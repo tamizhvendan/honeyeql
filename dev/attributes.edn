@@ -1,515 +1,824 @@
-{:currency/thousand-separator  {:db/ident           :currency/thousand-separator
-                                :db.column/name     "thousand_separator"
-                                :db.column/schema   "public"
-                                :db.column/relation "currency"
-                                :db.column/ident    :currency.thousand_separator}
- :currency/name                {:db/ident           :currency/name
-                                :db.column/name     "name"
-                                :db.column/schema   "public"
-                                :db.column/relation "currency"
-                                :db.column/ident    :currency.name}
- :state/name                   {:db/ident           :state/name
-                                :db.column/name     "name"
-                                :db.column/schema   "public"
-                                :db.column/relation "state"
-                                :db.column/ident    :state.name}
- :address/id                   {:db/ident           :address/id
-                                :db.column/name     "id"
-                                :db.column/schema   "public"
-                                :db.column/relation "address"
-                                :db.column/ident    :address.id}
- :invoice-item/id              {:db/ident           :invoice-item/id
-                                :db.column/name     "id"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice_item"
-                                :db.column/ident    :invoice_item.id}
- :payment/mode                 {:db/ident           :payment/mode
-                                :db.column/name     "mode"
-                                :db.column/schema   "public"
-                                :db.column/relation "payment"
-                                :db.column/ident    :payment.mode}
- :item/id                      {:db/ident           :item/id
-                                :db.column/name     "id"
-                                :db.column/schema   "public"
-                                :db.column/relation "item"
-                                :db.column/ident    :item.id}
- :address/company-id           {:db/ident           :address/company-id
-                                :db.column/name     "company_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "address"
-                                :db.column/ident    :address.company_id}
- :customer/billing-address-id  {:db/ident           :customer/billing-address-id
-                                :db.column/name     "billing_address_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "customer"
-                                :db.column/ident    :customer.billing_address_id}
- :invoice-item/invoice-id      {:db/ident           :invoice-item/invoice-id
-                                :db.column/name     "invoice_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice_item"
-                                :db.column/ident    :invoice_item.invoice_id}
- :tag/created-at               {:db/ident           :tag/created-at
-                                :db.column/name     "created_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "tag"
-                                :db.column/ident    :tag.created_at}
- :payment/updated-at           {:db/ident           :payment/updated-at
-                                :db.column/name     "updated_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "payment"
-                                :db.column/ident    :payment.updated_at}
- :payment/amount               {:db/ident           :payment/amount
-                                :db.column/name     "amount"
-                                :db.column/schema   "public"
-                                :db.column/relation "payment"
-                                :db.column/ident    :payment.amount}
- :invoice-item/company-id      {:db/ident           :invoice-item/company-id
-                                :db.column/name     "company_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice_item"
-                                :db.column/ident    :invoice_item.company_id}
- :invoice/status               {:db/ident           :invoice/status
-                                :db.column/name     "status"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice"
-                                :db.column/ident    :invoice.status}
- :item/company-id              {:db/ident           :item/company-id
-                                :db.column/name     "company_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "item"
-                                :db.column/ident    :item.company_id}
- :city/state-id                {:db/ident           :city/state-id
-                                :db.column/name     "state_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "city"
-                                :db.column/ident    :city.state_id}
- :item/description             {:db/ident           :item/description
-                                :db.column/name     "description"
-                                :db.column/schema   "public"
-                                :db.column/relation "item"
-                                :db.column/ident    :item.description}
- :state/id                     {:db/ident           :state/id
-                                :db.column/name     "id"
-                                :db.column/schema   "public"
-                                :db.column/relation "state"
-                                :db.column/ident    :state.id}
- :currency/id                  {:db/ident           :currency/id
-                                :db.column/name     "id"
-                                :db.column/schema   "public"
-                                :db.column/relation "currency"
-                                :db.column/ident    :currency.id}
- :address/city-id              {:db/ident           :address/city-id
-                                :db.column/name     "city_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "address"
-                                :db.column/ident    :address.city_id}
- :customer/email               {:db/ident           :customer/email
-                                :db.column/name     "email"
-                                :db.column/schema   "public"
-                                :db.column/relation "customer"
-                                :db.column/ident    :customer.email}
- :invoice/invoice-number       {:db/ident           :invoice/invoice-number
-                                :db.column/name     "invoice_number"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice"
-                                :db.column/ident    :invoice.invoice_number}
- :currency/code                {:db/ident           :currency/code
-                                :db.column/name     "code"
-                                :db.column/schema   "public"
-                                :db.column/relation "currency"
-                                :db.column/ident    :currency.code}
- :city/name                    {:db/ident           :city/name
-                                :db.column/name     "name"
-                                :db.column/schema   "public"
-                                :db.column/relation "city"
-                                :db.column/ident    :city.name}
- :address/line2                {:db/ident           :address/line2
-                                :db.column/name     "line2"
-                                :db.column/schema   "public"
-                                :db.column/relation "address"
-                                :db.column/ident    :address.line2}
- :tax/name                     {:db/ident           :tax/name
-                                :db.column/name     "name"
-                                :db.column/schema   "public"
-                                :db.column/relation "tax"
-                                :db.column/ident    :tax.name}
- :customer/primary-contact     {:db/ident           :customer/primary-contact
-                                :db.column/name     "primary_contact"
-                                :db.column/schema   "public"
-                                :db.column/relation "customer"
-                                :db.column/ident    :customer.primary_contact}
- :invoice/due-date             {:db/ident           :invoice/due-date
-                                :db.column/name     "due_date"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice"
-                                :db.column/ident    :invoice.due_date}
- :invoice/id                   {:db/ident           :invoice/id
-                                :db.column/name     "id"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice"
-                                :db.column/ident    :invoice.id}
- :tag/company-id               {:db/ident           :tag/company-id
-                                :db.column/name     "company_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "tag"
-                                :db.column/ident    :tag.company_id}
- :address/zip                  {:db/ident           :address/zip
-                                :db.column/name     "zip"
-                                :db.column/schema   "public"
-                                :db.column/relation "address"
-                                :db.column/ident    :address.zip}
- :address/created-at           {:db/ident           :address/created-at
-                                :db.column/name     "created_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "address"
-                                :db.column/ident    :address.created_at}
- :user/first-name              {:db/ident           :user/first-name
-                                :db.column/name     "first_name"
-                                :db.column/schema   "public"
-                                :db.column/relation "user"
-                                :db.column/ident    :user.first_name}
- :address/line1                {:db/ident           :address/line1
-                                :db.column/name     "line1"
-                                :db.column/schema   "public"
-                                :db.column/relation "address"
-                                :db.column/ident    :address.line1}
- :city/id                      {:db/ident           :city/id
-                                :db.column/name     "id"
-                                :db.column/schema   "public"
-                                :db.column/relation "city"
-                                :db.column/ident    :city.id}
- :item/price                   {:db/ident           :item/price
-                                :db.column/name     "price"
-                                :db.column/schema   "public"
-                                :db.column/relation "item"
-                                :db.column/ident    :item.price}
- :invoice-item/created-at      {:db/ident           :invoice-item/created-at
-                                :db.column/name     "created_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice_item"
-                                :db.column/ident    :invoice_item.created_at}
- :user/id                      {:db/ident           :user/id
-                                :db.column/name     "id"
-                                :db.column/schema   "public"
-                                :db.column/relation "user"
-                                :db.column/ident    :user.id}
- :tax/id                       {:db/ident           :tax/id
-                                :db.column/name     "id"
-                                :db.column/schema   "public"
-                                :db.column/relation "tax"
-                                :db.column/ident    :tax.id}
- :item/created-at              {:db/ident           :item/created-at
-                                :db.column/name     "created_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "item"
-                                :db.column/ident    :item.created_at}
- :invoice/updated-at           {:db/ident           :invoice/updated-at
-                                :db.column/name     "updated_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice"
-                                :db.column/ident    :invoice.updated_at}
- :invoice-tax/invoice-id       {:db/ident           :invoice-tax/invoice-id
-                                :db.column/name     "invoice_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice_tax"
-                                :db.column/ident    :invoice_tax.invoice_id}
- :user/password                {:db/ident           :user/password
-                                :db.column/name     "password"
-                                :db.column/schema   "public"
-                                :db.column/relation "user"
-                                :db.column/ident    :user.password}
- :customer/name                {:db/ident           :customer/name
-                                :db.column/name     "name"
-                                :db.column/schema   "public"
-                                :db.column/relation "customer"
-                                :db.column/ident    :customer.name}
- :tax/description              {:db/ident           :tax/description
-                                :db.column/name     "description"
-                                :db.column/schema   "public"
-                                :db.column/relation "tax"
-                                :db.column/ident    :tax.description}
- :user/updated-at              {:db/ident           :user/updated-at
-                                :db.column/name     "updated_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "user"
-                                :db.column/ident    :user.updated_at}
- :tax/updated-at               {:db/ident           :tax/updated-at
-                                :db.column/name     "updated_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "tax"
-                                :db.column/ident    :tax.updated_at}
- :customer/company-id          {:db/ident           :customer/company-id
-                                :db.column/name     "company_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "customer"
-                                :db.column/ident    :customer.company_id}
- :company/name                 {:db/ident           :company/name
-                                :db.column/name     "name"
-                                :db.column/schema   "public"
-                                :db.column/relation "company"
-                                :db.column/ident    :company.name}
- :customer/primary-currency-id {:db/ident           :customer/primary-currency-id
-                                :db.column/name     "primary_currency_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "customer"
-                                :db.column/ident    :customer.primary_currency_id}
- :invoice-item/quantity        {:db/ident           :invoice-item/quantity
-                                :db.column/name     "quantity"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice_item"
-                                :db.column/ident    :invoice_item.quantity}
- :payment/id                   {:db/ident           :payment/id
-                                :db.column/name     "id"
-                                :db.column/schema   "public"
-                                :db.column/relation "payment"
-                                :db.column/ident    :payment.id}
- :payment/notes                {:db/ident           :payment/notes
-                                :db.column/name     "notes"
-                                :db.column/schema   "public"
-                                :db.column/relation "payment"
-                                :db.column/ident    :payment.notes}
- :invoice/created-at           {:db/ident           :invoice/created-at
-                                :db.column/name     "created_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice"
-                                :db.column/ident    :invoice.created_at}
- :country/code                 {:db/ident           :country/code
-                                :db.column/name     "code"
-                                :db.column/schema   "public"
-                                :db.column/relation "country"
-                                :db.column/ident    :country.code}
- :tax/created-at               {:db/ident           :tax/created-at
-                                :db.column/name     "created_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "tax"
-                                :db.column/ident    :tax.created_at}
- :user/created-at              {:db/ident           :user/created-at
-                                :db.column/name     "created_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "user"
-                                :db.column/ident    :user.created_at}
- :address/country-id           {:db/ident           :address/country-id
-                                :db.column/name     "country_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "address"
-                                :db.column/ident    :address.country_id}
- :invoice/customer-id          {:db/ident           :invoice/customer-id
-                                :db.column/name     "customer_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice"
-                                :db.column/ident    :invoice.customer_id}
- :invoice-item/updated-at      {:db/ident           :invoice-item/updated-at
-                                :db.column/name     "updated_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice_item"
-                                :db.column/ident    :invoice_item.updated_at}
- :payment/company-id           {:db/ident           :payment/company-id
-                                :db.column/name     "company_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "payment"
-                                :db.column/ident    :payment.company_id}
- :country/name                 {:db/ident           :country/name
-                                :db.column/name     "name"
-                                :db.column/schema   "public"
-                                :db.column/relation "country"
-                                :db.column/ident    :country.name}
- :item/updated-at              {:db/ident           :item/updated-at
-                                :db.column/name     "updated_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "item"
-                                :db.column/ident    :item.updated_at}
- :invoice-item/discount-value  {:db/ident           :invoice-item/discount-value
-                                :db.column/name     "discount_value"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice_item"
-                                :db.column/ident    :invoice_item.discount_value}
- :address/updated-at           {:db/ident           :address/updated-at
-                                :db.column/name     "updated_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "address"
-                                :db.column/ident    :address.updated_at}
- :state/country-id             {:db/ident           :state/country-id
-                                :db.column/name     "country_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "state"
-                                :db.column/ident    :state.country_id}
- :customer-tag/customer-id     {:db/ident           :customer-tag/customer-id
-                                :db.column/name     "customer_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "customer_tag"
-                                :db.column/ident    :customer_tag.customer_id}
- :payment/currency-id          {:db/ident           :payment/currency-id
-                                :db.column/name     "currency_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "payment"
-                                :db.column/ident    :payment.currency_id}
- :invoice/invoice-date         {:db/ident           :invoice/invoice-date
-                                :db.column/name     "invoice_date"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice"
-                                :db.column/ident    :invoice.invoice_date}
- :customer/id                  {:db/ident           :customer/id
-                                :db.column/name     "id"
-                                :db.column/schema   "public"
-                                :db.column/relation "customer"
-                                :db.column/ident    :customer.id}
- :payment/created-at           {:db/ident           :payment/created-at
-                                :db.column/name     "created_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "payment"
-                                :db.column/ident    :payment.created_at}
- :tag/updated-at               {:db/ident           :tag/updated-at
-                                :db.column/name     "updated_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "tag"
-                                :db.column/ident    :tag.updated_at}
- :payment/invoice-id           {:db/ident           :payment/invoice-id
-                                :db.column/name     "invoice_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "payment"
-                                :db.column/ident    :payment.invoice_id}
- :company/id                   {:db/ident           :company/id
-                                :db.column/name     "id"
-                                :db.column/schema   "public"
-                                :db.column/relation "company"
-                                :db.column/ident    :company.id}
- :user/email                   {:db/ident           :user/email
-                                :db.column/name     "email"
-                                :db.column/schema   "public"
-                                :db.column/relation "user"
-                                :db.column/ident    :user.email}
- :currency/symbol              {:db/ident           :currency/symbol
-                                :db.column/name     "symbol"
-                                :db.column/schema   "public"
-                                :db.column/relation "currency"
-                                :db.column/ident    :currency.symbol}
- :tag/name                     {:db/ident           :tag/name
-                                :db.column/name     "name"
-                                :db.column/schema   "public"
-                                :db.column/relation "tag"
-                                :db.column/ident    :tag.name}
- :customer-tag/tag-id          {:db/ident           :customer-tag/tag-id
-                                :db.column/name     "tag_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "customer_tag"
-                                :db.column/ident    :customer_tag.tag_id}
- :customer/shipping-address-id {:db/ident           :customer/shipping-address-id
-                                :db.column/name     "shipping_address_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "customer"
-                                :db.column/ident    :customer.shipping_address_id}
- :company/updated-at           {:db/ident           :company/updated-at
-                                :db.column/name     "updated_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "company"
-                                :db.column/ident    :company.updated_at}
- :tax/percentage               {:db/ident           :tax/percentage
-                                :db.column/name     "percentage"
-                                :db.column/schema   "public"
-                                :db.column/relation "tax"
-                                :db.column/ident    :tax.percentage}
- :customer-tag/company-id      {:db/ident           :customer-tag/company-id
-                                :db.column/name     "company_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "customer_tag"
-                                :db.column/ident    :customer_tag.company_id}
- :invoice-tax/company-id       {:db/ident           :invoice-tax/company-id
-                                :db.column/name     "company_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice_tax"
-                                :db.column/ident    :invoice_tax.company_id}
- :tag/id                       {:db/ident           :tag/id
-                                :db.column/name     "id"
-                                :db.column/schema   "public"
-                                :db.column/relation "tag"
-                                :db.column/ident    :tag.id}
- :customer/updated-at          {:db/ident           :customer/updated-at
-                                :db.column/name     "updated_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "customer"
-                                :db.column/ident    :customer.updated_at}
- :tax/company-id               {:db/ident           :tax/company-id
-                                :db.column/name     "company_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "tax"
-                                :db.column/ident    :tax.company_id}
- :payment/customer-id          {:db/ident           :payment/customer-id
-                                :db.column/name     "customer_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "payment"
-                                :db.column/ident    :payment.customer_id}
- :user/company-id              {:db/ident           :user/company-id
-                                :db.column/name     "company_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "user"
-                                :db.column/ident    :user.company_id}
- :user/is-active               {:db/ident           :user/is-active
-                                :db.column/name     "is_active"
-                                :db.column/schema   "public"
-                                :db.column/relation "user"
-                                :db.column/ident    :user.is_active}
- :company/logo-url             {:db/ident           :company/logo-url
-                                :db.column/name     "logo_url"
-                                :db.column/schema   "public"
-                                :db.column/relation "company"
-                                :db.column/ident    :company.logo_url}
- :invoice-item/item-id         {:db/ident           :invoice-item/item-id
-                                :db.column/name     "item_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice_item"
-                                :db.column/ident    :invoice_item.item_id}
- :address/state-id             {:db/ident           :address/state-id
-                                :db.column/name     "state_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "address"
-                                :db.column/ident    :address.state_id}
- :invoice/company-id           {:db/ident           :invoice/company-id
-                                :db.column/name     "company_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice"
-                                :db.column/ident    :invoice.company_id}
- :invoice-item/discount-type   {:db/ident           :invoice-item/discount-type
-                                :db.column/name     "discount_type"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice_item"
-                                :db.column/ident    :invoice_item.discount_type}
- :currency/decimal-separator   {:db/ident           :currency/decimal-separator
-                                :db.column/name     "decimal_separator"
-                                :db.column/schema   "public"
-                                :db.column/relation "currency"
-                                :db.column/ident    :currency.decimal_separator}
- :user/last-name               {:db/ident           :user/last-name
-                                :db.column/name     "last_name"
-                                :db.column/schema   "public"
-                                :db.column/relation "user"
-                                :db.column/ident    :user.last_name}
- :invoice-item/name            {:db/ident           :invoice-item/name
-                                :db.column/name     "name"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice_item"
-                                :db.column/ident    :invoice_item.name}
- :country/id                   {:db/ident           :country/id
-                                :db.column/name     "id"
-                                :db.column/schema   "public"
-                                :db.column/relation "country"
-                                :db.column/ident    :country.id}
- :item/name                    {:db/ident           :item/name
-                                :db.column/name     "name"
-                                :db.column/schema   "public"
-                                :db.column/relation "item"
-                                :db.column/ident    :item.name}
- :customer/created-at          {:db/ident           :customer/created-at
-                                :db.column/name     "created_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "customer"
-                                :db.column/ident    :customer.created_at}
- :company/created-at           {:db/ident           :company/created-at
-                                :db.column/name     "created_at"
-                                :db.column/schema   "public"
-                                :db.column/relation "company"
-                                :db.column/ident    :company.created_at}
- :invoice-tax/tax-id           {:db/ident           :invoice-tax/tax-id
-                                :db.column/name     "tax_id"
-                                :db.column/schema   "public"
-                                :db.column/relation "invoice_tax"
-                                :db.column/ident    :invoice_tax.tax_id}}
+{:currency/thousand-separator  {:db/ident                     :currency/thousand-separator
+                                :db/doc                       nil
+                                :db.column/name               "thousand_separator"
+                                :db.column/schema             "public"
+                                :db.column/relation           "currency"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :currency.thousand_separator}
+ :currency/name                {:db/ident                     :currency/name
+                                :db/doc                       nil
+                                :db.column/name               "name"
+                                :db.column/schema             "public"
+                                :db.column/relation           "currency"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :currency.name}
+ :state/name                   {:db/ident                     :state/name
+                                :db/doc                       nil
+                                :db.column/name               "name"
+                                :db.column/schema             "public"
+                                :db.column/relation           "state"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :state.name}
+ :address/id                   {:db/ident                     :address/id
+                                :db/doc                       nil
+                                :db.column/name               "id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "address"
+                                :db.column/auto-incrementable true
+                                :db.column/nullable           false
+                                :db.column/ident              :address.id}
+ :invoice-item/id              {:db/ident                     :invoice-item/id
+                                :db/doc                       nil
+                                :db.column/name               "id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice_item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice_item.id}
+ :payment/mode                 {:db/ident                     :payment/mode
+                                :db/doc                       nil
+                                :db.column/name               "mode"
+                                :db.column/schema             "public"
+                                :db.column/relation           "payment"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :payment.mode}
+ :item/id                      {:db/ident                     :item/id
+                                :db/doc                       nil
+                                :db.column/name               "id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :item.id}
+ :address/company-id           {:db/ident                     :address/company-id
+                                :db/doc                       nil
+                                :db.column/name               "company_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "address"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :address.company_id}
+ :customer/billing-address-id  {:db/ident                     :customer/billing-address-id
+                                :db/doc                       nil
+                                :db.column/name               "billing_address_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "customer"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :customer.billing_address_id}
+ :invoice-item/invoice-id      {:db/ident                     :invoice-item/invoice-id
+                                :db/doc                       nil
+                                :db.column/name               "invoice_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice_item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice_item.invoice_id}
+ :tag/created-at               {:db/ident                     :tag/created-at
+                                :db/doc                       nil
+                                :db.column/name               "created_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "tag"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :tag.created_at}
+ :payment/updated-at           {:db/ident                     :payment/updated-at
+                                :db/doc                       nil
+                                :db.column/name               "updated_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "payment"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :payment.updated_at}
+ :payment/amount               {:db/ident                     :payment/amount
+                                :db/doc                       nil
+                                :db.column/name               "amount"
+                                :db.column/schema             "public"
+                                :db.column/relation           "payment"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :payment.amount}
+ :invoice-item/company-id      {:db/ident                     :invoice-item/company-id
+                                :db/doc                       nil
+                                :db.column/name               "company_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice_item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice_item.company_id}
+ :invoice/status               {:db/ident                     :invoice/status
+                                :db/doc                       nil
+                                :db.column/name               "status"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice.status}
+ :item/company-id              {:db/ident                     :item/company-id
+                                :db/doc                       nil
+                                :db.column/name               "company_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :item.company_id}
+ :city/state-id                {:db/ident                     :city/state-id
+                                :db/doc                       nil
+                                :db.column/name               "state_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "city"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :city.state_id}
+ :item/description             {:db/ident                     :item/description
+                                :db/doc                       nil
+                                :db.column/name               "description"
+                                :db.column/schema             "public"
+                                :db.column/relation           "item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           true
+                                :db.column/ident              :item.description}
+ :state/id                     {:db/ident                     :state/id
+                                :db/doc                       nil
+                                :db.column/name               "id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "state"
+                                :db.column/auto-incrementable true
+                                :db.column/nullable           false
+                                :db.column/ident              :state.id}
+ :currency/id                  {:db/ident                     :currency/id
+                                :db/doc                       nil
+                                :db.column/name               "id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "currency"
+                                :db.column/auto-incrementable true
+                                :db.column/nullable           false
+                                :db.column/ident              :currency.id}
+ :address/city-id              {:db/ident                     :address/city-id
+                                :db/doc                       nil
+                                :db.column/name               "city_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "address"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :address.city_id}
+ :customer/email               {:db/ident                     :customer/email
+                                :db/doc                       nil
+                                :db.column/name               "email"
+                                :db.column/schema             "public"
+                                :db.column/relation           "customer"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :customer.email}
+ :invoice/invoice-number       {:db/ident                     :invoice/invoice-number
+                                :db/doc                       nil
+                                :db.column/name               "invoice_number"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice.invoice_number}
+ :currency/code                {:db/ident                     :currency/code
+                                :db/doc                       nil
+                                :db.column/name               "code"
+                                :db.column/schema             "public"
+                                :db.column/relation           "currency"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :currency.code}
+ :city/name                    {:db/ident                     :city/name
+                                :db/doc                       nil
+                                :db.column/name               "name"
+                                :db.column/schema             "public"
+                                :db.column/relation           "city"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :city.name}
+ :address/line2                {:db/ident                     :address/line2
+                                :db/doc                       nil
+                                :db.column/name               "line2"
+                                :db.column/schema             "public"
+                                :db.column/relation           "address"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           true
+                                :db.column/ident              :address.line2}
+ :tax/name                     {:db/ident                     :tax/name
+                                :db/doc                       nil
+                                :db.column/name               "name"
+                                :db.column/schema             "public"
+                                :db.column/relation           "tax"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :tax.name}
+ :customer/primary-contact     {:db/ident                     :customer/primary-contact
+                                :db/doc                       nil
+                                :db.column/name               "primary_contact"
+                                :db.column/schema             "public"
+                                :db.column/relation           "customer"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :customer.primary_contact}
+ :invoice/due-date             {:db/ident                     :invoice/due-date
+                                :db/doc                       nil
+                                :db.column/name               "due_date"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice.due_date}
+ :invoice/id                   {:db/ident                     :invoice/id
+                                :db/doc                       nil
+                                :db.column/name               "id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice.id}
+ :tag/company-id               {:db/ident                     :tag/company-id
+                                :db/doc                       nil
+                                :db.column/name               "company_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "tag"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :tag.company_id}
+ :address/zip                  {:db/ident                     :address/zip
+                                :db/doc                       nil
+                                :db.column/name               "zip"
+                                :db.column/schema             "public"
+                                :db.column/relation           "address"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :address.zip}
+ :address/created-at           {:db/ident                     :address/created-at
+                                :db/doc                       nil
+                                :db.column/name               "created_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "address"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :address.created_at}
+ :user/first-name              {:db/ident                     :user/first-name
+                                :db/doc                       nil
+                                :db.column/name               "first_name"
+                                :db.column/schema             "public"
+                                :db.column/relation           "user"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :user.first_name}
+ :address/line1                {:db/ident                     :address/line1
+                                :db/doc                       nil
+                                :db.column/name               "line1"
+                                :db.column/schema             "public"
+                                :db.column/relation           "address"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :address.line1}
+ :city/id                      {:db/ident                     :city/id
+                                :db/doc                       nil
+                                :db.column/name               "id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "city"
+                                :db.column/auto-incrementable true
+                                :db.column/nullable           false
+                                :db.column/ident              :city.id}
+ :item/price                   {:db/ident                     :item/price
+                                :db/doc                       nil
+                                :db.column/name               "price"
+                                :db.column/schema             "public"
+                                :db.column/relation           "item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :item.price}
+ :invoice-item/created-at      {:db/ident                     :invoice-item/created-at
+                                :db/doc                       nil
+                                :db.column/name               "created_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice_item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice_item.created_at}
+ :user/id                      {:db/ident                     :user/id
+                                :db/doc                       nil
+                                :db.column/name               "id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "user"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :user.id}
+ :tax/id                       {:db/ident                     :tax/id
+                                :db/doc                       nil
+                                :db.column/name               "id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "tax"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :tax.id}
+ :item/created-at              {:db/ident                     :item/created-at
+                                :db/doc                       nil
+                                :db.column/name               "created_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :item.created_at}
+ :invoice/updated-at           {:db/ident                     :invoice/updated-at
+                                :db/doc                       nil
+                                :db.column/name               "updated_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice.updated_at}
+ :invoice-tax/invoice-id       {:db/ident                     :invoice-tax/invoice-id
+                                :db/doc                       nil
+                                :db.column/name               "invoice_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice_tax"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice_tax.invoice_id}
+ :user/password                {:db/ident                     :user/password
+                                :db/doc                       nil
+                                :db.column/name               "password"
+                                :db.column/schema             "public"
+                                :db.column/relation           "user"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :user.password}
+ :customer/name                {:db/ident                     :customer/name
+                                :db/doc                       nil
+                                :db.column/name               "name"
+                                :db.column/schema             "public"
+                                :db.column/relation           "customer"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :customer.name}
+ :tax/description              {:db/ident                     :tax/description
+                                :db/doc                       nil
+                                :db.column/name               "description"
+                                :db.column/schema             "public"
+                                :db.column/relation           "tax"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           true
+                                :db.column/ident              :tax.description}
+ :user/updated-at              {:db/ident                     :user/updated-at
+                                :db/doc                       nil
+                                :db.column/name               "updated_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "user"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :user.updated_at}
+ :tax/updated-at               {:db/ident                     :tax/updated-at
+                                :db/doc                       nil
+                                :db.column/name               "updated_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "tax"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :tax.updated_at}
+ :customer/company-id          {:db/ident                     :customer/company-id
+                                :db/doc                       nil
+                                :db.column/name               "company_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "customer"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :customer.company_id}
+ :company/name                 {:db/ident                     :company/name
+                                :db/doc                       nil
+                                :db.column/name               "name"
+                                :db.column/schema             "public"
+                                :db.column/relation           "company"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :company.name}
+ :customer/primary-currency-id {:db/ident                     :customer/primary-currency-id
+                                :db/doc                       nil
+                                :db.column/name               "primary_currency_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "customer"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :customer.primary_currency_id}
+ :invoice-item/quantity        {:db/ident                     :invoice-item/quantity
+                                :db/doc                       nil
+                                :db.column/name               "quantity"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice_item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice_item.quantity}
+ :payment/id                   {:db/ident                     :payment/id
+                                :db/doc                       nil
+                                :db.column/name               "id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "payment"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :payment.id}
+ :payment/notes                {:db/ident                     :payment/notes
+                                :db/doc                       nil
+                                :db.column/name               "notes"
+                                :db.column/schema             "public"
+                                :db.column/relation           "payment"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           true
+                                :db.column/ident              :payment.notes}
+ :invoice/created-at           {:db/ident                     :invoice/created-at
+                                :db/doc                       nil
+                                :db.column/name               "created_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice.created_at}
+ :country/code                 {:db/ident                     :country/code
+                                :db/doc                       nil
+                                :db.column/name               "code"
+                                :db.column/schema             "public"
+                                :db.column/relation           "country"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :country.code}
+ :tax/created-at               {:db/ident                     :tax/created-at
+                                :db/doc                       nil
+                                :db.column/name               "created_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "tax"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :tax.created_at}
+ :user/created-at              {:db/ident                     :user/created-at
+                                :db/doc                       nil
+                                :db.column/name               "created_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "user"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :user.created_at}
+ :address/country-id           {:db/ident                     :address/country-id
+                                :db/doc                       nil
+                                :db.column/name               "country_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "address"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :address.country_id}
+ :invoice/customer-id          {:db/ident                     :invoice/customer-id
+                                :db/doc                       nil
+                                :db.column/name               "customer_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice.customer_id}
+ :invoice-item/updated-at      {:db/ident                     :invoice-item/updated-at
+                                :db/doc                       nil
+                                :db.column/name               "updated_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice_item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice_item.updated_at}
+ :payment/company-id           {:db/ident                     :payment/company-id
+                                :db/doc                       nil
+                                :db.column/name               "company_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "payment"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :payment.company_id}
+ :country/name                 {:db/ident                     :country/name
+                                :db/doc                       nil
+                                :db.column/name               "name"
+                                :db.column/schema             "public"
+                                :db.column/relation           "country"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :country.name}
+ :item/updated-at              {:db/ident                     :item/updated-at
+                                :db/doc                       nil
+                                :db.column/name               "updated_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :item.updated_at}
+ :invoice-item/discount-value  {:db/ident                     :invoice-item/discount-value
+                                :db/doc                       nil
+                                :db.column/name               "discount_value"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice_item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           true
+                                :db.column/ident              :invoice_item.discount_value}
+ :address/updated-at           {:db/ident                     :address/updated-at
+                                :db/doc                       nil
+                                :db.column/name               "updated_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "address"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :address.updated_at}
+ :state/country-id             {:db/ident                     :state/country-id
+                                :db/doc                       nil
+                                :db.column/name               "country_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "state"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :state.country_id}
+ :customer-tag/customer-id     {:db/ident                     :customer-tag/customer-id
+                                :db/doc                       nil
+                                :db.column/name               "customer_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "customer_tag"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :customer_tag.customer_id}
+ :payment/currency-id          {:db/ident                     :payment/currency-id
+                                :db/doc                       nil
+                                :db.column/name               "currency_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "payment"
+                                :db.column/auto-incrementable true
+                                :db.column/nullable           false
+                                :db.column/ident              :payment.currency_id}
+ :invoice/invoice-date         {:db/ident                     :invoice/invoice-date
+                                :db/doc                       nil
+                                :db.column/name               "invoice_date"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice.invoice_date}
+ :customer/id                  {:db/ident                     :customer/id
+                                :db/doc                       nil
+                                :db.column/name               "id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "customer"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :customer.id}
+ :payment/created-at           {:db/ident                     :payment/created-at
+                                :db/doc                       nil
+                                :db.column/name               "created_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "payment"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :payment.created_at}
+ :tag/updated-at               {:db/ident                     :tag/updated-at
+                                :db/doc                       nil
+                                :db.column/name               "updated_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "tag"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :tag.updated_at}
+ :payment/invoice-id           {:db/ident                     :payment/invoice-id
+                                :db/doc                       nil
+                                :db.column/name               "invoice_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "payment"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :payment.invoice_id}
+ :company/id                   {:db/ident                     :company/id
+                                :db/doc                       nil
+                                :db.column/name               "id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "company"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :company.id}
+ :user/email                   {:db/ident                     :user/email
+                                :db/doc                       nil
+                                :db.column/name               "email"
+                                :db.column/schema             "public"
+                                :db.column/relation           "user"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :user.email}
+ :currency/symbol              {:db/ident                     :currency/symbol
+                                :db/doc                       nil
+                                :db.column/name               "symbol"
+                                :db.column/schema             "public"
+                                :db.column/relation           "currency"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :currency.symbol}
+ :tag/name                     {:db/ident                     :tag/name
+                                :db/doc                       nil
+                                :db.column/name               "name"
+                                :db.column/schema             "public"
+                                :db.column/relation           "tag"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :tag.name}
+ :customer-tag/tag-id          {:db/ident                     :customer-tag/tag-id
+                                :db/doc                       nil
+                                :db.column/name               "tag_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "customer_tag"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :customer_tag.tag_id}
+ :customer/shipping-address-id {:db/ident                     :customer/shipping-address-id
+                                :db/doc                       nil
+                                :db.column/name               "shipping_address_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "customer"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :customer.shipping_address_id}
+ :company/updated-at           {:db/ident                     :company/updated-at
+                                :db/doc                       nil
+                                :db.column/name               "updated_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "company"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :company.updated_at}
+ :tax/percentage               {:db/ident                     :tax/percentage
+                                :db/doc                       nil
+                                :db.column/name               "percentage"
+                                :db.column/schema             "public"
+                                :db.column/relation           "tax"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :tax.percentage}
+ :customer-tag/company-id      {:db/ident                     :customer-tag/company-id
+                                :db/doc                       nil
+                                :db.column/name               "company_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "customer_tag"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :customer_tag.company_id}
+ :invoice-tax/company-id       {:db/ident                     :invoice-tax/company-id
+                                :db/doc                       nil
+                                :db.column/name               "company_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice_tax"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice_tax.company_id}
+ :tag/id                       {:db/ident                     :tag/id
+                                :db/doc                       nil
+                                :db.column/name               "id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "tag"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :tag.id}
+ :customer/updated-at          {:db/ident                     :customer/updated-at
+                                :db/doc                       nil
+                                :db.column/name               "updated_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "customer"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :customer.updated_at}
+ :tax/company-id               {:db/ident                     :tax/company-id
+                                :db/doc                       nil
+                                :db.column/name               "company_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "tax"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :tax.company_id}
+ :payment/customer-id          {:db/ident                     :payment/customer-id
+                                :db/doc                       nil
+                                :db.column/name               "customer_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "payment"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :payment.customer_id}
+ :user/company-id              {:db/ident                     :user/company-id
+                                :db/doc                       nil
+                                :db.column/name               "company_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "user"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :user.company_id}
+ :user/is-active               {:db/ident                     :user/is-active
+                                :db/doc                       nil
+                                :db.column/name               "is_active"
+                                :db.column/schema             "public"
+                                :db.column/relation           "user"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :user.is_active}
+ :company/logo-url             {:db/ident                     :company/logo-url
+                                :db/doc                       nil
+                                :db.column/name               "logo_url"
+                                :db.column/schema             "public"
+                                :db.column/relation           "company"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           true
+                                :db.column/ident              :company.logo_url}
+ :invoice-item/item-id         {:db/ident                     :invoice-item/item-id
+                                :db/doc                       nil
+                                :db.column/name               "item_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice_item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice_item.item_id}
+ :address/state-id             {:db/ident                     :address/state-id
+                                :db/doc                       nil
+                                :db.column/name               "state_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "address"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :address.state_id}
+ :invoice/company-id           {:db/ident                     :invoice/company-id
+                                :db/doc                       nil
+                                :db.column/name               "company_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice.company_id}
+ :invoice-item/discount-type   {:db/ident                     :invoice-item/discount-type
+                                :db/doc                       nil
+                                :db.column/name               "discount_type"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice_item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           true
+                                :db.column/ident              :invoice_item.discount_type}
+ :currency/decimal-separator   {:db/ident                     :currency/decimal-separator
+                                :db/doc                       nil
+                                :db.column/name               "decimal_separator"
+                                :db.column/schema             "public"
+                                :db.column/relation           "currency"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :currency.decimal_separator}
+ :user/last-name               {:db/ident                     :user/last-name
+                                :db/doc                       nil
+                                :db.column/name               "last_name"
+                                :db.column/schema             "public"
+                                :db.column/relation           "user"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :user.last_name}
+ :invoice-item/name            {:db/ident                     :invoice-item/name
+                                :db/doc                       nil
+                                :db.column/name               "name"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice_item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice_item.name}
+ :country/id                   {:db/ident                     :country/id
+                                :db/doc                       nil
+                                :db.column/name               "id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "country"
+                                :db.column/auto-incrementable true
+                                :db.column/nullable           false
+                                :db.column/ident              :country.id}
+ :item/name                    {:db/ident                     :item/name
+                                :db/doc                       nil
+                                :db.column/name               "name"
+                                :db.column/schema             "public"
+                                :db.column/relation           "item"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :item.name}
+ :customer/created-at          {:db/ident                     :customer/created-at
+                                :db/doc                       nil
+                                :db.column/name               "created_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "customer"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :customer.created_at}
+ :company/created-at           {:db/ident                     :company/created-at
+                                :db/doc                       nil
+                                :db.column/name               "created_at"
+                                :db.column/schema             "public"
+                                :db.column/relation           "company"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :company.created_at}
+ :invoice-tax/tax-id           {:db/ident                     :invoice-tax/tax-id
+                                :db/doc                       nil
+                                :db.column/name               "tax_id"
+                                :db.column/schema             "public"
+                                :db.column/relation           "invoice_tax"
+                                :db.column/auto-incrementable false
+                                :db.column/nullable           false
+                                :db.column/ident              :invoice_tax.tax_id}}

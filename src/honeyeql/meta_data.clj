@@ -6,6 +6,11 @@
 (defn- meta-data-result [db-spec result-set]
   (rs/datafiable-result-set result-set db-spec {:builder-fn rs/as-unqualified-lower-maps}))
 
+(defn- coarce-boolean [bool-str]
+  (case bool-str
+    "YES" true
+    "NO" false))
+
 (defn- entity-ident [db-config {:keys [table_schem table_name]}]
   (if (= (get-in db-config [:schema :default]) table_schem)
     (keyword (inf/hyphenate table_name))
@@ -42,6 +47,8 @@
        (map #(to-entity-meta-data db-config %))
        (into {})))
 
+#_ (into {:a 1} [[:b 2]])
+
 (defn- filter-columns [db-config columns]
   (remove #(contains? (get-in db-config [:schema :ignore]) (:table_schem %)) columns))
 
@@ -49,31 +56,46 @@
                   [{:table_schem "information_schema"}
                    {:table_schem "public"}])
 
-(defn- to-attribute-meta-data [db-config column-meta-data]
-  (let [{:keys [table_schem table_name column_name]} column-meta-data
-        ident                                        (attribute-ident db-config column-meta-data)]
-    [ident {:db/ident           ident
-            :db.column/name     column_name
-            :db.column/schema   table_schem
-            :db.column/relation table_name
-            :db.column/ident    (column-ident db-config column-meta-data)}]))
+#_ (update-in {:a [1]} [:a] conj 2)
+(defn- add-attribute-meta-data [db-config heql-meta-data
+                               {:keys [table_schem table_name column_name
+                                       remarks is_nullable is_autoincrement]
+                                :as   column-meta-data}]
+  (let [attr-ident  (attribute-ident db-config column-meta-data)
+        entity-ident (entity-ident db-config column-meta-data)
+        is-nullable (coarce-boolean is_nullable)
+        entity-attr-qualifier (if is-nullable 
+                                :attribute/optional
+                                :attribute/required)]
+    (update-in 
+     (assoc-in heql-meta-data [:attributes attr-ident]
+               {:db/ident                     attr-ident
+                :db/doc                       remarks
+                :db.column/name               column_name
+                :db.column/schema             table_schem
+                :db.column/relation           table_name
+                :db.column/auto-incrementable (coarce-boolean is_autoincrement)
+                :db.column/nullable           is-nullable
+                :db.column/ident              (column-ident db-config column-meta-data)})
+     [:entities entity-ident entity-attr-qualifier]
+     conj attr-ident)))
 
 (defn- add-attributes-meta-data [db-spec jdbc-meta-data db-config heql-meta-data]
   (->> (.getColumns jdbc-meta-data nil "%" "%" nil)
        (meta-data-result db-spec)
        (filter-columns db-config)
-       (map #(to-attribute-meta-data db-config %))
-       (into {})
-       (assoc heql-meta-data :attributes)))
+       (reduce (partial add-attribute-meta-data db-config) heql-meta-data)))
 
 (defn fetch [db-spec db-config]
   (with-open [conn (jdbc/get-connection db-spec)]
     (let [jdbc-meta-data     (.getMetaData conn)
           entities-meta-data (entities-meta-data db-spec jdbc-meta-data db-config)
           heql-meta-data     {:entities entities-meta-data}]
-      #_(spit "./dev/attributes.edn"
-              (:attributes (add-attributes-meta-data db-spec jdbc-meta-data db-config heql-meta-data)))
-      (add-attributes-meta-data db-spec jdbc-meta-data db-config heql-meta-data))))
+      (spit "./dev/attributes.edn"
+            (:attributes (add-attributes-meta-data db-spec jdbc-meta-data db-config heql-meta-data)))
+      (spit "./dev/entities.edn"
+            (:entities (add-attributes-meta-data db-spec jdbc-meta-data db-config heql-meta-data)))
+      #_(add-attributes-meta-data db-spec jdbc-meta-data db-config heql-meta-data))))
 
 #_(def db-spec {:dbtype   "postgresql"
                 :dbname   "invoice-app"
