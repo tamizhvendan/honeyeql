@@ -1,0 +1,80 @@
+{:address      {:db/doc         nil
+                :db/ident       :address
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "address"}
+ :invoice-item {:db/doc         nil
+                :db/ident       :invoice-item
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "invoice_item"}
+ :payment      {:db/doc         nil
+                :db/ident       :payment
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "payment"}
+ :item         {:db/doc         nil
+                :db/ident       :item
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "item"}
+ :city         {:db/doc         nil
+                :db/ident       :city
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "city"}
+ :state        {:db/doc         nil
+                :db/ident       :state
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "state"}
+ :tax          {:db/doc         nil
+                :db/ident       :tax
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "tax"}
+ :customer     {:db/doc         nil
+                :db/ident       :customer
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "customer"}
+ :invoice      {:db/doc         nil
+                :db/ident       :invoice
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "invoice"}
+ :currency     {:db/doc         nil
+                :db/ident       :currency
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "currency"}
+ :customer-tag {:db/doc         nil
+                :db/ident       :customer-tag
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "customer_tag"}
+ :tag          {:db/doc         nil
+                :db/ident       :tag
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "tag"}
+ :invoice-tax  {:db/doc         nil
+                :db/ident       :invoice-tax
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "invoice_tax"}
+ :user         {:db/doc         nil
+                :db/ident       :user
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "user"}
+ :country      {:db/doc         nil
+                :db/ident       :country
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "country"}
+ :company      {:db/doc         nil
+                :db/ident       :company
+                :db.entity/type :table
+                :db/schema      "public"
+                :db/relation    "company"}}
