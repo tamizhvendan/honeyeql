@@ -1,5 +1,4 @@
 {:paths ["src"]
  :deps {org.clojure/clojure {:mvn/version "1.10.1"}
         seancorfield/next.jdbc {:mvn/version "1.0.10"}
-        inflections {:mvn/version "0.13.2"}}
- :aliases {:dev {:extra-deps {org.postgresql/postgresql {:mvn/version "42.2.8"}}}}}
+        inflections {:mvn/version "0.13.2"}}}
