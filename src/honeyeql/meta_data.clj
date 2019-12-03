@@ -38,8 +38,6 @@
       :db/schema      table_schem
       :db/relation    table_name}]))
 
-#_(inf/hyphenate "meta_data")
-
 (defn- entities-meta-data [db-spec jdbc-meta-data db-config]
   (->> (into-array String ["TABLE" "VIEW"])
        (.getTables jdbc-meta-data nil "%" nil)
@@ -47,27 +45,20 @@
        (map #(to-entity-meta-data db-config %))
        (into {})))
 
-#_ (into {:a 1} [[:b 2]])
-
 (defn- filter-columns [db-config columns]
   (remove #(contains? (get-in db-config [:schema :ignore]) (:table_schem %)) columns))
 
-#_(filter-columns {:schema {:ignore #{"information_schema"}}}
-                  [{:table_schem "information_schema"}
-                   {:table_schem "public"}])
-
-#_ (update-in {:a [1]} [:a] conj 2)
 (defn- add-attribute-meta-data [db-config heql-meta-data
-                               {:keys [table_schem table_name column_name
-                                       remarks is_nullable is_autoincrement]
-                                :as   column-meta-data}]
-  (let [attr-ident  (attribute-ident db-config column-meta-data)
-        entity-ident (entity-ident db-config column-meta-data)
-        is-nullable (coarce-boolean is_nullable)
-        entity-attr-qualifier (if is-nullable 
+                                {:keys [table_schem table_name column_name
+                                        remarks is_nullable is_autoincrement]
+                                 :as   column-meta-data}]
+  (let [attr-ident            (attribute-ident db-config column-meta-data)
+        entity-ident          (entity-ident db-config column-meta-data)
+        is-nullable           (coarce-boolean is_nullable)
+        entity-attr-qualifier (if is-nullable
                                 :attribute/optional
                                 :attribute/required)]
-    (update-in 
+    (update-in
      (assoc-in heql-meta-data [:attributes attr-ident]
                {:db/ident                     attr-ident
                 :db/doc                       remarks
@@ -86,36 +77,13 @@
        (filter-columns db-config)
        (reduce (partial add-attribute-meta-data db-config) heql-meta-data)))
 
-(defn fetch [db-spec db-config]
+(defmulti get-db-config identity)
+
+(defn fetch [db-spec]
   (with-open [conn (jdbc/get-connection db-spec)]
     (let [jdbc-meta-data     (.getMetaData conn)
+          db-product-name    (.getDatabaseProductName jdbc-meta-data)
+          db-config          (get-db-config db-product-name)
           entities-meta-data (entities-meta-data db-spec jdbc-meta-data db-config)
           heql-meta-data     {:entities entities-meta-data}]
-      (spit "./dev/attributes.edn"
-            (:attributes (add-attributes-meta-data db-spec jdbc-meta-data db-config heql-meta-data)))
-      (spit "./dev/entities.edn"
-            (:entities (add-attributes-meta-data db-spec jdbc-meta-data db-config heql-meta-data)))
-      #_(add-attributes-meta-data db-spec jdbc-meta-data db-config heql-meta-data))))
-
-#_(def db-spec {:dbtype   "postgresql"
-                :dbname   "invoice-app"
-                :user     "postgres"
-                :password "postgres"})
-
-#_(fetch db-spec {:schema {:default "public"
-                           :ignore  #{"information_schema" "pg_catalog"}}})
-
-#_{:user         {:db/doc         nil
-                  :db/ident       :public/user
-                  :db.entity/type :table
-                  :db/schema      "public"
-                  :db/relation    "user"}
-   :invoice-item {:db/doc         nil
-                  :db/ident       :public/invoice-item
-                  :db.entity/type :table
-                  :db/schema      "public"
-                  :db/relation    "invoice_item"}}
-
-(comment
-  (def columns (read-string (slurp "./dev/columns.edn")))
-  (distinct (keys (group-by :table_schem columns))))
+      (add-attributes-meta-data db-spec jdbc-meta-data db-config heql-meta-data))))
