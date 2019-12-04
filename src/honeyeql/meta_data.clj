@@ -30,13 +30,13 @@
                                        :as   table-meta-data}]
   (let [ident (entity-ident db-config table-meta-data)]
     [ident
-     {:db/doc         remarks
-      :db/ident       ident
-      :db.entity/type (case table_type
-                        "TABLE" :table
-                        "VIEW" :view)
-      :db/schema      table_schem
-      :db/relation    table_name}]))
+     {:entity/doc      remarks
+      :entity/ident    ident
+      :entity/type     (case table_type
+                         "TABLE" :table
+                         "VIEW" :view)
+      :entity/schema   table_schem
+      :entity/relation table_name}]))
 
 (defn- entities-meta-data [db-spec jdbc-meta-data db-config]
   (->> (into-array String ["TABLE" "VIEW"])
@@ -48,26 +48,32 @@
 (defn- filter-columns [db-config columns]
   (remove #(contains? (get-in db-config [:schema :ignore]) (:table_schem %)) columns))
 
+(defmulti column-type (fn [db-config _]
+                        (:db-product-name db-config)))
+
 (defn- add-attribute-meta-data [db-config heql-meta-data
-                                {:keys [table_schem table_name column_name
-                                        remarks is_nullable is_autoincrement]
+                                {:keys [table_schem table_name column_name data_type
+                                        remarks is_nullable is_autoincrement type_name]
                                  :as   column-meta-data}]
   (let [attr-ident            (attribute-ident db-config column-meta-data)
         entity-ident          (entity-ident db-config column-meta-data)
         is-nullable           (coarce-boolean is_nullable)
         entity-attr-qualifier (if is-nullable
-                                :attribute/optional
-                                :attribute/required)]
+                                :entity/opt-attrs
+                                :entity/req-attrs)]
     (update-in
      (assoc-in heql-meta-data [:attributes attr-ident]
-               {:db/ident                     attr-ident
-                :db/doc                       remarks
-                :db.column/name               column_name
-                :db.column/schema             table_schem
-                :db.column/relation           table_name
-                :db.column/auto-incrementable (coarce-boolean is_autoincrement)
-                :db.column/nullable           is-nullable
-                :db.column/ident              (column-ident db-config column-meta-data)})
+               {:attr/ident                     attr-ident
+                :attr/doc                       remarks
+                :attr/type                      (column-type db-config column-meta-data)
+                :attr.column/name               column_name
+                :attr.column/schema             table_schem
+                :attr.column/relation           table_name
+                :attr.column/auto-incrementable (coarce-boolean is_autoincrement)
+                :attr.column/nullable           is-nullable
+                :attr.column/jdbc-type          data_type
+                :attr.column/db-type            type_name
+                :attr.column/ident              (column-ident db-config column-meta-data)})
      [:entities entity-ident entity-attr-qualifier]
      conj attr-ident)))
 
@@ -83,7 +89,7 @@
   (with-open [conn (jdbc/get-connection db-spec)]
     (let [jdbc-meta-data     (.getMetaData conn)
           db-product-name    (.getDatabaseProductName jdbc-meta-data)
-          db-config          (get-db-config db-product-name)
+          db-config          (assoc (get-db-config db-product-name) :db-product-name db-product-name)
           entities-meta-data (entities-meta-data db-spec jdbc-meta-data db-config)
           heql-meta-data     {:entities entities-meta-data}]
       (add-attributes-meta-data db-spec jdbc-meta-data db-config heql-meta-data))))
