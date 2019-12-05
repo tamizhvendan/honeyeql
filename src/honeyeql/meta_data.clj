@@ -13,13 +13,14 @@
 
 (defn- entity-ident [db-config {:keys [table_schem table_name]}]
   (if (= (get-in db-config [:schema :default]) table_schem)
-    (keyword (inf/hyphenate table_name))
+    (keyword (inf/singular (inf/hyphenate table_name)))
     (keyword (inf/hyphenate table_schem) (inf/hyphenate table_name))))
 
 (defn- attribute-ident [db-config {:keys [table_schem table_name column_name]}]
   (if (= (get-in db-config [:schema :default]) table_schem)
-    (keyword (inf/hyphenate table_name) (inf/hyphenate column_name))
-    (keyword (str (inf/hyphenate table_schem) "." (inf/hyphenate table_name)) (inf/hyphenate column_name))))
+    (keyword (inf/singular (inf/hyphenate table_name)) (inf/hyphenate column_name))
+    (keyword (str (inf/hyphenate table_schem) "." (inf/singular (inf/hyphenate table_name))) 
+             (inf/hyphenate column_name))))
 
 (defn- column-ident [db-config {:keys [table_schem table_name column_name]}]
   (if (= (get-in db-config [:schema :default]) table_schem)
@@ -30,13 +31,14 @@
                                        :as   table-meta-data}]
   (let [ident (entity-ident db-config table-meta-data)]
     [ident
-     {:entity/doc      remarks
-      :entity/ident    ident
-      :entity/type     (case table_type
-                         "TABLE" :table
-                         "VIEW" :view)
-      :entity/schema   table_schem
-      :entity/relation table_name}]))
+     {:entity/doc             remarks
+      :entity/ident           ident
+      :entity.relation/type   (case table_type
+                                "TABLE" :table
+                                "VIEW" :view)
+      :entity.relation/schema table_schem
+      :entity.relation/name   table_name
+      :entity.relation/ident  (keyword (str table_schem "." table_name))}]))
 
 (defn- entities-meta-data [db-spec jdbc-meta-data db-config]
   (->> (into-array String ["TABLE" "VIEW"])
@@ -48,11 +50,12 @@
 (defn- filter-columns [db-config columns]
   (remove #(contains? (get-in db-config [:schema :ignore]) (:table_schem %)) columns))
 
-(defmulti column-type (fn [db-config _]
-                        (:db-product-name db-config)))
+(defmulti derive-column-type
+  (fn [db-config _]
+    (:db-product-name db-config)))
 
 (defn- add-attribute-meta-data [db-config heql-meta-data
-                                {:keys [table_schem table_name column_name data_type
+                                {:keys [table_schem table_name column_name data_type column_size
                                         remarks is_nullable is_autoincrement type_name]
                                  :as   column-meta-data}]
   (let [attr-ident            (attribute-ident db-config column-meta-data)
@@ -65,12 +68,13 @@
      (assoc-in heql-meta-data [:attributes attr-ident]
                {:attr/ident                     attr-ident
                 :attr/doc                       remarks
-                :attr/type                      (column-type db-config column-meta-data)
+                :attr/type                      (derive-column-type db-config column-meta-data)
+                :attr/nullable                  is-nullable
                 :attr.column/name               column_name
                 :attr.column/schema             table_schem
                 :attr.column/relation           table_name
+                :attr.column/size               column_size
                 :attr.column/auto-incrementable (coarce-boolean is_autoincrement)
-                :attr.column/nullable           is-nullable
                 :attr.column/jdbc-type          data_type
                 :attr.column/db-type            type_name
                 :attr.column/ident              (column-ident db-config column-meta-data)})
