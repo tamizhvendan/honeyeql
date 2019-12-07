@@ -16,16 +16,20 @@
     (keyword (inf/singular (inf/hyphenate table_name)))
     (keyword (inf/hyphenate table_schem) (inf/hyphenate table_name))))
 
-(defn- attribute-ident [db-config {:keys [table_schem table_name column_name]}]
-  (if (= (get-in db-config [:schema :default]) table_schem)
-    (keyword (inf/singular (inf/hyphenate table_name)) (inf/hyphenate column_name))
-    (keyword (str (inf/hyphenate table_schem) "." (inf/singular (inf/hyphenate table_name)))
-             (inf/hyphenate column_name))))
+(defn- attribute-ident 
+  ([db-config {:keys [table_schem table_name column_name]}]
+   (attribute-ident db-config table_schem table_name column_name))
+  ([db-config table_schem table_name column_name]
+   (if (= (get-in db-config [:schema :default]) table_schem)
+     (keyword (inf/singular (inf/hyphenate table_name)) (inf/hyphenate column_name))
+     (keyword (str (inf/hyphenate table_schem) "." (inf/singular (inf/hyphenate table_name)))
+              (inf/hyphenate column_name)))))
 
 (defn- column-ident [db-config {:keys [table_schem table_name column_name]}]
   (if (= (get-in db-config [:schema :default]) table_schem)
     (keyword (str table_name "." column_name))
     (keyword (str table_schem "." table_name "." column_name))))
+
 
 (defn- to-entity-meta-data [db-config {:keys [remarks table_type table_schem table_name]
                                        :as   table-meta-data}]
@@ -106,18 +110,22 @@
 
 (defmulti get-db-config identity)
 
+(defn- foreign-key-column-to-attr-name [{:keys [foreign-key-suffix]} fkcolumn_name]
+  (if foreign-key-suffix
+    (clojure.string/replace fkcolumn_name (re-pattern (str foreign-key-suffix "$")) "")
+    fkcolumn_name))
+
 (defn- add-relationships-meta-data [db-spec jdbc-meta-data db-config hql-meta-data]
   (->> (.getImportedKeys jdbc-meta-data nil "" nil)
        (meta-data-result db-spec)
        (reduce (fn [refs {:keys [fktable_schem fktable_name fkcolumn_name
                                  pktable_schem pktable_name pkcolumn_name]}]
-                 (assoc refs 
-                        (attribute-ident db-config {:table_schem fktable_schem
-                                                         :table_name  fktable_name
-                                                         :column_name fkcolumn_name})
-                        {:attr.column/ref {:attr/ident (attribute-ident db-config {:table_schem pktable_schem
-                                                                                   :table_name  pktable_name
-                                                                                   :column_name pkcolumn_name})}})) {})
+                 (assoc refs
+                        (attribute-ident db-config fktable_schem fktable_name (foreign-key-column-to-attr-name db-config fkcolumn_name))
+                        {:attr/type :attr.type/ref
+                         :attr.ref/cardinality :attr.cardinality/one
+                         :attr.ref/left  (attribute-ident db-config fktable_schem fktable_name fkcolumn_name)
+                         :attr.ref/right (attribute-ident db-config pktable_schem pktable_name pkcolumn_name)})) {})
        (merge-with merge (:attributes hql-meta-data))
        (assoc hql-meta-data :attributes)))
 
