@@ -95,16 +95,31 @@
          (remove #(contains? schemas-to-ignore (:table_schem %)))
          (group-by (fn [{:keys [table_schem table_name]}]
                      [table_schem table_name]))
-         (map (fn [[[table_schem table_name] v]]
-            [(entity-ident db-config {:table_schem table_schem
-                                      :table_name  table_name})
-             {:entity.relation/primary-key {:primary-key/name  (:pk_name (first v))
-                                            :primary-key/attrs (set (map #(attribute-ident db-config %) v))}}]))
-         (into {})
+         (reduce (fn [pks [[table_schem table_name] v]]
+                   (assoc pks
+                          (entity-ident db-config {:table_schem table_schem
+                                                   :table_name  table_name})
+                          {:entity.relation/primary-key {:primary-key/name  (:pk_name (first v))
+                                                         :primary-key/attrs (set (map #(attribute-ident db-config %) v))}})) {})
          (merge-with merge (:entities heql-meta-data))
          (assoc heql-meta-data :entities))))
 
 (defmulti get-db-config identity)
+
+(defn- add-relationships-meta-data [db-spec jdbc-meta-data db-config hql-meta-data]
+  (->> (.getImportedKeys jdbc-meta-data nil "" nil)
+       (meta-data-result db-spec)
+       (reduce (fn [refs {:keys [fktable_schem fktable_name fkcolumn_name
+                                 pktable_schem pktable_name pkcolumn_name]}]
+                 (assoc refs 
+                        (attribute-ident db-config {:table_schem fktable_schem
+                                                         :table_name  fktable_name
+                                                         :column_name fkcolumn_name})
+                        {:attr.column/ref {:attr/ident (attribute-ident db-config {:table_schem pktable_schem
+                                                                                   :table_name  pktable_name
+                                                                                   :column_name pkcolumn_name})}})) {})
+       (merge-with merge (:attributes hql-meta-data))
+       (assoc hql-meta-data :attributes)))
 
 (defn fetch [db-spec]
   (with-open [conn (jdbc/get-connection db-spec)]
@@ -114,4 +129,5 @@
       (->> (entities-meta-data db-spec jdbc-meta-data db-config)
            (hash-map :entities)
            (add-attributes-meta-data db-spec jdbc-meta-data db-config)
-           (add-primary-keys-meta-data db-spec jdbc-meta-data db-config)))))
+           (add-primary-keys-meta-data db-spec jdbc-meta-data db-config)
+           (add-relationships-meta-data db-spec jdbc-meta-data db-config)))))
