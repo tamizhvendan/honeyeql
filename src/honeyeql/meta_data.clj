@@ -11,12 +11,15 @@
     "YES" true
     "NO" false))
 
-(defn- entity-ident [db-config {:keys [table_schem table_name]}]
-  (if (= (get-in db-config [:schema :default]) table_schem)
-    (keyword (inf/singular (inf/hyphenate table_name)))
-    (keyword (inf/hyphenate table_schem) (inf/hyphenate table_name))))
+(defn- entity-ident
+  ([db-config {:keys [table_schem table_name]}]
+   (entity-ident db-config table_schem table_name))
+  ([db-config table_schem table_name]
+   (if (= (get-in db-config [:schema :default]) table_schem)
+     (keyword (inf/singular (inf/hyphenate table_name)))
+     (keyword (inf/hyphenate table_schem) (inf/hyphenate table_name)))))
 
-(defn- attribute-ident 
+(defn- attribute-ident
   ([db-config {:keys [table_schem table_name column_name]}]
    (attribute-ident db-config table_schem table_name column_name))
   ([db-config table_schem table_name column_name]
@@ -29,7 +32,6 @@
   (if (= (get-in db-config [:schema :default]) table_schem)
     (keyword (str table_name "." column_name))
     (keyword (str table_schem "." table_name "." column_name))))
-
 
 (defn- to-entity-meta-data [db-config {:keys [remarks table_type table_schem table_name]
                                        :as   table-meta-data}]
@@ -110,22 +112,43 @@
 
 (defmulti get-db-config identity)
 
-(defn- foreign-key-column-to-attr-name [{:keys [foreign-key-suffix]} fkcolumn_name]
+(defn- foreign-key-column->attr-name [{:keys [foreign-key-suffix]} fkcolumn_name]
   (if foreign-key-suffix
     (clojure.string/replace fkcolumn_name (re-pattern (str foreign-key-suffix "$")) "")
     fkcolumn_name))
 
+(defn- derive-rel-attrs [db-config hql-meta-data
+                         {:keys [fktable_schem fktable_name fkcolumn_name
+                                 pktable_schem pktable_name pkcolumn_name]}]
+  (let [one-to-one-attr-name   (foreign-key-column->attr-name db-config fkcolumn_name)
+        one-to-one-attr-ident  (attribute-ident db-config fktable_schem fktable_name one-to-one-attr-name)
+        left-attr-ident        (attribute-ident db-config fktable_schem fktable_name fkcolumn_name)
+        left-entity-ident      (entity-ident db-config fktable_schem fktable_name)
+        right-attr-ident       (attribute-ident db-config pktable_schem pktable_name pkcolumn_name)
+        right-entity-ident     (entity-ident db-config pktable_schem pktable_name)
+        is-nullable            (get-in hql-meta-data [:attributes left-attr-ident :attr/nullable])
+        one-to-many-attr-ident (keyword (name right-entity-ident) (inf/plural (name left-entity-ident)))]
+    {one-to-one-attr-ident  {:attr/ident            one-to-one-attr-ident
+                             :attr/type             :attr.type/ref
+                             :attr/nullable         is-nullable
+                             :attr.ref/cardinality  :attr.ref.cardinality/one
+                             :attr.ref/type         right-entity-ident
+                             :attr.column.ref/left  left-attr-ident
+                             :attr.column.ref/right right-attr-ident}
+     one-to-many-attr-ident {:attr/ident            one-to-many-attr-ident
+                             :attr/type             :attr.type/ref
+                             :attr/nullable         false
+                             :attr.ref/cardinality  :attr.ref.cardinality/many
+                             :attr.ref/type         left-entity-ident
+                             :attr.column.ref/left  right-attr-ident
+                             :attr.column.ref/right left-attr-ident}}))
+
+#_(keyword (name :chakra.country) (inf/plural (name :chakra.address)))
+
 (defn- add-relationships-meta-data [db-spec jdbc-meta-data db-config hql-meta-data]
   (->> (.getImportedKeys jdbc-meta-data nil "" nil)
        (meta-data-result db-spec)
-       (reduce (fn [refs {:keys [fktable_schem fktable_name fkcolumn_name
-                                 pktable_schem pktable_name pkcolumn_name]}]
-                 (assoc refs
-                        (attribute-ident db-config fktable_schem fktable_name (foreign-key-column-to-attr-name db-config fkcolumn_name))
-                        {:attr/type :attr.type/ref
-                         :attr.ref/cardinality :attr.cardinality/one
-                         :attr.ref/left  (attribute-ident db-config fktable_schem fktable_name fkcolumn_name)
-                         :attr.ref/right (attribute-ident db-config pktable_schem pktable_name pkcolumn_name)})) {})
+       (reduce #(merge %1 (derive-rel-attrs db-config hql-meta-data %2)) {})
        (merge-with merge (:attributes hql-meta-data))
        (assoc hql-meta-data :attributes)))
 
