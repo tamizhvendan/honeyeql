@@ -37,16 +37,18 @@
                                        :as   table-meta-data}]
   (let [ident (entity-ident db-config table-meta-data)]
     [ident
-     {:entity/doc             remarks
-      :entity/ident           ident
-      :entity.relation/type   (case table_type
-                                "TABLE" :table
-                                "VIEW" :view)
-      :entity.relation/schema table_schem
-      :entity.relation/name   table_name
-      :entity/opt-attrs #{}
-      :entity/req-attrs #{}
-      :entity.relation/ident  (keyword (str table_schem "." table_name))}]))
+     {:entity/doc                   remarks
+      :entity/ident                 ident
+      :entity.relation/type         (case table_type
+                                      "TABLE" :table
+                                      "VIEW" :view)
+      :entity.relation/schema       table_schem
+      :entity.relation/name         table_name
+      :entity/opt-attrs             #{}
+      :entity/req-attrs             #{}
+      :entity.relation/primary-key  {}
+      :entity.relation/foreign-keys #{}
+      :entity.relation/ident        (keyword (str table_schem "." table_name))}]))
 
 (defn- entities-meta-data [db-spec jdbc-meta-data db-config]
   (->> (into-array String ["TABLE" "VIEW"])
@@ -69,9 +71,7 @@
   (let [attr-ident            (attribute-ident db-config column-meta-data)
         entity-ident          (entity-ident db-config column-meta-data)
         is-nullable           (coarce-boolean is_nullable)
-        entity-attr-qualifier (if is-nullable
-                                :entity/opt-attrs
-                                :entity/req-attrs)]
+        entity-attr-qualifier (if is-nullable :entity/opt-attrs :entity/req-attrs)]
     (update-in
      (assoc-in heql-meta-data [:attributes attr-ident]
                {:attr/ident                     attr-ident
@@ -107,8 +107,8 @@
                    (assoc pks
                           (entity-ident db-config {:table_schem table_schem
                                                    :table_name  table_name})
-                          {:entity.relation/primary-key {:primary-key/name  (:pk_name (first v))
-                                                         :primary-key/attrs (set (map #(attribute-ident db-config %) v))}})) {})
+                          {:entity.relation/primary-key {:entity.relation.primary-key/name  (:pk_name (first v))
+                                                         :entity.relation.primary-key/attrs (set (map #(attribute-ident db-config %) v))}})) {})
          (merge-with merge (:entities heql-meta-data))
          (assoc heql-meta-data :entities))))
 
@@ -120,7 +120,7 @@
     fkcolumn_name))
 
 (defn- add-fk-rel-meta-data [db-config hql-meta-data
-                             {:keys [fktable_schem fktable_name fkcolumn_name
+                             {:keys [fktable_schem fktable_name fkcolumn_name fk_name
                                      pktable_schem pktable_name pkcolumn_name]}]
   (let [one-to-one-attr-name   (foreign-key-column->attr-name db-config fkcolumn_name)
         one-to-one-attr-ident  (attribute-ident db-config fktable_schem fktable_name one-to-one-attr-name)
@@ -144,9 +144,14 @@
                                           :attr.ref/type         left-entity-ident
                                           :attr.column.ref/left  right-attr-ident
                                           :attr.column.ref/right left-attr-ident}}
-     :entities   {left-entity-ident  (update (get-in hql-meta-data [:entities left-entity-ident])
-                                             (if is-nullable :entity/opt-attrs :entity/req-attrs)
-                                             conj one-to-one-attr-ident)
+     :entities   {left-entity-ident  (update
+                                      (update (get-in hql-meta-data [:entities left-entity-ident])
+                                              (if is-nullable :entity/opt-attrs :entity/req-attrs)
+                                              conj one-to-one-attr-ident)
+                                      :entity.relation/foreign-keys
+                                      conj {:entity.relation.foreign-key/name      fk_name
+                                            :entity.relation.foreign-key/self-attr left-attr-ident
+                                            :entity.relation.foreign-key/ref-attr  right-attr-ident})
                   right-entity-ident (update (get-in hql-meta-data [:entities right-entity-ident])
                                              :entity/req-attrs
                                              conj one-to-many-attr-ident)}}))
