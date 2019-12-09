@@ -86,7 +86,8 @@
                 :attr.column/jdbc-type          data_type
                 :attr.column/db-type            type_name
                 :attr.column/ident              (column-ident db-config column-meta-data)
-                :attr.column/ordinal-position   ordinal_position})
+                :attr.column/ordinal-position   ordinal_position
+                :attr.entity/ident              entity-ident})
      [:entities entity-ident entity-attr-qualifier]
      conj attr-ident)))
 
@@ -161,6 +162,48 @@
        (meta-data-result db-spec)
        (reduce #(merge-with merge %1 (add-fk-rel-meta-data db-config %1 %2)) hql-meta-data)))
 
+(defn- add-many-to-many-meta-data [hql-meta-data fks-meta-data]
+  (let [[{:entity.relation.foreign-key/keys [ref-attr self-attr]} & xs] fks-meta-data]
+    (if (seq xs)
+      ; (do
+      ;   (prn ref-attr self-attr "----")
+      ;   (run! #(prn (:entity.relation.foreign-key/ref-attr %) (:entity.relation.foreign-key/self-attr %)) xs)
+      ;   (add-many-to-many-meta-data hql-meta-data xs))
+      (add-many-to-many-meta-data
+       (reduce (fn [h-md fk-md]
+                 (let [r-ref-attr              (:entity.relation.foreign-key/ref-attr fk-md)
+                       r-self-attr             (:entity.relation.foreign-key/self-attr fk-md)
+                       left-entity-ident            (get-in h-md [:attributes ref-attr :attr.entity/ident])
+                       right-entity-ident           (get-in h-md [:attributes r-ref-attr :attr.entity/ident])
+                       many-to-many-attr-ident (keyword (name left-entity-ident) (inf/plural (name right-entity-ident))) 
+                       many-to-many-rev-attr-ident (keyword (name right-entity-ident) (inf/plural (name left-entity-ident)))]
+                   (when-not (or (get-in h-md [:attributes many-to-many-attr-ident])
+                                 (get-in h-md [:attributes many-to-many-rev-attr-ident]))
+                      (prn many-to-many-attr-ident))
+                   h-md
+                   #_(if (get-in h-md [:attributes many-to-many-attr-ident])
+                     h-md
+                     (update h-md :attributes
+                             {many-to-many-attr-ident {:attr/ident                        many-to-many-attr-ident
+                                                       :attr/type                         :attr.type/ref
+                                                       :attr/nullable                     false
+                                                       :attr.ref/cardinality              :attr.ref.cardinality/many
+                                                       :attr.ref/type                     left-entity-ident
+                                                       :attr.column.ref/left              ref-attr
+                                                       :attr.column.ref.associative/left  self-attr
+                                                       :attr.column.ref.associative/right r-self-attr
+                                                       :attr.column.ref/right             r-ref-attr}})))) hql-meta-data xs)
+       xs)
+      hql-meta-data)))
+
+(defn- add-many-to-many-rels-meta-data [hql-meta-data]
+  (reduce (fn [hql-md [_ e-md]]
+            (if-let [fks-md (seq (:entity.relation/foreign-keys e-md))]
+              (add-many-to-many-meta-data hql-md fks-md)
+              hql-md))
+          hql-meta-data
+          (:entities hql-meta-data)))
+
 (defn fetch [db-spec]
   (with-open [conn (jdbc/get-connection db-spec)]
     (let [jdbc-meta-data  (.getMetaData conn)
@@ -170,4 +213,5 @@
            (hash-map :entities)
            (add-attributes-meta-data db-spec jdbc-meta-data db-config)
            (add-primary-keys-meta-data db-spec jdbc-meta-data db-config)
-           (add-relationships-meta-data db-spec jdbc-meta-data db-config)))))
+           (add-relationships-meta-data db-spec jdbc-meta-data db-config)
+           add-many-to-many-rels-meta-data))))
