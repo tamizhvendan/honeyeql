@@ -136,6 +136,8 @@
                                           :attr/nullable         is-nullable
                                           :attr.ref/cardinality  :attr.ref.cardinality/one
                                           :attr.ref/type         right-entity-ident
+                                          :attr.entity/ident     left-entity-ident
+                                          :attr.column.ref/type  :attr.column.ref.type/one-to-one
                                           :attr.column.ref/left  left-attr-ident
                                           :attr.column.ref/right right-attr-ident}
                   one-to-many-attr-ident {:attr/ident            one-to-many-attr-ident
@@ -143,6 +145,8 @@
                                           :attr/nullable         false
                                           :attr.ref/cardinality  :attr.ref.cardinality/many
                                           :attr.ref/type         left-entity-ident
+                                          :attr.entity/ident     right-entity-ident
+                                          :attr.column.ref/type  :attr.column.ref.type/one-to-many
                                           :attr.column.ref/left  right-attr-ident
                                           :attr.column.ref/right left-attr-ident}}
      :entities   {left-entity-ident  (update
@@ -162,45 +166,64 @@
        (meta-data-result db-spec)
        (reduce #(merge-with merge %1 (add-fk-rel-meta-data db-config %1 %2)) hql-meta-data)))
 
-(defn- add-many-to-many-meta-data [hql-meta-data fks-meta-data]
-  (let [[{:entity.relation.foreign-key/keys [ref-attr self-attr]} & xs] fks-meta-data]
-    (if (seq xs)
-      ; (do
-      ;   (prn ref-attr self-attr "----")
-      ;   (run! #(prn (:entity.relation.foreign-key/ref-attr %) (:entity.relation.foreign-key/self-attr %)) xs)
-      ;   (add-many-to-many-meta-data hql-meta-data xs))
-      (add-many-to-many-meta-data
-       (reduce (fn [h-md fk-md]
-                 (let [r-ref-attr              (:entity.relation.foreign-key/ref-attr fk-md)
-                       r-self-attr             (:entity.relation.foreign-key/self-attr fk-md)
-                       left-entity-ident            (get-in h-md [:attributes ref-attr :attr.entity/ident])
-                       right-entity-ident           (get-in h-md [:attributes r-ref-attr :attr.entity/ident])
-                       many-to-many-attr-ident (keyword (name left-entity-ident) (inf/plural (name right-entity-ident))) 
-                       many-to-many-rev-attr-ident (keyword (name right-entity-ident) (inf/plural (name left-entity-ident)))]
-                   (when-not (or (get-in h-md [:attributes many-to-many-attr-ident])
-                                 (get-in h-md [:attributes many-to-many-rev-attr-ident]))
-                      (prn many-to-many-attr-ident))
-                   h-md
-                   #_(if (get-in h-md [:attributes many-to-many-attr-ident])
-                     h-md
-                     (update h-md :attributes
-                             {many-to-many-attr-ident {:attr/ident                        many-to-many-attr-ident
-                                                       :attr/type                         :attr.type/ref
-                                                       :attr/nullable                     false
-                                                       :attr.ref/cardinality              :attr.ref.cardinality/many
-                                                       :attr.ref/type                     left-entity-ident
-                                                       :attr.column.ref/left              ref-attr
-                                                       :attr.column.ref.associative/left  self-attr
-                                                       :attr.column.ref.associative/right r-self-attr
-                                                       :attr.column.ref/right             r-ref-attr}})))) hql-meta-data xs)
-       xs)
-      hql-meta-data)))
+(defn- associative-entity? [{:entity.relation/keys [primary-key foreign-keys]}]
+  (let [pk-attrs (:entity.relation.primary-key/attrs primary-key)
+        fk-attrs (set (map :entity.relation.foreign-key/self-attr foreign-keys))]
+    (and (= 2 (count pk-attrs))
+         (clojure.set/subset? pk-attrs fk-attrs))))
+
+(defn- associative-foreign-keys [{:entity.relation/keys [primary-key foreign-keys]}]
+  (filter #(contains? (:entity.relation.primary-key/attrs primary-key)
+                      (:entity.relation.foreign-key/self-attr %))
+          foreign-keys))
+
+(defn- add-many-to-many-relation-data [h-md entity-meta-data]
+  (let [[l-fk-md r-fk-md]                                        (associative-foreign-keys entity-meta-data)
+        {:entity.relation.foreign-key/keys [ref-attr self-attr]} l-fk-md
+        entity-ident                                             (:entity/ident entity-meta-data)
+        r-ref-attr                                               (:entity.relation.foreign-key/ref-attr r-fk-md)
+        r-self-attr                                              (:entity.relation.foreign-key/self-attr r-fk-md)
+        left-entity-ident                                        (get-in h-md [:attributes ref-attr :attr.entity/ident])
+        right-entity-ident                                       (get-in h-md [:attributes r-ref-attr :attr.entity/ident])
+        many-to-many-attr-ident                                  (keyword (name left-entity-ident) (inf/plural (name right-entity-ident)))
+        many-to-many-rev-attr-ident                              (keyword (name right-entity-ident) (inf/plural (name left-entity-ident)))]
+    (-> (update-in h-md [:entities entity-ident] assoc :entity/is-associative true)
+        (assoc-in [:attributes many-to-many-attr-ident]
+                  {:attr/ident                        many-to-many-attr-ident
+                   :attr/type                         :attr.type/ref
+                   :attr/nullable                     false
+                   :attr.ref/cardinality              :attr.ref.cardinality/many
+                   :attr.ref/type                     right-entity-ident
+                   :attr.entity/ident                 left-entity-ident
+                   :attr.column.ref/type              :attr.column.ref.type/many-to-many
+                   :attr.column.ref/left              ref-attr
+                   :attr.column.ref.associative/left  self-attr
+                   :attr.column.ref.associative/right r-self-attr
+                   :attr.column.ref/right             r-ref-attr})
+        (assoc-in [:attributes many-to-many-rev-attr-ident]
+                  {:attr/ident                        many-to-many-rev-attr-ident
+                   :attr/type                         :attr.type/ref
+                   :attr/nullable                     false
+                   :attr.ref/cardinality              :attr.ref.cardinality/many
+                   :attr.ref/type                     left-entity-ident
+                   :attr.entity/ident                 right-entity-ident
+                   :attr.column.ref/type              :attr.column.ref.type/many-to-many
+                   :attr.column.ref/left              r-ref-attr
+                   :attr.column.ref.associative/left  r-self-attr
+                   :attr.column.ref.associative/right self-attr
+                   :attr.column.ref/right             ref-attr})
+        (update-in [:entities left-entity-ident :entity/req-attrs]
+                   conj many-to-many-attr-ident)
+        (update-in [:entities right-entity-ident :entity/req-attrs]
+                   conj many-to-many-rev-attr-ident))))
 
 (defn- add-many-to-many-rels-meta-data [hql-meta-data]
-  (reduce (fn [hql-md [_ e-md]]
-            (if-let [fks-md (seq (:entity.relation/foreign-keys e-md))]
-              (add-many-to-many-meta-data hql-md fks-md)
-              hql-md))
+  (reduce (fn [h-md [entity-ident entity-meta-data]]
+            (if (associative-entity? entity-meta-data)
+              (add-many-to-many-relation-data
+               (update-in h-md [:entities entity-ident] assoc :entity/is-associative true)
+               entity-meta-data)
+              h-md))
           hql-meta-data
           (:entities hql-meta-data)))
 
