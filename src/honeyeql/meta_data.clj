@@ -238,3 +238,21 @@
            (add-primary-keys-meta-data db-spec jdbc-meta-data db-config)
            (add-relationships-meta-data db-spec jdbc-meta-data db-config)
            add-many-to-many-rels-meta-data))))
+
+;; Query Functions
+
+(defn- attr-meta-data [heql-meta-data attr-ident]
+  (if-let [attr-meta-data (get-in heql-meta-data [:attributes attr-ident])]
+    attr-meta-data
+    (throw (Exception. (str "attribute " attr-ident " not found")))))
+
+(defn entity-relation-ident [heql-meta-data attr-ident]
+  (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
+    (get-in heql-meta-data [:entities (:attr.entity/ident attr-md) :entity.relation/ident])))
+
+(defn attr-column-ident [heql-meta-data attr-ident]
+  (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
+    (get-in heql-meta-data [:attributes (:attr.entity/ident attr-md) :attr.column/ident])))
+
+(defn coarce-attr-value [heql-meta-data attr-ident value]
+  value)
