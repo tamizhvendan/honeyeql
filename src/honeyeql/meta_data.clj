@@ -19,6 +19,12 @@
      (keyword (inf/singular (inf/hyphenate table_name)))
      (keyword (inf/hyphenate table_schem) (inf/hyphenate table_name)))))
 
+(defn- relation-ident
+  ([db-config {:keys [table_schem table_name]}]
+   (if (= (get-in db-config [:schema :default]) table_schem)
+     (keyword table_name)
+     (keyword (inf/hyphenate table_schem) (inf/hyphenate table_name)))))
+
 (defn- attribute-ident
   ([db-config {:keys [table_schem table_name column_name]}]
    (attribute-ident db-config table_schem table_name column_name))
@@ -48,7 +54,7 @@
       :entity/req-attrs             #{}
       :entity.relation/primary-key  {}
       :entity.relation/foreign-keys #{}
-      :entity.relation/ident        (keyword (str table_schem "." table_name))}]))
+      :entity.relation/ident        (relation-ident db-config table-meta-data)}]))
 
 (defn- entities-meta-data [db-spec jdbc-meta-data db-config]
   (->> (into-array String ["TABLE" "VIEW"])
@@ -232,8 +238,8 @@
     (let [jdbc-meta-data  (.getMetaData conn)
           db-product-name (.getDatabaseProductName jdbc-meta-data)
           db-config       (assoc (get-db-config db-product-name) :db-product-name db-product-name)]
-      (->> (entities-meta-data db-spec jdbc-meta-data db-config)
-           (hash-map :entities)
+      (->> {:db-config db-config
+            :entities (entities-meta-data db-spec jdbc-meta-data db-config)}
            (add-attributes-meta-data db-spec jdbc-meta-data db-config)
            (add-primary-keys-meta-data db-spec jdbc-meta-data db-config)
            (add-relationships-meta-data db-spec jdbc-meta-data db-config)
@@ -252,7 +258,7 @@
 
 (defn attr-column-ident [heql-meta-data attr-ident]
   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
-    (get-in heql-meta-data [:attributes (:attr.entity/ident attr-md) :attr.column/ident])))
+    (get-in heql-meta-data [:attributes (:attr/ident attr-md) :attr.column/ident])))
 
 (defn coarce-attr-value [heql-meta-data attr-ident value]
   value)
