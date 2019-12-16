@@ -247,7 +247,10 @@
 
 ;; Query Functions
 
-(defn- attr-meta-data [heql-meta-data attr-ident]
+(defn entities [heql-meta-data]
+  (:entities heql-meta-data))
+
+(defn attr-meta-data [heql-meta-data attr-ident]
   (if-let [attr-meta-data (get-in heql-meta-data [:attributes attr-ident])]
     attr-meta-data
     (throw (Exception. (str "attribute " attr-ident " not found")))))
