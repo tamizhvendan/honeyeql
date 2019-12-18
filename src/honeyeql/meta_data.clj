@@ -52,7 +52,6 @@
       :entity.relation/name         table_name
       :entity/opt-attrs             #{}
       :entity/req-attrs             #{}
-      :entity.relation/primary-key  {}
       :entity.relation/foreign-keys #{}
       :entity.relation/ident        (relation-ident db-config table-meta-data)}]))
 
@@ -237,18 +236,20 @@
   (with-open [conn (jdbc/get-connection db-spec)]
     (let [jdbc-meta-data  (.getMetaData conn)
           db-product-name (.getDatabaseProductName jdbc-meta-data)
-          db-config       (assoc (get-db-config db-product-name) :db-product-name db-product-name)]
-      (->> {:db-config db-config
-            :entities (entities-meta-data db-spec jdbc-meta-data db-config)}
-           (add-attributes-meta-data db-spec jdbc-meta-data db-config)
-           (add-primary-keys-meta-data db-spec jdbc-meta-data db-config)
-           (add-relationships-meta-data db-spec jdbc-meta-data db-config)
-           add-many-to-many-rels-meta-data))))
+          db-config       (assoc (get-db-config db-product-name) :db-product-name db-product-name)
+          heql-meta-data  (->> {:db-config db-config
+                                :entities  (entities-meta-data db-spec jdbc-meta-data db-config)}
+                               (add-attributes-meta-data db-spec jdbc-meta-data db-config)
+                               (add-primary-keys-meta-data db-spec jdbc-meta-data db-config)
+                               (add-relationships-meta-data db-spec jdbc-meta-data db-config)
+                               add-many-to-many-rels-meta-data)]
+      (tap> {:heql-meta-data heql-meta-data})
+      heql-meta-data)))
 
 ;; Query Functions
 
 (defn entities [heql-meta-data]
-  (:entities heql-meta-data))
+  (vals (:entities heql-meta-data)))
 
 (defn attr-meta-data [heql-meta-data attr-ident]
   (if-let [attr-meta-data (get-in heql-meta-data [:attributes attr-ident])]
