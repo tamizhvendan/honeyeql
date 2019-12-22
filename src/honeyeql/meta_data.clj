@@ -125,6 +125,11 @@
     (clojure.string/replace fkcolumn_name (re-pattern (str foreign-key-suffix "$")) "")
     fkcolumn_name))
 
+(defn- one-to-many-attr-ident [left-entity-ident right-entity-ident]
+  (if-let [e-ns (namespace left-entity-ident)]
+    (keyword (str e-ns "." (name right-entity-ident)) (inf/plural (name left-entity-ident)))
+    (keyword (name right-entity-ident) (inf/plural (name left-entity-ident)))))
+
 (defn- add-fk-rel-meta-data [db-config hql-meta-data
                              {:keys [fktable_schem fktable_name fkcolumn_name fk_name
                                      pktable_schem pktable_name pkcolumn_name]}]
@@ -135,36 +140,35 @@
         right-attr-ident       (attribute-ident db-config pktable_schem pktable_name pkcolumn_name)
         right-entity-ident     (entity-ident db-config pktable_schem pktable_name)
         is-nullable            (get-in hql-meta-data [:attributes left-attr-ident :attr/nullable])
-        one-to-many-attr-ident (keyword (name right-entity-ident) (inf/plural (name left-entity-ident)))]
-    {:attributes {one-to-one-attr-ident  {:attr/ident            one-to-one-attr-ident
-                                          :attr/type             :attr.type/ref
-                                          :attr/nullable         is-nullable
-                                          :attr.ref/cardinality  :attr.ref.cardinality/one
-                                          :attr.ref/type         right-entity-ident
-                                          :attr.entity/ident     left-entity-ident
-                                          :attr.column.ref/type  :attr.column.ref.type/one-to-one
-                                          :attr.column.ref/left  left-attr-ident
-                                          :attr.column.ref/right right-attr-ident}
-                  one-to-many-attr-ident {:attr/ident            one-to-many-attr-ident
-                                          :attr/type             :attr.type/ref
-                                          :attr/nullable         false
-                                          :attr.ref/cardinality  :attr.ref.cardinality/many
-                                          :attr.ref/type         left-entity-ident
-                                          :attr.entity/ident     right-entity-ident
-                                          :attr.column.ref/type  :attr.column.ref.type/one-to-many
-                                          :attr.column.ref/left  right-attr-ident
-                                          :attr.column.ref/right left-attr-ident}}
-     :entities   {left-entity-ident  (update
-                                      (update (get-in hql-meta-data [:entities left-entity-ident])
-                                              (if is-nullable :entity/opt-attrs :entity/req-attrs)
-                                              conj one-to-one-attr-ident)
-                                      :entity.relation/foreign-keys
-                                      conj {:entity.relation.foreign-key/name      fk_name
-                                            :entity.relation.foreign-key/self-attr left-attr-ident
-                                            :entity.relation.foreign-key/ref-attr  right-attr-ident})
-                  right-entity-ident (update (get-in hql-meta-data [:entities right-entity-ident])
-                                             :entity/req-attrs
-                                             conj one-to-many-attr-ident)}}))
+        one-to-many-attr-ident (one-to-many-attr-ident right-entity-ident left-entity-ident)]
+    (-> (assoc-in hql-meta-data [:attributes one-to-one-attr-ident]
+                  {:attr/ident            one-to-one-attr-ident
+                   :attr/type             :attr.type/ref
+                   :attr/nullable         is-nullable
+                   :attr.ref/cardinality  :attr.ref.cardinality/one
+                   :attr.ref/type         right-entity-ident
+                   :attr.entity/ident     left-entity-ident
+                   :attr.column.ref/type  :attr.column.ref.type/one-to-one
+                   :attr.column.ref/left  left-attr-ident
+                   :attr.column.ref/right right-attr-ident})
+        (assoc-in [:attributes one-to-many-attr-ident]
+                  {:attr/ident            one-to-many-attr-ident
+                   :attr/type             :attr.type/ref
+                   :attr/nullable         false
+                   :attr.ref/cardinality  :attr.ref.cardinality/many
+                   :attr.ref/type         left-entity-ident
+                   :attr.entity/ident     right-entity-ident
+                   :attr.column.ref/type  :attr.column.ref.type/one-to-many
+                   :attr.column.ref/left  right-attr-ident
+                   :attr.column.ref/right left-attr-ident})
+        (update-in [:entities left-entity-ident (if is-nullable :entity/opt-attrs :entity/req-attrs)]
+                   conj one-to-one-attr-ident)
+        (update-in [:entities left-entity-ident :entity.relation/foreign-keys]
+                   conj {:entity.relation.foreign-key/name      fk_name
+                         :entity.relation.foreign-key/self-attr left-attr-ident
+                         :entity.relation.foreign-key/ref-attr  right-attr-ident})
+        (update-in [:entities right-entity-ident :entity/req-attrs]
+                   conj one-to-many-attr-ident))))
 
 (defn- add-relationships-meta-data [db-spec jdbc-meta-data db-config hql-meta-data]
   (->> (.getImportedKeys jdbc-meta-data nil "" nil)
@@ -190,8 +194,8 @@
         r-self-attr                                              (:entity.relation.foreign-key/self-attr r-fk-md)
         left-entity-ident                                        (get-in h-md [:attributes ref-attr :attr.entity/ident])
         right-entity-ident                                       (get-in h-md [:attributes r-ref-attr :attr.entity/ident])
-        many-to-many-attr-ident                                  (keyword (name left-entity-ident) (inf/plural (name right-entity-ident)))
-        many-to-many-rev-attr-ident                              (keyword (name right-entity-ident) (inf/plural (name left-entity-ident)))]
+        many-to-many-attr-ident                                  (one-to-many-attr-ident left-entity-ident right-entity-ident)
+        many-to-many-rev-attr-ident                              (one-to-many-attr-ident right-entity-ident left-entity-ident)]
     (-> (update-in h-md [:entities entity-ident] assoc :entity/is-associative true)
         (assoc-in [:attributes many-to-many-attr-ident]
                   {:attr/ident                        many-to-many-attr-ident
