@@ -1,7 +1,7 @@
 (ns honeyeql.core
   (:require [edn-query-language.core :as eql]
             [honeyeql.meta-data :as heql-md]
-            [cheshire.core :as json]
+            [clojure.data.json :as json]
             [inflections.core :as inf]))
 
 (defn- find-join-type [eql-node]
@@ -22,12 +22,11 @@
     :unqualified-camel-case (inf/camel-case (name attr-ident) :lower)))
 
 (defn- select-clause [heql-context eql-nodes]
-  (let [{:keys [heql-meta-data heql-config]} heql-context
-        {:keys [attribute]}                  heql-config
-        attr-idents                          (eql-nodes->attr-idents eql-nodes)
-        attr-column-idents                   (map (fn [attr-ident]
-                                                    [(heql-md/attr-column-ident heql-meta-data attr-ident)
-                                                     (column-alias (attribute :return-as) attr-ident)]) attr-idents)]
+  (let [{:keys [heql-meta-data]} heql-context
+        attr-idents              (eql-nodes->attr-idents eql-nodes)
+        attr-column-idents       (map (fn [attr-ident]
+                                        [(heql-md/attr-column-ident heql-meta-data attr-ident)
+                                         (column-alias :qualified-kebab-case attr-ident)]) attr-idents)]
     (vec attr-column-idents)))
 
 (defmulti eql->hsql (fn [heql-context eql-node] (find-join-type eql-node)))
@@ -64,18 +63,38 @@
    (reset! global-heql-meta-data (heql-md/fetch db-spec))
    (swap! global-heql-config merge heql-config)))
 
+(defn- json-key-fn [attribute-return-as key]
+  (if (= :qualified-kebab-case attribute-return-as)
+    (keyword key)
+    [(keyword key) (column-alias attribute-return-as (keyword key))]))
+
+(defn- json-value-fn [heql-meta-data attribute-return-as json-key json-value]
+  (if (= :qualified-kebab-case attribute-return-as)
+    (heql-md/coarce-attr-value heql-meta-data json-key json-value)
+    (heql-md/coarce-attr-value heql-meta-data (first json-key) json-value)))
+
+(defn- transform-keys [attribute-return-as return-value]
+  (if (= :qualified-kebab-case attribute-return-as)
+    return-value
+    (inf/transform-keys return-value (comp keyword second))))
+
 (defn query
   ([eql-query]
    (query @global-db-spec @global-heql-config @global-heql-meta-data eql-query))
   ([db-spec heql-config heql-meta-data eql-query]
-   (let [heql-context {:heql-config    (merge default-heql-config heql-config)
-                       :heql-meta-data heql-meta-data}
-         hsql         (eql->hsql heql-context (eql/query->ast eql-query))]
+   (let [heql-context   {:heql-config    (merge default-heql-config heql-config)
+                         :heql-meta-data heql-meta-data}
+         hsql           (eql->hsql heql-context (eql/query->ast eql-query))
+         attr-return-as (get-in heql-config [:attribute :return-as])]
      (tap> {:hsql hsql})
-     (json/parse-string (execute-query db-spec heql-meta-data hsql) true))))
+     (map  #(transform-keys attr-return-as %)
+           (json/read-str (execute-query db-spec heql-meta-data hsql)
+                          :bigdec true
+                          :key-fn #(json-key-fn attr-return-as %)
+                          :value-fn #(json-value-fn heql-meta-data attr-return-as %1 %2))))))
 
 (defn query-single
   ([eql-query]
    (first (query eql-query)))
   ([db-spec heql-config heql-meta-data eql-query]
-   (first (query db-spec heql-meta-data heql-config eql-query))))
+   (first (query db-spec heql-config heql-meta-data eql-query))))
