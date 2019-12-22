@@ -21,31 +21,28 @@
     :qualified-kebab-case (str (namespace attr-ident) "/" (name attr-ident))
     :unqualified-camel-case (inf/camel-case (name attr-ident) :lower)))
 
-(defn- select-clause [heql-context eql-nodes]
-  (let [{:keys [heql-meta-data]} heql-context
-        attr-idents              (eql-nodes->attr-idents eql-nodes)
+(defn- select-clause [heql-meta-data eql-nodes]
+  (let [attr-idents              (eql-nodes->attr-idents eql-nodes)
         attr-column-idents       (map (fn [attr-ident]
                                         [(heql-md/attr-column-ident heql-meta-data attr-ident)
                                          (column-alias :qualified-kebab-case attr-ident)]) attr-idents)]
     (vec attr-column-idents)))
 
-(defmulti eql->hsql (fn [heql-context eql-node] (find-join-type eql-node)))
+(defmulti eql->hsql (fn [heql-meta-data eql-node] (find-join-type eql-node)))
 
-(defmethod eql->hsql :root [heql-context eql-node]
-  (eql->hsql heql-context (first (:children eql-node))))
+(defmethod eql->hsql :root [heql-meta-data eql-node]
+  (eql->hsql heql-meta-data (first (:children eql-node))))
 
-(defn- eql-ident-key->hsql-predicate [heql-context [attr-ident value]]
-  (let [{:keys [heql-meta-data]} heql-context
-        attr-col-ident           (heql-md/attr-column-ident heql-meta-data attr-ident)
+(defn- eql-ident-key->hsql-predicate [heql-meta-data [attr-ident value]]
+  (let [attr-col-ident           (heql-md/attr-column-ident heql-meta-data attr-ident)
         attr-value               (heql-md/coarce-attr-value heql-meta-data attr-ident value)]
     [:= attr-col-ident attr-value]))
 
-(defmethod eql->hsql :ident-join [heql-context eql-node]
-  (let [{:keys [heql-meta-data]} heql-context
-        {:keys [key children]}   eql-node]
+(defmethod eql->hsql :ident-join [heql-meta-data eql-node]
+  (let [{:keys [key children]}   eql-node]
     {:from   [(heql-md/entity-relation-ident heql-meta-data (first key))]
-     :where  (eql-ident-key->hsql-predicate heql-context key)
-     :select (select-clause heql-context children)}))
+     :where  (eql-ident-key->hsql-predicate heql-meta-data key)
+     :select (select-clause heql-meta-data children)}))
 
 (defmulti execute-query (fn [db-spec heql-meta-data hsql]
                           (get-in heql-meta-data [:db-config :db-product-name])))
@@ -82,9 +79,7 @@
   ([eql-query]
    (query @global-db-spec @global-heql-config @global-heql-meta-data eql-query))
   ([db-spec heql-config heql-meta-data eql-query]
-   (let [heql-context   {:heql-config    (merge default-heql-config heql-config)
-                         :heql-meta-data heql-meta-data}
-         hsql           (eql->hsql heql-context (eql/query->ast eql-query))
+   (let [hsql           (eql->hsql heql-meta-data (eql/query->ast eql-query))
          attr-return-as (get-in heql-config [:attribute :return-as])]
      (tap> {:hsql hsql})
      (map  #(transform-keys attr-return-as %)
