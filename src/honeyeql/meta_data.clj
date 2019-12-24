@@ -62,8 +62,11 @@
        (map #(to-entity-meta-data db-config %))
        (into {})))
 
+(defn- schemas-to-ignore [db-config]
+  (get-in db-config [:schema :ignore]))
+
 (defn- filter-columns [db-config columns]
-  (remove #(contains? (get-in db-config [:schema :ignore]) (:table_schem %)) columns))
+  (remove #(contains? (schemas-to-ignore db-config) (:table_schem %)) columns))
 
 (defmulti derive-attr-type
   (fn [db-config _]
@@ -103,20 +106,19 @@
        (reduce (partial add-attribute-meta-data db-config) heql-meta-data)))
 
 (defn- add-primary-keys-meta-data [db-spec jdbc-meta-data db-config heql-meta-data]
-  (let [schemas-to-ignore (get-in db-config [:schema :ignore])]
-    (->> (.getPrimaryKeys jdbc-meta-data nil "" nil)
-         (meta-data-result db-spec)
-         (remove #(contains? schemas-to-ignore (:table_schem %)))
-         (group-by (fn [{:keys [table_schem table_name]}]
-                     [table_schem table_name]))
-         (reduce (fn [pks [[table_schem table_name] v]]
-                   (assoc pks
-                          (entity-ident db-config {:table_schem table_schem
-                                                   :table_name  table_name})
-                          {:entity.relation/primary-key {:entity.relation.primary-key/name  (:pk_name (first v))
-                                                         :entity.relation.primary-key/attrs (set (map #(attribute-ident db-config %) v))}})) {})
-         (merge-with merge (:entities heql-meta-data))
-         (assoc heql-meta-data :entities))))
+  (->> (.getPrimaryKeys jdbc-meta-data nil "" nil)
+       (meta-data-result db-spec)
+       (remove #(contains? (schemas-to-ignore db-config) (:table_schem %)))
+       (group-by (fn [{:keys [table_schem table_name]}]
+                   [table_schem table_name]))
+       (reduce (fn [pks [[table_schem table_name] v]]
+                 (assoc pks
+                        (entity-ident db-config {:table_schem table_schem
+                                                 :table_name  table_name})
+                        {:entity.relation/primary-key {:entity.relation.primary-key/name  (:pk_name (first v))
+                                                       :entity.relation.primary-key/attrs (set (map #(attribute-ident db-config %) v))}})) {})
+       (merge-with merge (:entities heql-meta-data))
+       (assoc heql-meta-data :entities)))
 
 (defmulti get-db-config identity)
 
@@ -236,6 +238,22 @@
           hql-meta-data
           (:entities hql-meta-data)))
 
+(defn- namespace-ident [schema]
+  (keyword (inf/hyphenate schema)))
+
+(defn- add-namespaces [db-config hql-meta-data]
+  (let [default-schema (get-in db-config [:schema :default])]
+    (->> (:entities hql-meta-data)
+        (map (fn [[_ v]]
+               (:entity.relation/schema v)))
+        distinct
+        (remove #(= default-schema %))
+        (reduce (fn [sm s]
+                  (assoc sm (namespace-ident s)
+                         {:namespace/ident       (namespace-ident s)
+                          :namespace.schema/name s})) {})
+        (assoc hql-meta-data :namespaces))))
+
 (defn fetch [db-spec]
   (with-open [conn (jdbc/get-connection db-spec)]
     (let [jdbc-meta-data  (.getMetaData conn)
@@ -246,11 +264,15 @@
                                (add-attributes-meta-data db-spec jdbc-meta-data db-config)
                                (add-primary-keys-meta-data db-spec jdbc-meta-data db-config)
                                (add-relationships-meta-data db-spec jdbc-meta-data db-config)
-                               add-many-to-many-rels-meta-data)]
+                               add-many-to-many-rels-meta-data
+                               (add-namespaces db-config))]
       (tap> {:heql-meta-data heql-meta-data})
       heql-meta-data)))
 
 ;; Query Functions
+
+(defn namespace-idents [heql-meta-data]
+  (map key (:namespaces heql-meta-data)))
 
 (defn entities [heql-meta-data]
   (vals (:entities heql-meta-data)))
