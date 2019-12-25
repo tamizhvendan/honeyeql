@@ -2,7 +2,8 @@
   (:require [edn-query-language.core :as eql]
             [honeyeql.meta-data :as heql-md]
             [clojure.data.json :as json]
-            [inflections.core :as inf]))
+            [inflections.core :as inf]
+            [honeyeql.debug :refer [trace>>]]))
 
 (defn- find-join-type [eql-node]
   (let [{node-type :type
@@ -22,10 +23,10 @@
     :unqualified-camel-case (inf/camel-case (name attr-ident) :lower)))
 
 (defn- select-clause [heql-meta-data eql-nodes]
-  (let [attr-idents              (eql-nodes->attr-idents eql-nodes)
-        attr-column-idents       (map (fn [attr-ident]
-                                        [(heql-md/attr-column-ident heql-meta-data attr-ident)
-                                         (column-alias :qualified-kebab-case attr-ident)]) attr-idents)]
+  (let [attr-idents        (eql-nodes->attr-idents eql-nodes)
+        attr-column-idents (map (fn [attr-ident]
+                                  [(heql-md/attr-column-ident heql-meta-data attr-ident)
+                                   (column-alias :qualified-kebab-case attr-ident)]) attr-idents)]
     (vec attr-column-idents)))
 
 (defmulti eql->hsql (fn [heql-meta-data eql-node] (find-join-type eql-node)))
@@ -34,8 +35,8 @@
   (eql->hsql heql-meta-data (first (:children eql-node))))
 
 (defn- eql-ident->hsql-predicate [heql-meta-data [attr-ident value]]
-  (let [attr-col-ident           (heql-md/attr-column-ident heql-meta-data attr-ident)
-        attr-value               (heql-md/coarce-attr-value heql-meta-data attr-ident value)]
+  (let [attr-col-ident (heql-md/attr-column-ident heql-meta-data attr-ident)
+        attr-value     (heql-md/coarce-attr-value heql-meta-data attr-ident value)]
     [:= attr-col-ident attr-value]))
 
 (defn- eql-ident-key->hsql-predicate [heql-meta-data eql-ident-key]
@@ -45,7 +46,7 @@
       (first predicates))))
 
 (defmethod eql->hsql :ident-join [heql-meta-data eql-node]
-  (let [{:keys [key children]}   eql-node]
+  (let [{:keys [key children]} eql-node]
     {:from   [(heql-md/entity-relation-ident heql-meta-data (first key))]
      :where  (eql-ident-key->hsql-predicate heql-meta-data key)
      :select (select-clause heql-meta-data children)}))
@@ -85,11 +86,13 @@
   ([eql-query]
    (query @global-db-spec @global-heql-config @global-heql-meta-data eql-query))
   ([db-spec heql-config heql-meta-data eql-query]
-   (let [hsql           (eql->hsql heql-meta-data (eql/query->ast eql-query))
-         attr-return-as (get-in heql-config [:attribute :return-as])]
-     (tap> {:hsql hsql})
+   (let [attr-return-as (get-in heql-config [:attribute :return-as])]
      (map  #(transform-keys attr-return-as %)
-           (json/read-str (execute-query db-spec heql-meta-data hsql)
+           (json/read-str (->> (eql/query->ast eql-query)
+                               (trace>> :eql-ast)
+                               (eql->hsql heql-meta-data)
+                               (trace>> :hsql)
+                               (execute-query db-spec heql-meta-data))
                           :bigdec true
                           :key-fn #(json-key-fn attr-return-as %)
                           :value-fn #(json-value-fn heql-meta-data attr-return-as %1 %2))))))

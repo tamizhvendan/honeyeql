@@ -1,7 +1,8 @@
 (ns honeyeql.meta-data
   (:require [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]
-            [inflections.core :as inf]))
+            [inflections.core :as inf]
+            [honeyeql.debug :refer [trace>>]]))
 
 (defn- meta-data-result [db-spec result-set]
   (rs/datafiable-result-set result-set db-spec {:builder-fn rs/as-unqualified-lower-maps}))
@@ -244,30 +245,29 @@
 (defn- add-namespaces [db-config hql-meta-data]
   (let [default-schema (get-in db-config [:schema :default])]
     (->> (:entities hql-meta-data)
-        (map (fn [[_ v]]
-               (:entity.relation/schema v)))
-        distinct
-        (remove #(= default-schema %))
-        (reduce (fn [sm s]
-                  (assoc sm (namespace-ident s)
-                         {:namespace/ident       (namespace-ident s)
-                          :namespace.schema/name s})) {})
-        (assoc hql-meta-data :namespaces))))
+         (map (fn [[_ v]]
+                (:entity.relation/schema v)))
+         distinct
+         (remove #(= default-schema %))
+         (reduce (fn [sm s]
+                   (assoc sm (namespace-ident s)
+                          {:namespace/ident       (namespace-ident s)
+                           :namespace.schema/name s})) {})
+         (assoc hql-meta-data :namespaces))))
 
 (defn fetch [db-spec]
   (with-open [conn (jdbc/get-connection db-spec)]
     (let [jdbc-meta-data  (.getMetaData conn)
           db-product-name (.getDatabaseProductName jdbc-meta-data)
-          db-config       (assoc (get-db-config db-product-name) :db-product-name db-product-name)
-          heql-meta-data  (->> {:db-config db-config
-                                :entities  (entities-meta-data db-spec jdbc-meta-data db-config)}
-                               (add-attributes-meta-data db-spec jdbc-meta-data db-config)
-                               (add-primary-keys-meta-data db-spec jdbc-meta-data db-config)
-                               (add-relationships-meta-data db-spec jdbc-meta-data db-config)
-                               add-many-to-many-rels-meta-data
-                               (add-namespaces db-config))]
-      (tap> {:heql-meta-data heql-meta-data})
-      heql-meta-data)))
+          db-config       (assoc (get-db-config db-product-name) :db-product-name db-product-name)]
+      (->> {:db-config db-config
+            :entities  (entities-meta-data db-spec jdbc-meta-data db-config)}
+           (add-attributes-meta-data db-spec jdbc-meta-data db-config)
+           (add-primary-keys-meta-data db-spec jdbc-meta-data db-config)
+           (add-relationships-meta-data db-spec jdbc-meta-data db-config)
+           add-many-to-many-rels-meta-data
+           (add-namespaces db-config)
+           (trace>> :heql-meta-data)))))
 
 ;; Query Functions
 
