@@ -33,10 +33,16 @@
 (defmethod eql->hsql :root [heql-meta-data eql-node]
   (eql->hsql heql-meta-data (first (:children eql-node))))
 
-(defn- eql-ident-key->hsql-predicate [heql-meta-data [attr-ident value]]
+(defn- eql-ident->hsql-predicate [heql-meta-data [attr-ident value]]
   (let [attr-col-ident           (heql-md/attr-column-ident heql-meta-data attr-ident)
         attr-value               (heql-md/coarce-attr-value heql-meta-data attr-ident value)]
     [:= attr-col-ident attr-value]))
+
+(defn- eql-ident-key->hsql-predicate [heql-meta-data eql-ident-key]
+  (let [predicates (map #(eql-ident->hsql-predicate heql-meta-data %) (partition 2 eql-ident-key))]
+    (if (< 1 (count predicates))
+      (conj predicates :and)
+      (first predicates))))
 
 (defmethod eql->hsql :ident-join [heql-meta-data eql-node]
   (let [{:keys [key children]}   eql-node]
