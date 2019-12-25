@@ -5,17 +5,24 @@
             [inflections.core :as inf]
             [honeyeql.debug :refer [trace>>]]))
 
-(defn- find-join-type [eql-node]
+(defn- find-join-type [heql-meta-data eql-node]
   (let [{node-type :type
          node-key  :key} eql-node]
     (cond
       (= :root node-type) :root
+      (and (= :join node-type) (keyword? node-key)) (-> (heql-md/attr-column-ref-type heql-meta-data node-key)
+                                                        name
+                                                        (str "-join")
+                                                        keyword)
       (and (= :join node-type) (seq node-key) (even? (count node-key))) :ident-join)))
 
+(defn- eql-node->attr-ident [{:keys [key type dispatch-key]}]
+  (cond
+    (and (= :prop type) (keyword? key)) key
+    (and (= :join type) dispatch-key) key))
+
 (defn- eql-nodes->attr-idents [eql-nodes]
-  (map (fn [{:keys [key type]}]
-         (cond
-           (and (= :prop type) (keyword? key)) key)) eql-nodes))
+  (map eql-node->attr-ident eql-nodes))
 
 (defn- column-alias [attr-return-as attr-ident]
   (case attr-return-as
@@ -29,10 +36,12 @@
                                    (column-alias :qualified-kebab-case attr-ident)]) attr-idents)]
     (vec attr-column-idents)))
 
-(defmulti eql->hsql (fn [heql-meta-data eql-node] (find-join-type eql-node)))
+(defmulti eql->hsql (fn [heql-meta-data eql-node] (find-join-type heql-meta-data eql-node)))
 
 (defmethod eql->hsql :root [heql-meta-data eql-node]
   (eql->hsql heql-meta-data (first (:children eql-node))))
+
+;; Ident Join
 
 (defn- eql-ident->hsql-predicate [heql-meta-data [attr-ident value]]
   (let [attr-col-ident (heql-md/attr-column-ident heql-meta-data attr-ident)
@@ -46,10 +55,23 @@
       (first predicates))))
 
 (defmethod eql->hsql :ident-join [heql-meta-data eql-node]
-  (let [{:keys [key children]} eql-node]
-    {:from   [(heql-md/entity-relation-ident heql-meta-data (first key))]
-     :where  (eql-ident-key->hsql-predicate heql-meta-data key)
-     :select (select-clause heql-meta-data children)}))
+  (let [{:keys [key children]} eql-node
+        hsql                   {:from   [(heql-md/entity-relation-ident heql-meta-data (first key))]
+                                :where  (eql-ident-key->hsql-predicate heql-meta-data key)
+                                :select (select-clause heql-meta-data children)}]
+    (if-let [one-to-one-join-children
+             (seq (filter #(= :one-to-one-join (find-join-type heql-meta-data %)) children))]
+      (assoc hsql :left-join-lateral (map #(eql->hsql heql-meta-data %) one-to-one-join-children))
+      hsql)))
+
+;; One to One Join
+
+(defmethod eql->hsql :one-to-one-join [heql-meta-data eql-node]
+  (let [{:keys [key children]}   eql-node]
+    [{:from   [(heql-md/ref-entity-relation-ident heql-meta-data key)]
+      :where  (heql-md/join-predicate heql-meta-data key)
+      :select (select-clause heql-meta-data children)}
+     (heql-md/attr-column-ident heql-meta-data (eql-node->attr-ident eql-node))]))
 
 (defmulti execute-query (fn [db-spec heql-meta-data hsql]
                           (get-in heql-meta-data [:db-config :db-product-name])))
@@ -64,8 +86,8 @@
    (initialize! db-spec default-heql-config))
   ([db-spec heql-config]
    (reset! global-db-spec db-spec)
-   (reset! global-heql-meta-data (heql-md/fetch db-spec))
-   (swap! global-heql-config merge heql-config)))
+   (swap! global-heql-config merge heql-config)
+   (reset! global-heql-meta-data (heql-md/fetch db-spec))))
 
 (defn- json-key-fn [attribute-return-as key]
   (if (= :qualified-kebab-case attribute-return-as)
