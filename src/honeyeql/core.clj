@@ -73,21 +73,7 @@
       :select (select-clause heql-meta-data children)}
      (heql-md/attr-column-ident heql-meta-data (eql-node->attr-ident eql-node))]))
 
-(defmulti execute-query (fn [db-spec heql-meta-data hsql]
-                          (get-in heql-meta-data [:db-config :db-product-name])))
-
-(def ^:private default-heql-config {:attribute {:return-as :qualified-kebab-case}})
-(defonce ^:private global-db-spec (atom nil))
-(defonce ^:private global-heql-meta-data (atom nil))
-(defonce ^:private global-heql-config (atom nil))
-
-(defn initialize!
-  ([db-spec]
-   (initialize! db-spec default-heql-config))
-  ([db-spec heql-config]
-   (reset! global-db-spec db-spec)
-   (swap! global-heql-config merge heql-config)
-   (reset! global-heql-meta-data (heql-md/fetch db-spec))))
+(def default-heql-config {:attribute {:return-as :qualified-kebab-case}})
 
 (defn- json-key-fn [attribute-return-as key]
   (if (= :qualified-kebab-case attribute-return-as)
@@ -104,23 +90,25 @@
     return-value
     (inf/transform-keys return-value (comp keyword second))))
 
-(defn query
-  ([eql-query]
-   (query @global-db-spec @global-heql-config @global-heql-meta-data eql-query))
-  ([db-spec heql-config heql-meta-data eql-query]
-   (let [attr-return-as (get-in heql-config [:attribute :return-as])]
-     (map  #(transform-keys attr-return-as %)
-           (json/read-str (->> (eql/query->ast eql-query)
-                               (trace>> :eql-ast)
-                               (eql->hsql heql-meta-data)
-                               (trace>> :hsql)
-                               (execute-query db-spec heql-meta-data))
-                          :bigdec true
-                          :key-fn #(json-key-fn attr-return-as %)
-                          :value-fn #(json-value-fn heql-meta-data attr-return-as %1 %2))))))
+(defprotocol DbAdapter
+  (db-spec [db-adapter])
+  (meta-data [db-adapter])
+  (config [db-adapter])
+  (merge-config [db-adapter config-to-override])
+  (execute [db-adapter hsql]))
 
-(defn query-single
-  ([eql-query]
-   (first (query eql-query)))
-  ([db-spec heql-config heql-meta-data eql-query]
-   (first (query db-spec heql-config heql-meta-data eql-query))))
+(defn query [db-apapter eql-query]
+  (let [heql-meta-data (meta-data db-apapter)
+        attr-return-as (get-in (config db-apapter) [:attribute :return-as])]
+    (map  #(transform-keys attr-return-as %)
+          (json/read-str (->> (eql/query->ast eql-query)
+                              (trace>> :eql-ast)
+                              (eql->hsql heql-meta-data)
+                              (trace>> :hsql)
+                              (execute db-apapter))
+                         :bigdec true
+                         :key-fn #(json-key-fn attr-return-as %)
+                         :value-fn #(json-value-fn heql-meta-data attr-return-as %1 %2)))))
+
+(defn query-single [db-apapter eql-query]
+  (first (query db-apapter eql-query)))
