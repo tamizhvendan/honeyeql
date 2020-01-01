@@ -100,13 +100,15 @@
      [:entities entity-ident entity-attr-qualifier]
      conj attr-ident)))
 
-(defn- add-attributes-meta-data [db-spec jdbc-meta-data db-config heql-meta-data]
+(defn- add-attributes-meta-data [db-spec jdbc-meta-data {:keys [db-config]
+                                                         :as   heql-meta-data}]
   (->> (.getColumns jdbc-meta-data nil "%" "%" nil)
        (meta-data-result db-spec)
        (filter-columns db-config)
        (reduce (partial add-attribute-meta-data db-config) heql-meta-data)))
 
-(defn- add-primary-keys-meta-data [db-spec jdbc-meta-data db-config heql-meta-data]
+(defn- add-primary-keys-meta-data [db-spec jdbc-meta-data {:keys [db-config]
+                                                           :as   heql-meta-data}]
   (->> (.getPrimaryKeys jdbc-meta-data nil "" nil)
        (meta-data-result db-spec)
        (remove #(contains? (schemas-to-ignore db-config) (:table_schem %)))
@@ -133,7 +135,7 @@
     (keyword (str e-ns "." (name right-entity-ident)) (inf/plural (name left-entity-ident)))
     (keyword (name right-entity-ident) (inf/plural (name left-entity-ident)))))
 
-(defn- add-fk-rel-meta-data [db-config hql-meta-data
+(defn- add-fk-rel-meta-data [db-config heql-meta-data
                              {:keys [fktable_schem fktable_name fkcolumn_name fk_name
                                      pktable_schem pktable_name pkcolumn_name]}]
   (let [one-to-one-attr-name   (foreign-key-column->attr-name db-config fkcolumn_name)
@@ -142,9 +144,9 @@
         left-entity-ident      (entity-ident db-config fktable_schem fktable_name)
         right-attr-ident       (attribute-ident db-config pktable_schem pktable_name pkcolumn_name)
         right-entity-ident     (entity-ident db-config pktable_schem pktable_name)
-        is-nullable            (get-in hql-meta-data [:attributes left-attr-ident :attr/nullable])
+        is-nullable            (get-in heql-meta-data [:attributes left-attr-ident :attr/nullable])
         one-to-many-attr-ident (one-to-many-attr-ident right-entity-ident left-entity-ident)]
-    (-> (assoc-in hql-meta-data [:attributes one-to-one-attr-ident]
+    (-> (assoc-in heql-meta-data [:attributes one-to-one-attr-ident]
                   {:attr/ident            one-to-one-attr-ident
                    :attr/type             :attr.type/ref
                    :attr/nullable         is-nullable
@@ -173,10 +175,11 @@
         (update-in [:entities right-entity-ident :entity/req-attrs]
                    conj one-to-many-attr-ident))))
 
-(defn- add-relationships-meta-data [db-spec jdbc-meta-data db-config hql-meta-data]
+(defn- add-relationships-meta-data [db-spec jdbc-meta-data {:keys [db-config]
+                                                            :as   heql-meta-data}]
   (->> (.getImportedKeys jdbc-meta-data nil "" nil)
        (meta-data-result db-spec)
-       (reduce #(merge-with merge %1 (add-fk-rel-meta-data db-config %1 %2)) hql-meta-data)))
+       (reduce #(merge-with merge %1 (add-fk-rel-meta-data db-config %1 %2)) heql-meta-data)))
 
 (defn- associative-entity? [{:entity.relation/keys [primary-key foreign-keys]}]
   (let [pk-attrs (:entity.relation.primary-key/attrs primary-key)
@@ -229,22 +232,23 @@
         (update-in [:entities right-entity-ident :entity/req-attrs]
                    conj many-to-many-rev-attr-ident))))
 
-(defn- add-many-to-many-rels-meta-data [hql-meta-data]
+(defn- add-many-to-many-rels-meta-data [heql-meta-data]
   (reduce (fn [h-md [entity-ident entity-meta-data]]
             (if (associative-entity? entity-meta-data)
               (add-many-to-many-relation-data
                (update-in h-md [:entities entity-ident] assoc :entity/is-associative true)
                entity-meta-data)
               h-md))
-          hql-meta-data
-          (:entities hql-meta-data)))
+          heql-meta-data
+          (:entities heql-meta-data)))
 
 (defn- namespace-ident [schema]
   (keyword (inf/hyphenate schema)))
 
-(defn- add-namespaces [db-config hql-meta-data]
+(defn- add-namespaces [{:keys [db-config]
+                        :as   heql-meta-data}]
   (let [default-schema (get-in db-config [:schema :default])]
-    (->> (:entities hql-meta-data)
+    (->> (:entities heql-meta-data)
          (map (fn [[_ v]]
                 (:entity.relation/schema v)))
          distinct
@@ -253,7 +257,7 @@
                    (assoc sm (namespace-ident s)
                           {:namespace/ident       (namespace-ident s)
                            :namespace.schema/name s})) {})
-         (assoc hql-meta-data :namespaces))))
+         (assoc heql-meta-data :namespaces))))
 
 (defn fetch [db-spec]
   (with-open [conn (jdbc/get-connection db-spec)]
@@ -262,11 +266,11 @@
           db-config       (assoc (get-db-config db-product-name) :db-product-name db-product-name)]
       (->> {:db-config db-config
             :entities  (entities-meta-data db-spec jdbc-meta-data db-config)}
-           (add-attributes-meta-data db-spec jdbc-meta-data db-config)
-           (add-primary-keys-meta-data db-spec jdbc-meta-data db-config)
-           (add-relationships-meta-data db-spec jdbc-meta-data db-config)
+           (add-attributes-meta-data db-spec jdbc-meta-data)
+           (add-primary-keys-meta-data db-spec jdbc-meta-data)
+           (add-relationships-meta-data db-spec jdbc-meta-data)
            add-many-to-many-rels-meta-data
-           (add-namespaces db-config)
+           add-namespaces
            (trace>> :heql-meta-data)))))
 
 ;; Query Functions
