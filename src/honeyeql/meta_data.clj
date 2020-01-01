@@ -20,6 +20,16 @@
      (keyword (inf/singular (inf/hyphenate table_name)))
      (keyword (inf/hyphenate table_schem) (inf/hyphenate table_name)))))
 
+(defn- entity-ident-in-pascal-case [entity-ident]
+  (if-let [schema (namespace entity-ident)]
+    (keyword (inf/camel-case (str schema "-" (name entity-ident))))
+    (keyword (inf/camel-case (name entity-ident)))))
+
+(defn- entity-ident-in-camel-case [entity-ident]
+  (if-let [schema (namespace entity-ident)]
+    (keyword (inf/camel-case (str schema "-" (name entity-ident)) :lower))
+    (keyword (inf/camel-case (name entity-ident) :lower))))
+
 (defn- relation-ident
   ([db-config {:keys [table_schem table_name]}]
    (if (= (get-in db-config [:schema :default]) table_schem)
@@ -35,6 +45,9 @@
      (keyword (str (inf/hyphenate table_schem) "." (inf/singular (inf/hyphenate table_name)))
               (inf/hyphenate column_name)))))
 
+(defn- attribute-ident-in-camel-case [attr-ident]
+  (keyword (inf/camel-case (name attr-ident) :lower)))
+
 (defn- column-ident [db-config {:keys [table_schem table_name column_name]}]
   (if (= (get-in db-config [:schema :default]) table_schem)
     (keyword (str table_name "." column_name))
@@ -46,6 +59,8 @@
     [ident
      {:entity/doc                   remarks
       :entity/ident                 ident
+      :entity.ident/pascal-case     (entity-ident-in-pascal-case ident)
+      :entity.ident/camel-case      (entity-ident-in-camel-case ident)
       :entity.relation/type         (case table_type
                                       "TABLE" :table
                                       "VIEW" :view)
@@ -84,6 +99,7 @@
     (update-in
      (assoc-in heql-meta-data [:attributes attr-ident]
                {:attr/ident                     attr-ident
+                :attr.ident/camel-case          (attribute-ident-in-camel-case attr-ident)
                 :attr/doc                       remarks
                 :attr/type                      (derive-attr-type db-config column-meta-data)
                 :attr/nullable                  is-nullable
@@ -116,19 +132,15 @@
                    [table_schem table_name]))
        (reduce (fn [pks [[table_schem table_name] v]]
                  (assoc pks
-                        (entity-ident db-config {:table_schem table_schem
-                                                 :table_name  table_name})
+                        (entity-ident db-config table_schem table_name)
                         {:entity.relation/primary-key {:entity.relation.primary-key/name  (:pk_name (first v))
                                                        :entity.relation.primary-key/attrs (set (map #(attribute-ident db-config %) v))}})) {})
-       (merge-with merge (:entities heql-meta-data))
-       (assoc heql-meta-data :entities)))
+       (update heql-meta-data :entities (partial merge-with merge))))
 
 (defmulti get-db-config identity)
 
 (defn- foreign-key-column->attr-name [{:keys [foreign-key-suffix]} fkcolumn_name]
-  (if foreign-key-suffix
-    (clojure.string/replace fkcolumn_name (re-pattern (str foreign-key-suffix "$")) "")
-    fkcolumn_name))
+  (clojure.string/replace fkcolumn_name (re-pattern (str foreign-key-suffix "$")) ""))
 
 (defn- one-to-many-attr-ident [left-entity-ident right-entity-ident]
   (if-let [e-ns (namespace left-entity-ident)]
@@ -148,6 +160,7 @@
         one-to-many-attr-ident (one-to-many-attr-ident right-entity-ident left-entity-ident)]
     (-> (assoc-in heql-meta-data [:attributes one-to-one-attr-ident]
                   {:attr/ident            one-to-one-attr-ident
+                   :attr.ident/camel-case (attribute-ident-in-camel-case one-to-one-attr-ident)
                    :attr/type             :attr.type/ref
                    :attr/nullable         is-nullable
                    :attr.ref/cardinality  :attr.ref.cardinality/one
@@ -158,6 +171,7 @@
                    :attr.column.ref/right right-attr-ident})
         (assoc-in [:attributes one-to-many-attr-ident]
                   {:attr/ident            one-to-many-attr-ident
+                   :attr.ident/camel-case (attribute-ident-in-camel-case one-to-many-attr-ident)
                    :attr/type             :attr.type/ref
                    :attr/nullable         false
                    :attr.ref/cardinality  :attr.ref.cardinality/many
@@ -205,6 +219,7 @@
     (-> (update-in h-md [:entities entity-ident] assoc :entity/is-associative true)
         (assoc-in [:attributes many-to-many-attr-ident]
                   {:attr/ident                        many-to-many-attr-ident
+                   :attr.ident/camel-case             (attribute-ident-in-camel-case many-to-many-attr-ident)
                    :attr/type                         :attr.type/ref
                    :attr/nullable                     false
                    :attr.ref/cardinality              :attr.ref.cardinality/many
@@ -217,6 +232,7 @@
                    :attr.column.ref/right             r-ref-attr})
         (assoc-in [:attributes many-to-many-rev-attr-ident]
                   {:attr/ident                        many-to-many-rev-attr-ident
+                   :attr.ident/camel-case             (attribute-ident-in-camel-case many-to-many-rev-attr-ident)
                    :attr/type                         :attr.type/ref
                    :attr/nullable                     false
                    :attr.ref/cardinality              :attr.ref.cardinality/many
@@ -281,6 +297,11 @@
 (defn entities [heql-meta-data]
   (vals (:entities heql-meta-data)))
 
+(defn entity-meta-data [heql-meta-data entity-ident]
+  (if-let [entity-meta-data (get-in heql-meta-data [:entities entity-ident])]
+    entity-meta-data
+    (throw (Exception. (str "entity " entity-ident " not found")))))
+
 (defn attr-meta-data [heql-meta-data attr-ident]
   (if-let [attr-meta-data (get-in heql-meta-data [:attributes attr-ident])]
     attr-meta-data
@@ -288,12 +309,12 @@
 
 (defn entity-relation-ident [heql-meta-data attr-ident]
   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
-    (get-in heql-meta-data [:entities (:attr.entity/ident attr-md) :entity.relation/ident])))
+    (:entity.relation/ident (entity-meta-data heql-meta-data (:attr.entity/ident attr-md)))))
 
 (defn ref-entity-relation-ident [heql-meta-data attr-ident]
   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
     (when (= :attr.type/ref (:attr/type attr-md))
-      (get-in heql-meta-data [:entities (:attr.ref/type attr-md) :entity.relation/ident]))))
+      (:entity.relation/ident (entity-meta-data heql-meta-data (:attr.ref/type attr-md))))))
 
 (defn attr-column-ident [heql-meta-data attr-ident]
   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
