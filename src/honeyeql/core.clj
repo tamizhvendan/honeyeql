@@ -36,9 +36,9 @@
                                    (column-alias :qualified-kebab-case attr-ident)]) attr-idents)]
     (vec attr-column-idents)))
 
-(defmulti eql->hsql (fn [heql-meta-data eql-node] (find-join-type heql-meta-data eql-node)))
+(defmulti ^{:private true} eql->hsql (fn [heql-meta-data eql-node] (find-join-type heql-meta-data eql-node)))
 
-(defmethod eql->hsql :root [heql-meta-data eql-node]
+(defmethod ^{:private true} eql->hsql :root [heql-meta-data eql-node]
   (eql->hsql heql-meta-data (first (:children eql-node))))
 
 ;; Ident Join
@@ -54,7 +54,7 @@
       (conj predicates :and)
       (first predicates))))
 
-(defmethod eql->hsql :ident-join [heql-meta-data eql-node]
+(defmethod ^{:private true} eql->hsql :ident-join [heql-meta-data eql-node]
   (let [{:keys [key children]} eql-node
         hsql                   {:from   [(heql-md/entity-relation-ident heql-meta-data (first key))]
                                 :where  (eql-ident-key->hsql-predicate heql-meta-data key)
