@@ -54,24 +54,28 @@
       (conj predicates :and)
       (first predicates))))
 
+(defn- assoc-one-to-one-hsql-queries [heql-meta-data hsql eql-nodes]
+  (if-let [one-to-one-join-children
+           (seq (filter #(= :one-to-one-join (find-join-type heql-meta-data %)) eql-nodes))]
+    (assoc hsql :left-join-lateral (map #(eql->hsql heql-meta-data %) one-to-one-join-children))
+    hsql))
+
 (defmethod ^{:private true} eql->hsql :ident-join [heql-meta-data eql-node]
   (let [{:keys [key children]} eql-node
         hsql                   {:from   [(heql-md/entity-relation-ident heql-meta-data (first key))]
                                 :where  (eql-ident-key->hsql-predicate heql-meta-data key)
                                 :select (select-clause heql-meta-data children)}]
-    (if-let [one-to-one-join-children
-             (seq (filter #(= :one-to-one-join (find-join-type heql-meta-data %)) children))]
-      (assoc hsql :left-join-lateral (map #(eql->hsql heql-meta-data %) one-to-one-join-children))
-      hsql)))
+    (assoc-one-to-one-hsql-queries heql-meta-data hsql children)))
 
 ;; One to One Join
 
 (defmethod eql->hsql :one-to-one-join [heql-meta-data eql-node]
-  (let [{:keys [key children]}   eql-node]
-    [{:from   [(heql-md/ref-entity-relation-ident heql-meta-data key)]
-      :where  (heql-md/join-predicate heql-meta-data key)
-      :select (select-clause heql-meta-data children)}
-     (heql-md/attr-column-ident heql-meta-data (eql-node->attr-ident eql-node))]))
+  (let [{:keys [key children]} eql-node
+        hsql                   {:from   [(heql-md/ref-entity-relation-ident heql-meta-data key)]
+                                :where  (heql-md/join-predicate heql-meta-data key)
+                                :select (select-clause heql-meta-data children)}
+        one-to-one-hsql-alias  (heql-md/attr-column-ident heql-meta-data (eql-node->attr-ident eql-node))]
+    [(assoc-one-to-one-hsql-queries heql-meta-data hsql children) one-to-one-hsql-alias]))
 
 (def default-heql-config {:attribute {:return-as :qualified-kebab-case}})
 
