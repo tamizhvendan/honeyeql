@@ -48,10 +48,11 @@
 (defn- attribute-ident-in-camel-case [attr-ident]
   (keyword (inf/camel-case (name attr-ident) :lower)))
 
-(defn- column-ident [db-config {:keys [table_schem table_name column_name]}]
-  (if (= (get-in db-config [:schema :default]) table_schem)
-    (keyword (str table_name "." column_name))
-    (keyword (str table_schem "." table_name "." column_name))))
+(defn- column-ident [db-config {:keys [table_schem table_name column_name relationship-column]}]
+  (let [col-name-separator (if relationship-column "_" ".")]
+    (if (= (get-in db-config [:schema :default]) table_schem)
+     (keyword (str table_name col-name-separator column_name))
+     (keyword (str table_schem "." table_name col-name-separator column_name)))))
 
 (defn- to-entity-meta-data [db-config {:keys [remarks table_type table_schem table_name]
                                        :as   table-meta-data}]
@@ -168,7 +169,11 @@
                    :attr.entity/ident     left-entity-ident
                    :attr.column.ref/type  :attr.column.ref.type/one-to-one
                    :attr.column.ref/left  left-attr-ident
-                   :attr.column.ref/right right-attr-ident})
+                   :attr.column.ref/right right-attr-ident
+                   :attr.column/ident     (column-ident db-config {:table_schem fktable_schem
+                                                                   :table_name  fktable_name
+                                                                   :column_name one-to-one-attr-name
+                                                                   :relationship-column true})})
         (assoc-in [:attributes one-to-many-attr-ident]
                   {:attr/ident            one-to-many-attr-ident
                    :attr.ident/camel-case (attribute-ident-in-camel-case one-to-many-attr-ident)
@@ -318,9 +323,7 @@
 
 (defn attr-column-ident [heql-meta-data attr-ident]
   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
-    (if (= :attr.type/ref (:attr/type attr-md))
-      (keyword (str (namespace attr-ident) "_" (name attr-ident)))
-      (get-in heql-meta-data [:attributes (:attr/ident attr-md) :attr.column/ident]))))
+    (get-in heql-meta-data [:attributes (:attr/ident attr-md) :attr.column/ident])))
 
 (defn attr-column-ref-type [heql-meta-data attr-ident]
   (:attr.column.ref/type (attr-meta-data heql-meta-data attr-ident)))
