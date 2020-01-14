@@ -325,6 +325,10 @@
   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
     (get-in heql-meta-data [:attributes (:attr/ident attr-md) :attr.column/ident])))
 
+(defn attr-column-name [heql-meta-data attr-ident]
+  (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
+    (get-in heql-meta-data [:attributes (:attr/ident attr-md) :attr.column/name])))
+
 (defn attr-column-ref-type [heql-meta-data attr-ident]
   (:attr.column.ref/type (attr-meta-data heql-meta-data attr-ident)))
 
