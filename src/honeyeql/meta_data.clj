@@ -334,15 +334,3 @@
 
 (defn coarce-attr-value [heql-meta-data attr-ident value]
   value)
-
-(let [{:attr.column.ref/keys [left]} {:attr.column.ref/left 42}]
-  left)
-
-(defn- one-to-one-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]}]
-  [:= (attr-column-ident heql-meta-data left) (attr-column-ident heql-meta-data right)])
-
-(defn join-predicate [heql-meta-data join-attr-ident]
-  (let [join-attr-md (attr-meta-data heql-meta-data join-attr-ident)]
-    (when (= :attr.type/ref (:attr/type join-attr-md))
-      (case (:attr.column.ref/type join-attr-md)
-        :attr.column.ref.type/one-to-one (one-to-one-join-predicate heql-meta-data join-attr-md)))))

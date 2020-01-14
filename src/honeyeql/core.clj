@@ -31,10 +31,12 @@
 
 (defn- select-clause [heql-meta-data eql-nodes]
   (let [attr-idents-with-alias (eql-nodes->attr-idents-with-alias eql-nodes)
-        attr-column-idents     (map (fn [[attr-ident alias]]
-                                      [(->> (heql-md/attr-column-name heql-meta-data attr-ident)
-                                            (str (:parent alias) ".")
-                                            keyword)
+        attr-column-idents     (map (fn [[attr-ident {:keys [parent self]}]]
+                                      [(if (and self parent) 
+                                         (keyword (str parent "__" self))
+                                         (->> (heql-md/attr-column-name heql-meta-data attr-ident)
+                                                                  (str parent ".")
+                                                                  keyword))
                                        (column-alias :qualified-kebab-case attr-ident)]) attr-idents-with-alias)]
     (vec attr-column-idents)))
 
@@ -72,13 +74,25 @@
 
 ;; One to One Join
 
+(defn- one-to-one-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
+  [:= 
+   (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data left))) 
+   (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data right)))])
+
+(defn join-predicate [heql-meta-data join-attr-ident alias]
+  (let [join-attr-md (heql-md/attr-meta-data heql-meta-data join-attr-ident)]
+    (when (= :attr.type/ref (:attr/type join-attr-md))
+      (case (:attr.column.ref/type join-attr-md)
+        :attr.column.ref.type/one-to-one (one-to-one-join-predicate heql-meta-data join-attr-md alias)))))
+
 (defmethod eql->hsql :one-to-one-join [heql-meta-data eql-node]
-  (let [{:keys [key children]} eql-node
-        hsql                   {:from   [(heql-md/ref-entity-relation-ident heql-meta-data key)]
-                                :where  (heql-md/join-predicate heql-meta-data key)
-                                :select (select-clause heql-meta-data children)}
-        one-to-one-hsql-alias  (heql-md/attr-column-ident heql-meta-data (first (eql-node->attr-ident-with-alias eql-node)))]
-    [(assoc-one-to-one-hsql-queries heql-meta-data hsql children) one-to-one-hsql-alias]))
+  (let [{:keys [key children alias]} eql-node
+        hsql                   {:from   [[(heql-md/ref-entity-relation-ident heql-meta-data key)
+                                          (keyword (:self alias))]]
+                                :where  (join-predicate heql-meta-data key alias)
+                                :select (select-clause heql-meta-data children)}]
+    [(assoc-one-to-one-hsql-queries heql-meta-data hsql children)
+     (keyword (str (:parent alias) "__" (:self alias)))]))
 
 (def default-heql-config {:attribute {:return-as :qualified-kebab-case}})
 
