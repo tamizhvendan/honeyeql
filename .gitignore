@@ -1,4 +1,3 @@
-pom.xml
 pom.xml.asc
 *.jar
 *.class
@@ -13,3 +12,6 @@ pom.xml.asc
 .nrepl-port
 .cpcache/
 .clj-kondo/.cache
+.settings
+.classpath
+.project

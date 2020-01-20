@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.graphqlize</groupId>
+  <artifactId>honeyeql</artifactId>
+  <version>0.1.0-alpha1</version>
+
+  <name>Honey EQL</name>
+  <description>HoneyEQL enables you to query database using the EQL.</description>
+  <url>https://github.com/graphqlize/honeyeql</url>
+
+  <licenses>
+    <license>
+      <name>EPL-2.0</name>
+      <url>https://www.eclipse.org/legal/epl-2.0/</url>
+    </license>
+  </licenses>
+
+  <scm>
+    <url>https://github.com/graphqlize/honeyeql</url>
+  </scm>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>data.json</artifactId>
+      <version>0.2.7</version>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>clojure</artifactId>
+      <version>1.10.1</version>
+    </dependency>
+    <dependency>
+      <groupId>edn-query-language</groupId>
+      <artifactId>eql</artifactId>
+      <version>0.0.9</version>
+    </dependency>
+    <dependency>
+      <groupId>honeysql</groupId>
+      <artifactId>honeysql</artifactId>
+      <version>0.9.8</version>
+    </dependency>
+    <dependency>
+      <groupId>inflections</groupId>
+      <artifactId>inflections</artifactId>
+      <version>0.13.2</version>
+    </dependency>
+    <dependency>
+      <groupId>seancorfield</groupId>
+      <artifactId>next.jdbc</artifactId>
+      <version>1.0.10</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <sourceDirectory>src</sourceDirectory>
+    <resources>
+      <resource>
+        <directory>src</directory>
+      </resource>
+    </resources>
+  </build>
+
+  <distributionManagement>
+    <repository>
+      <id>clojars</id>
+      <name>Clojars repository</name>
+      <url>https://clojars.org/repo</url>
+    </repository>
+  </distributionManagement>
+
+  <repositories>
+    <repository>
+      <id>clojars</id>
+      <url>https://clojars.org/repo</url>
+    </repository>
+  </repositories>
+
+</project>
