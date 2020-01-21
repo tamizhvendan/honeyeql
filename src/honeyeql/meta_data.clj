@@ -2,6 +2,8 @@
   (:require [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]
             [inflections.core :as inf]
+            [clojure.set :as set]
+            [clojure.string :as string]
             [honeyeql.debug :refer [trace>>]]))
 
 (defn- meta-data-result [db-spec result-set]
@@ -141,7 +143,7 @@
 (defmulti get-db-config identity)
 
 (defn- foreign-key-column->attr-name [{:keys [foreign-key-suffix]} fkcolumn_name]
-  (clojure.string/replace fkcolumn_name (re-pattern (str foreign-key-suffix "$")) ""))
+  (string/replace fkcolumn_name (re-pattern (str foreign-key-suffix "$")) ""))
 
 (defn- one-to-many-attr-ident [left-entity-ident right-entity-ident]
   (if-let [e-ns (namespace left-entity-ident)]
@@ -204,7 +206,7 @@
   (let [pk-attrs (:entity.relation.primary-key/attrs primary-key)
         fk-attrs (set (map :entity.relation.foreign-key/self-attr foreign-keys))]
     (and (= 2 (count pk-attrs))
-         (clojure.set/subset? pk-attrs fk-attrs))))
+         (set/subset? pk-attrs fk-attrs))))
 
 (defn- associative-foreign-keys [{:entity.relation/keys [primary-key foreign-keys]}]
   (filter #(contains? (:entity.relation.primary-key/attrs primary-key)
