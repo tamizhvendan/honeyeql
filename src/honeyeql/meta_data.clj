@@ -160,7 +160,7 @@
         right-attr-ident       (attribute-ident db-config pktable_schem pktable_name pkcolumn_name)
         right-entity-ident     (entity-ident db-config pktable_schem pktable_name)
         is-nullable            (get-in heql-meta-data [:attributes left-attr-ident :attr/nullable])
-        one-to-many-attr-ident (one-to-many-attr-ident right-entity-ident left-entity-ident)]
+        one-to-many-attr-ident (one-to-many-attr-ident left-entity-ident right-entity-ident)]
     (-> (assoc-in heql-meta-data [:attributes one-to-one-attr-ident]
                   {:attr/ident            one-to-one-attr-ident
                    :attr.ident/camel-case (attribute-ident-in-camel-case one-to-one-attr-ident)
@@ -327,9 +327,12 @@
   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
     (get-in heql-meta-data [:attributes (:attr/ident attr-md) :attr.column/ident])))
 
-(defn attr-column-name [heql-meta-data attr-ident]
-  (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
-    (get-in heql-meta-data [:attributes (:attr/ident attr-md) :attr.column/name])))
+(defn attr-column-name 
+  ([attr-meta-data]
+   (:attr.column/name attr-meta-data))
+  ([heql-meta-data attr-ident]
+   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
+     (attr-column-name attr-md))))
 
 (defn attr-column-ref-type [heql-meta-data attr-ident]
   (:attr.column.ref/type (attr-meta-data heql-meta-data attr-ident)))
