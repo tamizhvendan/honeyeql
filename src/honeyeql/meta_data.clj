@@ -230,7 +230,7 @@
                    :attr/type                         :attr.type/ref
                    :attr/nullable                     false
                    :attr.ref/cardinality              :attr.ref.cardinality/many
-                   :attr.ref/type                     right-entity-ident
+                   :attr.ref/type                     left-entity-ident
                    :attr.entity/ident                 left-entity-ident
                    :attr.column.ref/type              :attr.column.ref.type/many-to-many
                    :attr.column.ref/left              ref-attr
@@ -243,7 +243,7 @@
                    :attr/type                         :attr.type/ref
                    :attr/nullable                     false
                    :attr.ref/cardinality              :attr.ref.cardinality/many
-                   :attr.ref/type                     left-entity-ident
+                   :attr.ref/type                     right-entity-ident
                    :attr.entity/ident                 right-entity-ident
                    :attr.column.ref/type              :attr.column.ref.type/many-to-many
                    :attr.column.ref/left              r-ref-attr
