@@ -53,8 +53,8 @@
 (defn- column-ident [db-config {:keys [table_schem table_name column_name relationship-column]}]
   (let [col-name-separator (if relationship-column "_" ".")]
     (if (= (get-in db-config [:schema :default]) table_schem)
-     (keyword (str table_name col-name-separator column_name))
-     (keyword (str table_schem "." table_name col-name-separator column_name)))))
+      (keyword (str table_name col-name-separator column_name))
+      (keyword (str table_schem "." table_name col-name-separator column_name)))))
 
 (defn- to-entity-meta-data [db-config {:keys [remarks table_type table_schem table_name]
                                        :as   table-meta-data}]
@@ -172,9 +172,9 @@
                    :attr.column.ref/type  :attr.column.ref.type/one-to-one
                    :attr.column.ref/left  left-attr-ident
                    :attr.column.ref/right right-attr-ident
-                   :attr.column/ident     (column-ident db-config {:table_schem fktable_schem
-                                                                   :table_name  fktable_name
-                                                                   :column_name one-to-one-attr-name
+                   :attr.column/ident     (column-ident db-config {:table_schem         fktable_schem
+                                                                   :table_name          fktable_name
+                                                                   :column_name         one-to-one-attr-name
                                                                    :relationship-column true})})
         (assoc-in [:attributes one-to-many-attr-ident]
                   {:attr/ident            one-to-many-attr-ident
@@ -225,35 +225,37 @@
         many-to-many-rev-attr-ident                              (one-to-many-attr-ident right-entity-ident left-entity-ident)]
     (-> (update-in h-md [:entities entity-ident] assoc :entity/is-associative true)
         (assoc-in [:attributes many-to-many-attr-ident]
-                  {:attr/ident                        many-to-many-attr-ident
-                   :attr.ident/camel-case             (attribute-ident-in-camel-case many-to-many-attr-ident)
-                   :attr/type                         :attr.type/ref
-                   :attr/nullable                     false
-                   :attr.ref/cardinality              :attr.ref.cardinality/many
-                   :attr.ref/type                     left-entity-ident
-                   :attr.entity/ident                 left-entity-ident
-                   :attr.column.ref/type              :attr.column.ref.type/many-to-many
-                   :attr.column.ref/left              ref-attr
-                   :attr.column.ref.associative/left  self-attr
-                   :attr.column.ref.associative/right r-self-attr
-                   :attr.column.ref/right             r-ref-attr})
+                  {:attr/ident                              many-to-many-attr-ident
+                   :attr.ident/camel-case                   (attribute-ident-in-camel-case many-to-many-attr-ident)
+                   :attr/type                               :attr.type/ref
+                   :attr/nullable                           false
+                   :attr.ref/cardinality                    :attr.ref.cardinality/many
+                   :attr.ref/type                           left-entity-ident
+                   :attr.entity/ident                       left-entity-ident
+                   :attr.column.ref/type                    :attr.column.ref.type/many-to-many
+                   :attr.column.ref/left                    ref-attr
+                   :attr.column.ref.associative/ident       entity-ident
+                   :attr.column.ref.associative/left-ident  self-attr
+                   :attr.column.ref.associative/right-ident r-self-attr
+                   :attr.column.ref/right                   r-ref-attr})
         (assoc-in [:attributes many-to-many-rev-attr-ident]
-                  {:attr/ident                        many-to-many-rev-attr-ident
-                   :attr.ident/camel-case             (attribute-ident-in-camel-case many-to-many-rev-attr-ident)
-                   :attr/type                         :attr.type/ref
-                   :attr/nullable                     false
-                   :attr.ref/cardinality              :attr.ref.cardinality/many
-                   :attr.ref/type                     right-entity-ident
-                   :attr.entity/ident                 right-entity-ident
-                   :attr.column.ref/type              :attr.column.ref.type/many-to-many
-                   :attr.column.ref/left              r-ref-attr
-                   :attr.column.ref.associative/left  r-self-attr
-                   :attr.column.ref.associative/right self-attr
-                   :attr.column.ref/right             ref-attr})
+                  {:attr/ident                              many-to-many-rev-attr-ident
+                   :attr.ident/camel-case                   (attribute-ident-in-camel-case many-to-many-rev-attr-ident)
+                   :attr/type                               :attr.type/ref
+                   :attr/nullable                           false
+                   :attr.ref/cardinality                    :attr.ref.cardinality/many
+                   :attr.ref/type                           right-entity-ident
+                   :attr.entity/ident                       right-entity-ident
+                   :attr.column.ref/type                    :attr.column.ref.type/many-to-many
+                   :attr.column.ref/left                    r-ref-attr
+                   :attr.column.ref.associative/ident       entity-ident
+                   :attr.column.ref.associative/left-ident  r-self-attr
+                   :attr.column.ref.associative/right-ident self-attr
+                   :attr.column.ref/right                   ref-attr})
         (update-in [:entities left-entity-ident :entity/req-attrs]
-                   conj many-to-many-attr-ident)
+                   conj many-to-many-rev-attr-ident)
         (update-in [:entities right-entity-ident :entity/req-attrs]
-                   conj many-to-many-rev-attr-ident))))
+                   conj many-to-many-attr-ident))))
 
 (defn- add-many-to-many-rels-meta-data [heql-meta-data]
   (reduce (fn [h-md [entity-ident entity-meta-data]]
@@ -327,7 +329,7 @@
   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
     (get-in heql-meta-data [:attributes (:attr/ident attr-md) :attr.column/ident])))
 
-(defn attr-column-name 
+(defn attr-column-name
   ([attr-meta-data]
    (:attr.column/name attr-meta-data))
   ([heql-meta-data attr-ident]

@@ -34,7 +34,7 @@
         attr-md               (heql-md/attr-meta-data heql-meta-data attr-ident)
         select-attr-expr      (case (:attr.column.ref/type attr-md)
                                 :attr.column.ref.type/one-to-one (keyword (str parent "__" self))
-                                :attr.column.ref.type/one-to-many (eql->hsql heql-meta-data  eql-node)
+                                (:attr.column.ref.type/one-to-many :attr.column.ref.type/many-to-many) (eql->hsql heql-meta-data  eql-node)
                                 (->> (heql-md/attr-column-name attr-md)
                                      (str parent ".")
                                      keyword))]
@@ -100,6 +100,34 @@
         hsql                         {:from   [[(heql-md/ref-entity-relation-ident heql-meta-data key)
                                                 (keyword (:self alias))]]
                                       :where  (one-to-many-join-predicate heql-meta-data join-attr-md alias)
+                                      :select (select-clause heql-meta-data children)}
+        projection-alias             (keyword (gensym))]
+    {:coalesce-array {:select [(json-agg projection-alias)]
+                      :from   [[(assoc-one-to-one-hsql-queries heql-meta-data hsql children) projection-alias]]}}))
+
+(defn- many-to-many-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]
+                                                    :as                   join-attr-md} alias assoc-table-alias]
+  (let [{:attr.column.ref.associative/keys [left-ident right-ident]} join-attr-md]
+    [:and 
+     [:=
+      (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data left)))
+      (keyword (str assoc-table-alias "." (heql-md/attr-column-name heql-meta-data left-ident)))]
+     [:=
+      (keyword (str assoc-table-alias "." (heql-md/attr-column-name heql-meta-data right-ident)))
+      (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data right)))]]))
+
+(defmethod ^{:private true} eql->hsql :many-to-many-join [heql-meta-data eql-node]
+  (let [{:keys [key children alias]} eql-node
+        join-attr-md                 (heql-md/attr-meta-data heql-meta-data key)
+        
+        assoc-table-alias            (gensym)
+        hsql                         {:from   [[(heql-md/ref-entity-relation-ident heql-meta-data key)
+                                                (keyword (:self alias))]
+                                               [(->> (:attr.column.ref.associative/ident join-attr-md) 
+                                                     (heql-md/entity-meta-data heql-meta-data) 
+                                                     :entity.relation/ident)
+                                                (keyword assoc-table-alias)]]
+                                      :where  (many-to-many-join-predicate heql-meta-data join-attr-md alias assoc-table-alias)
                                       :select (select-clause heql-meta-data children)}
         projection-alias             (keyword (gensym))]
     {:coalesce-array {:select [(json-agg projection-alias)]
