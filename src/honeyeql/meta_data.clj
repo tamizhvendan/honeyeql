@@ -340,4 +340,7 @@
   (:attr.column.ref/type (attr-meta-data heql-meta-data attr-ident)))
 
 (defn coarce-attr-value [heql-meta-data attr-ident value]
-  value)
+  (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
+    (case (:attr/type attr-md)
+     :attr.type/uuid (if (uuid? value) value (java.util.UUID/fromString value))
+      value)))
