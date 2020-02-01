@@ -10,6 +10,7 @@
          node-key  :key} eql-node]
     (cond
       (= :root node-type) :root
+      (and (= :join node-type) (vector? node-key) (empty node-key)) :non-ident-join
       (and (= :join node-type) (keyword? node-key)) (-> (heql-md/attr-column-ref-type heql-meta-data node-key)
                                                         name
                                                         (str "-join")
@@ -71,6 +72,14 @@
                                       :select (select-clause heql-meta-data children)}]
     (assoc-one-to-one-hsql-queries heql-meta-data hsql children)))
 
+(defmethod ^{:private true} eql->hsql :non-ident-join [heql-meta-data eql-node]
+  (let [{:keys [children alias]} eql-node
+        first-child-ident            (eql-node->attr-ident (first children))
+        hsql                         {:from   [[(heql-md/entity-relation-ident heql-meta-data first-child-ident)
+                                                (keyword (:self alias))]]
+                                      :select (select-clause heql-meta-data children)}]
+    (assoc-one-to-one-hsql-queries heql-meta-data hsql children)))
+
 (defn- one-to-one-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
   [:=
    (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data left)))
@@ -108,7 +117,7 @@
 (defn- many-to-many-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]
                                                     :as                   join-attr-md} alias assoc-table-alias]
   (let [{:attr.column.ref.associative/keys [left-ident right-ident]} join-attr-md]
-    [:and 
+    [:and
      [:=
       (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data left)))
       (keyword (str assoc-table-alias "." (heql-md/attr-column-name heql-meta-data left-ident)))]
@@ -119,12 +128,12 @@
 (defmethod ^{:private true} eql->hsql :many-to-many-join [heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
         join-attr-md                 (heql-md/attr-meta-data heql-meta-data key)
-        
+
         assoc-table-alias            (gensym)
         hsql                         {:from   [[(heql-md/ref-entity-relation-ident heql-meta-data key)
                                                 (keyword (:self alias))]
-                                               [(->> (:attr.column.ref.associative/ident join-attr-md) 
-                                                     (heql-md/entity-meta-data heql-meta-data) 
+                                               [(->> (:attr.column.ref.associative/ident join-attr-md)
+                                                     (heql-md/entity-meta-data heql-meta-data)
                                                      :entity.relation/ident)
                                                 (keyword assoc-table-alias)]]
                                       :where  (many-to-many-join-predicate heql-meta-data join-attr-md alias assoc-table-alias)
