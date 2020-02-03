@@ -10,7 +10,7 @@
          node-key  :key} eql-node]
     (cond
       (= :root node-type) :root
-      (and (= :join node-type) (vector? node-key) (empty node-key)) :non-ident-join
+      (and (= :join node-type) (vector? node-key) (empty? node-key)) :non-ident-join
       (and (= :join node-type) (keyword? node-key)) (-> (heql-md/attr-column-ref-type heql-meta-data node-key)
                                                         name
                                                         (str "-join")

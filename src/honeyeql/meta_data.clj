@@ -32,6 +32,11 @@
     (keyword (inf/camel-case (str schema "-" (name entity-ident)) :lower))
     (keyword (inf/camel-case (name entity-ident) :lower))))
 
+(defn- pluralize-entity-ident [entity-ident]
+  (if-let [schema (namespace entity-ident)]
+    (keyword (inf/camel-case (str schema "-" (inf/plural (name entity-ident))) :lower))
+    (keyword (inf/camel-case (inf/plural (name entity-ident)) :lower))))
+
 (defn- relation-ident
   ([db-config {:keys [table_schem table_name]}]
    (if (= (get-in db-config [:schema :default]) table_schem)
@@ -64,6 +69,7 @@
       :entity/ident                 ident
       :entity.ident/pascal-case     (entity-ident-in-pascal-case ident)
       :entity.ident/camel-case      (entity-ident-in-camel-case ident)
+      :entity.ident/plural          (pluralize-entity-ident ident)
       :entity.relation/type         (case table_type
                                       "TABLE" :table
                                       "VIEW" :view)
@@ -342,5 +348,5 @@
 (defn coarce-attr-value [heql-meta-data attr-ident value]
   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
     (case (:attr/type attr-md)
-     :attr.type/uuid (if (uuid? value) value (java.util.UUID/fromString value))
+      :attr.type/uuid (if (uuid? value) value (java.util.UUID/fromString value))
       value)))
