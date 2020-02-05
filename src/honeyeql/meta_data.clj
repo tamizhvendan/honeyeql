@@ -151,10 +151,40 @@
 (defn- foreign-key-column->attr-name [{:keys [foreign-key-suffix]} fkcolumn_name]
   (string/replace fkcolumn_name (re-pattern (str foreign-key-suffix "$")) ""))
 
-(defn- one-to-many-attr-ident [left-entity-ident right-entity-ident]
-  (if-let [e-ns (namespace left-entity-ident)]
-    (keyword (str e-ns "." (name right-entity-ident)) (inf/plural (name left-entity-ident)))
-    (keyword (name right-entity-ident) (inf/plural (name left-entity-ident)))))
+(defn- one-to-many-attr-ident 
+  ([left-entity-ident right-entity-ident]
+   (one-to-many-attr-ident left-entity-ident right-entity-ident nil))
+  ([left-entity-ident right-entity-ident one-to-one-attr-ident]
+   (let [attr-name (cond 
+                     (nil? one-to-one-attr-ident) (inf/plural (name left-entity-ident))
+                     (= one-to-one-attr-ident (keyword (name left-entity-ident) (name right-entity-ident))) (inf/plural (name left-entity-ident))
+                     :else (str (name one-to-one-attr-ident) "-" (inf/plural (name left-entity-ident))))]
+     (if-let [e-ns (namespace right-entity-ident)]
+       (keyword (str e-ns "." (name right-entity-ident)) attr-name)
+       (keyword (name right-entity-ident) attr-name)))))
+
+#_ (one-to-many-attr-ident :film :language :film/language)
+#_ (one-to-many-attr-ident :film :language :film/original-language)
+
+(defn- add-one-to-many-metadata [heql-meta-data
+                                 {:keys [left-entity-ident left-attr-ident 
+                                         right-entity-ident right-attr-ident
+                                         one-to-one-attr-ident]}]
+  (let [one-to-many-attr-ident (one-to-many-attr-ident left-entity-ident right-entity-ident one-to-one-attr-ident)]
+    (update-in (assoc-in heql-meta-data
+                        [:attributes one-to-many-attr-ident]
+                        {:attr/ident            one-to-many-attr-ident
+                         :attr.ident/camel-case (attribute-ident-in-camel-case one-to-many-attr-ident)
+                         :attr/type             :attr.type/ref
+                         :attr/nullable         false
+                         :attr.ref/cardinality  :attr.ref.cardinality/many
+                         :attr.ref/type         left-entity-ident
+                         :attr.entity/ident     right-entity-ident
+                         :attr.column.ref/type  :attr.column.ref.type/one-to-many
+                         :attr.column.ref/left  right-attr-ident
+                         :attr.column.ref/right left-attr-ident})
+              [:entities right-entity-ident :entity/req-attrs]
+              conj one-to-many-attr-ident)))
 
 (defn- add-fk-rel-meta-data [db-config heql-meta-data
                              {:keys [fktable_schem fktable_name fkcolumn_name fk_name
@@ -165,8 +195,7 @@
         left-entity-ident      (entity-ident db-config fktable_schem fktable_name)
         right-attr-ident       (attribute-ident db-config pktable_schem pktable_name pkcolumn_name)
         right-entity-ident     (entity-ident db-config pktable_schem pktable_name)
-        is-nullable            (get-in heql-meta-data [:attributes left-attr-ident :attr/nullable])
-        one-to-many-attr-ident (one-to-many-attr-ident left-entity-ident right-entity-ident)]
+        is-nullable            (get-in heql-meta-data [:attributes left-attr-ident :attr/nullable])]
     (-> (assoc-in heql-meta-data [:attributes one-to-one-attr-ident]
                   {:attr/ident            one-to-one-attr-ident
                    :attr.ident/camel-case (attribute-ident-in-camel-case one-to-one-attr-ident)
@@ -182,25 +211,17 @@
                                                                    :table_name          fktable_name
                                                                    :column_name         one-to-one-attr-name
                                                                    :relationship-column true})})
-        (assoc-in [:attributes one-to-many-attr-ident]
-                  {:attr/ident            one-to-many-attr-ident
-                   :attr.ident/camel-case (attribute-ident-in-camel-case one-to-many-attr-ident)
-                   :attr/type             :attr.type/ref
-                   :attr/nullable         false
-                   :attr.ref/cardinality  :attr.ref.cardinality/many
-                   :attr.ref/type         left-entity-ident
-                   :attr.entity/ident     right-entity-ident
-                   :attr.column.ref/type  :attr.column.ref.type/one-to-many
-                   :attr.column.ref/left  right-attr-ident
-                   :attr.column.ref/right left-attr-ident})
         (update-in [:entities left-entity-ident (if is-nullable :entity/opt-attrs :entity/req-attrs)]
                    conj one-to-one-attr-ident)
         (update-in [:entities left-entity-ident :entity.relation/foreign-keys]
                    conj {:entity.relation.foreign-key/name      fk_name
                          :entity.relation.foreign-key/self-attr left-attr-ident
                          :entity.relation.foreign-key/ref-attr  right-attr-ident})
-        (update-in [:entities right-entity-ident :entity/req-attrs]
-                   conj one-to-many-attr-ident))))
+        (add-one-to-many-metadata {:left-entity-ident left-entity-ident
+                                   :left-attr-ident left-attr-ident
+                                   :right-entity-ident right-entity-ident
+                                   :right-attr-ident right-attr-ident
+                                   :one-to-one-attr-ident one-to-one-attr-ident}))))
 
 (defn- add-relationships-meta-data [db-spec jdbc-meta-data {:keys [db-config]
                                                             :as   heql-meta-data}]
