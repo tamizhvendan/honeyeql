@@ -14,11 +14,14 @@
     "YES" true
     "NO" false))
 
+(defn- default-schema? [db-config table-schema]
+  (or (nil? table-schema) (= (get-in db-config [:schema :default]) table-schema)))
+
 (defn- entity-ident
   ([db-config {:keys [table_schem table_name]}]
    (entity-ident db-config table_schem table_name))
   ([db-config table_schem table_name]
-   (if (= (get-in db-config [:schema :default]) table_schem)
+   (if (default-schema? db-config table_schem)
      (keyword (inf/singular (inf/hyphenate table_name)))
      (keyword (inf/hyphenate table_schem) (inf/hyphenate table_name)))))
 
@@ -39,7 +42,7 @@
 
 (defn- relation-ident
   ([db-config {:keys [table_schem table_name]}]
-   (if (= (get-in db-config [:schema :default]) table_schem)
+   (if (default-schema? db-config table_schem)
      (keyword table_name)
      (keyword (str (inf/hyphenate table_schem) "." (inf/hyphenate table_name))))))
 
@@ -47,7 +50,7 @@
   ([db-config {:keys [table_schem table_name column_name]}]
    (attribute-ident db-config table_schem table_name column_name))
   ([db-config table_schem table_name column_name]
-   (if (= (get-in db-config [:schema :default]) table_schem)
+   (if (default-schema? db-config table_schem)
      (keyword (inf/singular (inf/hyphenate table_name)) (inf/hyphenate column_name))
      (keyword (str (inf/hyphenate table_schem) "." (inf/singular (inf/hyphenate table_name)))
               (inf/hyphenate column_name)))))
@@ -57,7 +60,7 @@
 
 (defn- column-ident [db-config {:keys [table_schem table_name column_name relationship-column]}]
   (let [col-name-separator (if relationship-column "_" ".")]
-    (if (= (get-in db-config [:schema :default]) table_schem)
+    (if (default-schema? db-config table_schem)
       (keyword (str table_name col-name-separator column_name))
       (keyword (str table_schem "." table_name col-name-separator column_name)))))
 
@@ -227,8 +230,8 @@
 
 (defn- add-relationships-meta-data [db-meta-data {:keys [db-config]
                                                   :as   heql-meta-data}]
-  (reduce 
-   #(merge-with merge %1 (add-fk-rel-meta-data db-config %1 %2)) 
+  (reduce
+   #(merge-with merge %1 (add-fk-rel-meta-data db-config %1 %2))
    heql-meta-data
    (:foreign-keys db-meta-data)))
 
