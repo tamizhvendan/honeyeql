@@ -14,7 +14,9 @@
   (config [db-adapter])
   (merge-config [db-adapter config-to-override])
   (to-sql [db-adapter hsql])
-  (select-clause [db-adapter heql-meta-data eql-nodes]))
+  (select-clause [db-adapter heql-meta-data eql-nodes])
+  (resolve-one-to-one-relationship [db-adapter heql-meta-data hsql eql-node])
+  (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]))
 
 (defn- find-join-type [heql-meta-data eql-node]
   (let [{node-type :type
@@ -54,19 +56,13 @@
       (conj predicates :and)
       (first predicates))))
 
-(defn- assoc-one-to-one-hsql-queries [db-adapter heql-meta-data hsql eql-nodes]
-  (if-let [one-to-one-join-children
-           (seq (filter #(= :one-to-one-join (find-join-type heql-meta-data %)) eql-nodes))]
-    (assoc hsql :left-join-lateral (map #(eql->hsql db-adapter heql-meta-data %) one-to-one-join-children))
-    hsql))
-
 (defmethod ^{:private true} eql->hsql :ident-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
         hsql                         {:from   [[(heql-md/entity-relation-ident heql-meta-data (first key))
                                                 (keyword (:self alias))]]
                                       :where  (eql-ident-key->hsql-predicate heql-meta-data key alias)
                                       :select (select-clause db-adapter heql-meta-data children)}]
-    (assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children)))
+    (resolve-children-one-to-one-relationships db-adapter heql-meta-data hsql children)))
 
 (defmethod ^{:private true} eql->hsql :non-ident-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [children alias]} eql-node
@@ -74,7 +70,7 @@
         hsql                     {:from   [[(heql-md/entity-relation-ident heql-meta-data first-child-ident)
                                             (keyword (:self alias))]]
                                   :select (select-clause db-adapter heql-meta-data children)}]
-    (assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children)))
+    (resolve-children-one-to-one-relationships db-adapter heql-meta-data hsql children)))
 
 (defn- one-to-one-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
   [:=
@@ -88,8 +84,7 @@
                                                 (keyword (:self alias))]]
                                       :where  (one-to-one-join-predicate heql-meta-data join-attr-md alias)
                                       :select (select-clause db-adapter heql-meta-data children)}]
-    [(assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children)
-     (keyword (str (:parent alias) "__" (:self alias)))]))
+    (resolve-one-to-one-relationship db-adapter heql-meta-data hsql eql-node)))
 
 (defn- one-to-many-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
   [:=
@@ -108,7 +103,7 @@
                                       :select (select-clause db-adapter heql-meta-data children)}
         projection-alias             (keyword (gensym))]
     {:coalesce-array {:select [(json-agg projection-alias)]
-                      :from   [[(assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children) projection-alias]]}}))
+                      :from   [[(resolve-children-one-to-one-relationships db-adapter heql-meta-data hsql children) projection-alias]]}}))
 
 (defn- many-to-many-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]
                                                     :as                   join-attr-md} alias assoc-table-alias]
@@ -136,7 +131,7 @@
                                       :select (select-clause db-adapter heql-meta-data children)}
         projection-alias             (keyword (gensym))]
     {:coalesce-array {:select [(json-agg projection-alias)]
-                      :from   [[(assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children) projection-alias]]}}))
+                      :from   [[(resolve-children-one-to-one-relationships db-adapter heql-meta-data hsql children) projection-alias]]}}))
 
 (defn- json-key-fn [attribute-return-as key]
   (if (= :qualified-kebab-case attribute-return-as)

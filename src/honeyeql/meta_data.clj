@@ -370,8 +370,11 @@
    (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
      (attr-column-name attr-md))))
 
-(defn attr-column-ref-type [heql-meta-data attr-ident]
-  (:attr.column.ref/type (attr-meta-data heql-meta-data attr-ident)))
+(defn attr-column-ref-type
+  ([heql-meta-data attr-ident]
+   (attr-column-ref-type (attr-meta-data heql-meta-data attr-ident)))
+  ([attr-meta-data]
+   (:attr.column.ref/type attr-meta-data)))
 
 (defn coarce-attr-value [heql-meta-data attr-ident value]
   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
