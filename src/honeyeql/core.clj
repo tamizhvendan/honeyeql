@@ -16,9 +16,10 @@
   (to-sql [db-adapter hsql])
   (select-clause [db-adapter heql-meta-data eql-nodes])
   (resolve-one-to-one-relationship [db-adapter heql-meta-data hsql eql-node])
-  (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]))
+  (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes])
+  (resolve-one-to-many-relationship [db-adapter heql-meta-data hsql eql-node]))
 
-(defn- find-join-type [heql-meta-data eql-node]
+(defn find-join-type [heql-meta-data eql-node]
   (let [{node-type :type
          node-key  :key} eql-node]
     (cond
@@ -100,10 +101,8 @@
         hsql                         {:from   [[(heql-md/ref-entity-relation-ident heql-meta-data key)
                                                 (keyword (:self alias))]]
                                       :where  (one-to-many-join-predicate heql-meta-data join-attr-md alias)
-                                      :select (select-clause db-adapter heql-meta-data children)}
-        projection-alias             (keyword (gensym))]
-    {:coalesce-array {:select [(json-agg projection-alias)]
-                      :from   [[(resolve-children-one-to-one-relationships db-adapter heql-meta-data hsql children) projection-alias]]}}))
+                                      :select (select-clause db-adapter heql-meta-data children)}]
+    (resolve-one-to-many-relationship db-adapter heql-meta-data hsql eql-node)))
 
 (defn- many-to-many-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]
                                                     :as                   join-attr-md} alias assoc-table-alias]
