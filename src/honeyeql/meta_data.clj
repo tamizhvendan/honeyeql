@@ -312,9 +312,11 @@
          distinct
          (remove #(= default-schema %))
          (reduce (fn [sm s]
-                   (assoc sm (namespace-ident s)
-                          {:namespace/ident       (namespace-ident s)
-                           :namespace.schema/name s})) {})
+                   (if s
+                     (assoc sm (namespace-ident s)
+                            {:namespace/ident       (namespace-ident s)
+                             :namespace.schema/name s})
+                     sm)) {})
          (assoc heql-meta-data :namespaces))))
 
 (defn fetch [db-spec]
