@@ -12,7 +12,6 @@
   (db-spec [db-adapter])
   (meta-data [db-adapter])
   (config [db-adapter])
-  (merge-config [db-adapter config-to-override])
   (to-sql [db-adapter hsql])
   (select-clause [db-adapter heql-meta-data eql-nodes])
   (resolve-one-to-one-relationship [db-adapter heql-meta-data hsql eql-node])

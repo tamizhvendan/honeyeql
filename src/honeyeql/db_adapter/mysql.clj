@@ -133,8 +133,6 @@
     (:heql-meta-data mysql-adapter))
   (config [mysql-adapter]
     (:heql-config mysql-adapter))
-  (merge-config [mysql-adapter config-to-override]
-    (update mysql-adapter :heql-config merge config-to-override))
   (to-sql [mysql-adapter hsql]
     (fix-lateral (hsql/format (result-set-hql hsql) :quoting :mysql)))
   (select-clause [db-adapter heql-meta-data eql-nodes]

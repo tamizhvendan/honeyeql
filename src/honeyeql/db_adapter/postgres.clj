@@ -116,8 +116,6 @@
     (:heql-meta-data pg-adapter))
   (config [pg-adapter]
     (:heql-config pg-adapter))
-  (merge-config [pg-adapter config-to-override]
-    (update pg-adapter :heql-config merge config-to-override))
   (to-sql [pg-adapter hsql]
     (hsql/format (result-set-hql hsql) :quoting :ansi))
   (select-clause [db-adapter heql-meta-data eql-nodes]
