@@ -6,7 +6,7 @@
             [next.jdbc.sql :as jdbc-sql]
             [honeyeql.debug :refer [trace>>]]))
 
-(def default-heql-config {:attribute {:return-as :qualified-kebab-case}})
+(def default-heql-config {:field/naming-convention :qualified-kebab-case})
 
 (defprotocol DbAdapter
   (db-spec [db-adapter])
@@ -37,8 +37,8 @@
     (and (= :prop type) (keyword? key)) key
     (and (= :join type) dispatch-key) key))
 
-(defn column-alias [attr-return-as attr-ident]
-  (case attr-return-as
+(defn column-alias [field-naming-convention attr-ident]
+  (case field-naming-convention
     :qualified-kebab-case (str (namespace attr-ident) "/" (name attr-ident))
     :unqualified-camel-case (inf/camel-case (name attr-ident) :lower)))
 
@@ -166,9 +166,9 @@
        :prop (assoc-in (assoc eql-node :attr-ident attr-ident) [:alias :parent] parent-alias)))))
 
 (defn query [db-adapter eql-query]
-  (let [heql-meta-data (meta-data db-adapter)
-        attr-return-as (get-in (config db-adapter) [:attribute :return-as])]
-    (map  #(transform-keys attr-return-as %)
+  (let [heql-meta-data          (meta-data db-adapter)
+        field-naming-convention (:field/naming-convention (config db-adapter))]
+    (map  #(transform-keys field-naming-convention %)
           (json/read-str (->> (eql/query->ast eql-query)
                               add-alias-and-ident
                               (trace>> :eql-ast)
@@ -180,8 +180,8 @@
                               first
                               :result)
                          :bigdec true
-                         :key-fn #(json-key-fn attr-return-as %)
-                         :value-fn #(json-value-fn heql-meta-data attr-return-as %1 %2)))))
+                         :key-fn #(json-key-fn field-naming-convention %)
+                         :value-fn #(json-value-fn heql-meta-data field-naming-convention %1 %2)))))
 
 (defn query-single [db-adapter eql-query]
   (first (query db-adapter eql-query)))
