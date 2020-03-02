@@ -23,7 +23,7 @@
   ([db-config table_schem table_name]
    (if (default-schema? db-config table_schem)
      (keyword (inf/singular (inf/hyphenate table_name)))
-     (keyword (inf/hyphenate table_schem) (inf/hyphenate table_name)))))
+     (keyword (inf/hyphenate table_schem) (inf/singular (inf/hyphenate table_name))))))
 
 (defn- entity-ident-in-pascal-case [entity-ident]
   (if-let [schema (namespace entity-ident)]
