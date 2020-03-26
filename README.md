@@ -86,13 +86,17 @@ Then we query the database using either `query-single` to retrieve a single item
             [honeyeql.core :as heql]))
 
 ; ...
-(heql/query-single [{[:actor/actor-id 1] [:actor/first-name
-                                          :actor/last-name]}])
+(heql/query-single
+  db-adapter
+  [{[:actor/actor-id 1] [:actor/first-name
+                         :actor/last-name]}])
 ; returns
 ; {:actor/first-name "PENELOPE"
 ;  :actor/last-name  "GUINESS"}
 
-(heql/query [{[] [:language/name]}])
+(heql/query
+  db-adapter
+  [{[] [:language/name]}])
 ; returns
 ; ({:language/name "English"} {:language/name "Italian"}
 ;  {:language/name "Japanese"} {:language/name "Mandarin"}
@@ -107,6 +111,7 @@ Supports all kind of relationships as well
 
 ```clojure
 (heql/query-single
+  db-adapter
   [{[:city/city-id 3] [:city/city
                        {:city/country [:country/country]}]}])
 ```
@@ -117,6 +122,7 @@ Supports all kind of relationships as well
 
 ```clojure
 (heql/query-single
+  db-adapter
   [{[:country/country-id 2] [:country/country
                              {:country/cities [:city/city]}]}])
 ```
@@ -127,6 +133,7 @@ Supports all kind of relationships as well
 
 ```clojure
 (heql/query-single
+  db-adapter
   [{[:actor/actor-id 148] [:actor/first-name
                            {:actor/films [:film/title]}]}])
 ```
