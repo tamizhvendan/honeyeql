@@ -5,17 +5,17 @@
             [honeysql.core :as hsql]
             [clojure.string :as string]))
 
-(defmethod ^{:private true} fmt/format-clause :left-join-lateral [[_ join-groups] _]
+(defmethod ^{:private true} fmt/format-clause :pg-left-join-lateral [[_ join-groups] _]
   (string/join
    " "
    (map (fn [[join-group alias]]
           (str "LEFT JOIN LATERAL " (fmt/to-sql join-group) " AS \"" (name alias) "\" ON TRUE"))
         join-groups)))
 
-(defmethod ^{:private true} fmt/format-clause :coalesce-array [[_ x] _]
+(defmethod ^{:private true} fmt/format-clause :pg-coalesce-array [[_ x] _]
   (str " COALESCE (" (fmt/to-sql x) ",'[]')"))
 
-(fmt/register-clause! :left-join-lateral 135)
+(fmt/register-clause! :pg-left-join-lateral 135)
 
 (defmethod heql-md/get-db-config "PostgreSQL" [_]
   {:schema             {:default "public"
@@ -102,7 +102,7 @@
 (defn- assoc-one-to-one-hsql-queries [db-adapter heql-meta-data hsql eql-nodes]
   (if-let [one-to-one-join-children
            (seq (filter #(= :one-to-one-join (heql/find-join-type heql-meta-data %)) eql-nodes))]
-    (assoc hsql :left-join-lateral (map #(heql/eql->hsql db-adapter heql-meta-data %) one-to-one-join-children))
+    (assoc hsql :pg-left-join-lateral (map #(heql/eql->hsql db-adapter heql-meta-data %) one-to-one-join-children))
     hsql))
 
 (defn- json-agg [select-alias]
@@ -127,11 +127,11 @@
      (keyword (str (:parent alias) "__" (:self alias)))])
   (resolve-one-to-many-relationship [db-adapter heql-meta-data hsql {:keys [children]}]
     (let [projection-alias (gensym)]
-      {:coalesce-array {:select [(json-agg projection-alias)]
-                        :from   [[(assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children)
-                                  projection-alias]]}}))
+      {:pg-coalesce-array {:select [(json-agg projection-alias)]
+                           :from   [[(assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children)
+                                     projection-alias]]}}))
   (resolve-many-to-many-relationship [db-adapter heql-meta-data hsql {:keys [children]}]
     (let [projection-alias (gensym)]
-      {:coalesce-array {:select [(json-agg projection-alias)]
-                        :from   [[(assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children)
-                                  projection-alias]]}})))
+      {:pg-coalesce-array {:select [(json-agg projection-alias)]
+                           :from   [[(assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children)
+                                     projection-alias]]}})))

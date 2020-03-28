@@ -81,18 +81,21 @@
                             select-clause)) :result]]
       :from   [alias]})))
 
-(defn- json-object
-  ([obj]
-   (json-object obj false))
-  ([obj aggregate?]
-   (let [prefix (if aggregate? "JSON_ARRAYAGG(JSON_OBJECT(" "JSON_OBJECT(")
-         suffix (if aggregate? "))" ")")]
-     (hsql/raw (str prefix
-                    (string/join ", " (map (fn [[k v]]
-                                             (if (keyword? v)
-                                               (str "'" k "'" ", "  "`" (namespace v) "`.`" (name v) "`")
-                                               (str "'" k "'" ", (" (first (hsql/format v :quoting :mysql)) ")"))) obj))
-                    suffix)))))
+(defn- json-kv [[k v]]
+  (if (keyword? v)
+    (list (str "'" k "'" ", "  "`" (namespace v) "`.`" (name v) "`"))
+    (let [[sql & args] (hsql/format v :quoting :mysql)]
+      (cons (str "'" k "'" ", (" sql ")") args))))
+
+(defn- json-object [obj]
+  (let [json-kvs     (map json-kv obj)
+        json-obj-str (format "JSON_OBJECT(%s)" (string/join ", " (map first json-kvs)))
+        sql-args     (mapcat rest json-kvs)]
+    (if (seq sql-args)
+      (-> (cons json-obj-str sql-args)
+          vec
+          hsql/raw)
+      (hsql/raw json-obj-str))))
 
 (defn- mysql-select-clause [db-adapter heql-meta-data eql-nodes]
   (json-object
@@ -125,6 +128,9 @@
 (defn- fix-lateral [[x & xs]]
   (conj xs (string/replace x "LATERAL," "LATERAL")))
 
+(defn- fix-params [[x & xs]]
+  (conj xs (string/replace x #"\?+ AS " " AS ")))
+
 (defrecord MySqlAdapter [db-spec heql-config heql-meta-data]
   heql/DbAdapter
   (db-spec [mysql-adapter]
@@ -134,7 +140,9 @@
   (config [mysql-adapter]
     (:heql-config mysql-adapter))
   (to-sql [mysql-adapter hsql]
-    (fix-lateral (hsql/format (result-set-hql hsql) :quoting :mysql)))
+    (-> (hsql/format (result-set-hql hsql) :quoting :mysql)
+        fix-lateral
+        fix-params))
   (select-clause [db-adapter heql-meta-data eql-nodes]
     [[(mysql-select-clause db-adapter heql-meta-data eql-nodes) :result]])
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]
