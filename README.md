@@ -25,6 +25,12 @@ HoneyEQL powers [GraphQLize](https://www.graphqlize.org).
 ## Table of contents
 
 - [Getting Started](#getting-started)
+  - Queries
+    - [one-to-one relationship](#one-to-one-relationship)
+    - [one-to-many relationship](#one-to-many-relationship)
+    - [many-to-many relationship](#many-to-many-relationship)
+    - Pagination
+      - [limit and offset](#limit-and-offset)
 - [Metadata](#metadata)
 
 ## Getting Started
@@ -60,7 +66,7 @@ The next step is initializing the `db-adapter` using either [db-spec-map](https:
                                      :password "postgres"}))
 ```
 
-### MySQL with db connection pool**
+### MySQL with db connection pool
 
 ```clojure
 (ns core
@@ -91,16 +97,16 @@ Then we query the database using either `query-single` to retrieve a single item
   [{[:actor/actor-id 1] [:actor/first-name
                          :actor/last-name]}])
 ; returns
-; {:actor/first-name "PENELOPE"
-;  :actor/last-name  "GUINESS"}
+{:actor/first-name "PENELOPE"
+ :actor/last-name  "GUINESS"}
 
 (heql/query
   db-adapter
   [{[] [:language/name]}])
 ; returns
-; ({:language/name "English"} {:language/name "Italian"}
-;  {:language/name "Japanese"} {:language/name "Mandarin"}
-;  {:language/name "French"} {:language/name "German"})
+({:language/name "English"} {:language/name "Italian"}
+ {:language/name "Japanese"} {:language/name "Mandarin"}
+ {:language/name "French"} {:language/name "German"})
 ```
 
 Supports all kind of relationships as well
@@ -138,6 +144,41 @@ Supports all kind of relationships as well
                            {:actor/films [:film/title]}]}])
 ```
 
+### Pagination
+
+#### Limit and Offset
+
+```clojure
+(heql/query
+  db-adapter
+  [{'([] {:limit 2 :offset 2}) 
+   [:actor/actor-id :actor/first-name]}])
+; returns
+({:actor/actor-id 3, :actor/first-name "ED"}
+ {:actor/actor-id 4, :actor/first-name "JENNIFER"})
+```
+
+Both `limit` and `offset` can be applied on `one-to-many` and `many-to-many` relationships as well. 
+
+```clojure
+(heql/query-single
+  db-adapter
+  [{[:country/country-id 2] 
+    [:country/country
+     ; one-to-many relationship
+     {'(:country/cities {:limit 2 :offset 2}) 
+       [:city/city]}]}])
+```
+```clojure
+(heql/query
+  db-adapter
+  [{[:actor/actor-id 148] 
+    [:actor/first-name
+    ; many-to-many relationship
+    {'(:actor/films {:limit 1 :offset 2})
+      [:film/title]}]}])
+```
+
 ## Metadata
 
 In addition to querying, HoneyEQL supports quering the metadata of the database also.
@@ -145,9 +186,9 @@ In addition to querying, HoneyEQL supports quering the metadata of the database 
 ```clojure
 (heql/meta-data db-adapter)
 ; returns
-; {:entities ...
-;  :attributes ...
-;  :namespaces ...}
+{:entities ...
+ :attributes ...
+ :namespaces ...}
 ```
 
 The visual representation of the above data for the Postgres Sakila database is available in the below links
