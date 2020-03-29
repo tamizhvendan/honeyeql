@@ -48,7 +48,7 @@ This documentation uses [deps](https://clojure.org/guides/deps_and_cli) and assu
 
 The next step is initializing the `db-adapter` using either [db-spec-map](https://cljdoc.org/d/seancorfield/next.jdbc/1.0.409/doc/getting-started#the-db-spec-hash-map) or
 
-**Postgres with db-spec map**
+### Postgres with db-spec map
 
 ```clojure
 (ns core
@@ -60,7 +60,7 @@ The next step is initializing the `db-adapter` using either [db-spec-map](https:
                                      :password "postgres"}))
 ```
 
-**MySQL with db connection pool**
+### MySQL with db connection pool**
 
 ```clojure
 (ns core
@@ -105,7 +105,7 @@ Then we query the database using either `query-single` to retrieve a single item
 
 Supports all kind of relationships as well
 
-**one-to-one relationship**
+### one-to-one relationship
 
 ![](https://www.graphqlize.org/img/address_city_country_er_diagram.png)
 
@@ -116,7 +116,7 @@ Supports all kind of relationships as well
                        {:city/country [:country/country]}]}])
 ```
 
-**one-to-many relationship**
+### one-to-many relationship
 
 ![](https://www.graphqlize.org/img/address_city_country_er_diagram.png)
 
@@ -127,7 +127,7 @@ Supports all kind of relationships as well
                              {:country/cities [:city/city]}]}])
 ```
 
-**many-to-many relationship**
+### many-to-many relationship
 
 ![](https://www.graphqlize.org/img/film_actor_er_diagram.png)
 
