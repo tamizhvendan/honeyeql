@@ -44,7 +44,7 @@
     ; https://jdbc.postgresql.org/documentation/head/8-date-time.html
     ("time" "time without time zone") :attr.type/time
     ("timetz" "time with time zone") :attr.type/offset-time
-    ("timestamp" "timestamp without time zone") :attr.type/data-time
+    ("timestamp" "timestamp without time zone") :attr.type/date-time
     ("timestamptz" "timestamp with time zone") :attr.type/offset-date-time
     "uuid" :attr.type/uuid
     "xml" :attr.type/xml

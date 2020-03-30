@@ -4,12 +4,14 @@
             [inflections.core :as inf]
             [clojure.set :as set]
             [clojure.string :as string]
-            [honeyeql.debug :refer [trace>>]]))
+            [honeyeql.debug :refer [trace>>]])
+  (:import [java.time OffsetDateTime LocalDateTime
+            LocalDate LocalTime]))
 
 (defn datafied-result-set [db-spec result-set]
   (rs/datafiable-result-set result-set db-spec {:builder-fn rs/as-unqualified-lower-maps}))
 
-(defn- coarce-boolean [bool-str]
+(defn- coerce-boolean [bool-str]
   (case bool-str
     "YES" true
     "NO" false))
@@ -108,7 +110,7 @@
                                  :as   column-meta-data}]
   (let [attr-ident            (attribute-ident db-config column-meta-data)
         entity-ident          (entity-ident db-config column-meta-data)
-        is-nullable           (coarce-boolean is_nullable)
+        is-nullable           (coerce-boolean is_nullable)
         entity-attr-qualifier (if is-nullable :entity/opt-attrs :entity/req-attrs)]
     (update-in
      (assoc-in heql-meta-data [:attributes attr-ident]
@@ -121,7 +123,7 @@
                 :attr.column/schema             table_schem
                 :attr.column/relation           table_name
                 :attr.column/size               column_size
-                :attr.column/auto-incrementable (coarce-boolean is_autoincrement)
+                :attr.column/auto-incrementable (coerce-boolean is_autoincrement)
                 :attr.column/jdbc-type          data_type
                 :attr.column/db-type            type_name
                 :attr.column/ident              (column-ident db-config column-meta-data)

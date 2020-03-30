@@ -48,7 +48,7 @@
 
 (defn- eql-ident->hsql-predicate [heql-meta-data [attr-ident value] alias]
   (let [attr-col-name (heql-md/attr-column-name heql-meta-data attr-ident)
-        attr-value    (heql-md/coarce-attr-value heql-meta-data attr-ident value)]
+        attr-value    (heql-md/coerce-attr-value heql-meta-data attr-ident value)]
     [:= (keyword (str (:self alias) "." attr-col-name)) attr-value]))
 
 (defn- eql-ident-key->hsql-predicate [heql-meta-data eql-ident-key alias]
@@ -150,8 +150,8 @@
 
 (defn- json-value-fn [heql-meta-data attribute-return-as json-key json-value]
   (if (= :qualified-kebab-case attribute-return-as)
-    (heql-md/coarce-attr-value heql-meta-data json-key json-value)
-    (heql-md/coarce-attr-value heql-meta-data (first json-key) json-value)))
+    (heql-md/coerce-attr-value heql-meta-data json-key json-value)
+    (heql-md/coerce-attr-value heql-meta-data (first json-key) json-value)))
 
 (defn- transform-keys [attribute-return-as return-value]
   (if (= :qualified-kebab-case attribute-return-as)

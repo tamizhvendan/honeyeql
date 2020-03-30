@@ -21,7 +21,7 @@
     "DOUBLE" :attr.type/double
     "JSON" :attr.type/json
     "DATE" :attr.type/date
-    "DATETIME" :attr.type/data-time
+    "DATETIME" :attr.type/date-time
     "TIMESTAMP" :attr.type/offset-date-time
     "TIME" :attr.type/time
     "YEAR" :attr.type/integer
