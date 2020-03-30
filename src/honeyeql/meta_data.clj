@@ -380,8 +380,32 @@
   ([attr-meta-data]
    (:attr.column.ref/type attr-meta-data)))
 
-(defn coarce-attr-value [heql-meta-data attr-ident value]
+(defn- same-type? [expected-type x]
+  (= expected-type (type x)))
+
+(defn- local-date? [x]
+  (same-type? LocalDate x))
+
+(defn- local-date-time? [x]
+  (same-type? LocalDateTime x))
+
+(defn- local-time? [x]
+  (same-type? LocalTime x))
+
+(defn- offset-date-time? [x]
+  (same-type? OffsetDateTime x))
+
+(defn- coerce [type-check-fn parse-fn x]
+  (if (type-check-fn x)
+    x
+    (parse-fn x)))
+
+(defn coerce-attr-value [heql-meta-data attr-ident value]
   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
     (case (:attr/type attr-md)
-      :attr.type/uuid (if (uuid? value) value (java.util.UUID/fromString value))
+      :attr.type/uuid (coerce uuid? #(java.util.UUID/fromString %) value)
+      :attr.type/date (coerce local-date? #(LocalDate/parse %) value)
+      :attr.type/time (coerce local-time? #(LocalTime/parse %) value)
+      :attr.type/date-time (coerce local-date-time? #(LocalDateTime/parse %) value)
+      :attr.type/offset-date-time (coerce offset-date-time? #(OffsetDateTime/parse %) value)
       value)))
