@@ -2,7 +2,10 @@
   (:require [honeyeql.meta-data :as heql-md]
             [honeyeql.core :as heql]
             [honeysql.core :as hsql]
-            [clojure.string :as string]))
+            [honeyeql.db-adapter.core :as db]
+            [clojure.string :as string])
+  (:import [java.time LocalDateTime]
+           [java.time.format DateTimeFormatter]))
 
 (defmethod heql-md/get-db-config "MySQL" [_]
   {:schema             {:default "xyz"
@@ -10,6 +13,7 @@
    :foreign-key-suffix "_id"})
 
 ;; https://dev.mysql.com/doc/refman/8.0/en/data-types.html
+;; https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-reference-type-conversions.html
 (defn- mysql-type->col-type [{:keys [type_name]}]
   (case type_name
     ("CHAR" "VARCHAR" "TINYTEXT" "TEXT" "MEDIUMTEXT" "LONGTEXT" "ENUM" "SET" "BINARY" "VARBINARY" "TINYBLOB" "BLOB" "LONGBLOB") :attr.type/string
@@ -22,7 +26,7 @@
     "JSON" :attr.type/json
     "DATE" :attr.type/date
     "DATETIME" :attr.type/date-time
-    "TIMESTAMP" :attr.type/offset-date-time
+    "TIMESTAMP" :attr.type/date-time
     "TIME" :attr.type/time
     "YEAR" :attr.type/integer
     :attr.type/unknown))
@@ -132,17 +136,13 @@
   (conj xs (string/replace x #"\?+ AS " " AS ")))
 
 (defrecord MySqlAdapter [db-spec heql-config heql-meta-data]
-  heql/DbAdapter
-  (db-spec [mysql-adapter]
-    (:db-spec mysql-adapter))
-  (meta-data [mysql-adapter]
-    (:heql-meta-data mysql-adapter))
-  (config [mysql-adapter]
-    (:heql-config mysql-adapter))
+  db/DbAdapter
   (to-sql [mysql-adapter hsql]
     (-> (hsql/format (result-set-hql hsql) :quoting :mysql)
         fix-lateral
         fix-params))
+  (coerce-date-time [_ value]
+    (LocalDateTime/parse value (DateTimeFormatter/ofPattern "yyyy-MM-dd HH:mm:ss.SSSSSS")))
   (select-clause [db-adapter heql-meta-data eql-nodes]
     [[(mysql-select-clause db-adapter heql-meta-data eql-nodes) :result]])
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]

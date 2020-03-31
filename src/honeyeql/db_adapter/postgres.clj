@@ -3,7 +3,9 @@
             [honeyeql.core :as heql]
             [honeysql.format :as fmt]
             [honeysql.core :as hsql]
-            [clojure.string :as string]))
+            [honeyeql.db-adapter.core :as db]
+            [clojure.string :as string])
+  (:import [java.time LocalDateTime]))
 
 (defmethod ^{:private true} fmt/format-clause :pg-left-join-lateral [[_ join-groups] _]
   (string/join
@@ -109,15 +111,11 @@
   (keyword (str "%json_agg." (name select-alias) ".*")))
 
 (defrecord PostgresAdapter [db-spec heql-config heql-meta-data]
-  heql/DbAdapter
-  (db-spec [pg-adapter]
-    (:db-spec pg-adapter))
-  (meta-data [pg-adapter]
-    (:heql-meta-data pg-adapter))
-  (config [pg-adapter]
-    (:heql-config pg-adapter))
+  db/DbAdapter
   (to-sql [pg-adapter hsql]
     (hsql/format (result-set-hql hsql) :quoting :ansi))
+  (coerce-date-time [_ value]
+    (LocalDateTime/parse value))
   (select-clause [db-adapter heql-meta-data eql-nodes]
     (vec (map #(eql-node->select-expr db-adapter heql-meta-data %) eql-nodes)))
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]

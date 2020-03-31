@@ -4,6 +4,7 @@
             [inflections.core :as inf]
             [clojure.set :as set]
             [clojure.string :as string]
+            [honeyeql.db-adapter.core :as db]
             [honeyeql.debug :refer [trace>>]])
   (:import [java.time OffsetDateTime LocalDateTime
             LocalDate LocalTime]))
@@ -400,12 +401,15 @@
     x
     (parse-fn x)))
 
-(defn coerce-attr-value [heql-meta-data attr-ident value]
-  (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
+(defn coerce-attr-value [db-adapter attr-ident value]
+  (let [heql-meta-data (:heql-meta-data db-adapter)
+        attr-md (attr-meta-data heql-meta-data attr-ident)]
     (case (:attr/type attr-md)
       :attr.type/uuid (coerce uuid? #(java.util.UUID/fromString %) value)
       :attr.type/date (coerce local-date? #(LocalDate/parse %) value)
       :attr.type/time (coerce local-time? #(LocalTime/parse %) value)
-      :attr.type/date-time (coerce local-date-time? #(LocalDateTime/parse %) value)
+      :attr.type/date-time (coerce local-date-time? #(db/coerce-date-time db-adapter %) value)
       :attr.type/offset-date-time (coerce offset-date-time? #(OffsetDateTime/parse %) value)
       value)))
+
+#_ (java.time.Instant/parse "2006-02-15 05:05:03.000000")
