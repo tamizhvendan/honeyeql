@@ -5,7 +5,9 @@
             [honeysql.core :as hsql]
             [honeyeql.db-adapter.core :as db]
             [clojure.string :as string])
-  (:import [java.time LocalDateTime]))
+  (:import [java.time LocalDateTime]
+           [java.time.temporal ChronoField]
+           [java.time.format DateTimeFormatter DateTimeFormatterBuilder]))
 
 (defmethod ^{:private true} fmt/format-clause :pg-left-join-lateral [[_ join-groups] _]
   (string/join
@@ -45,9 +47,9 @@
     "text" :attr.type/string
     ; https://jdbc.postgresql.org/documentation/head/8-date-time.html
     ("time" "time without time zone") :attr.type/time
-    ("timetz" "time with time zone") :attr.type/offset-time
+    ("timetz" "time with time zone") :attr.type/time-with-time-zone
     ("timestamp" "timestamp without time zone") :attr.type/date-time
-    ("timestamptz" "timestamp with time zone") :attr.type/offset-date-time
+    ("timestamptz" "timestamp with time zone") :attr.type/date-time-with-time-zone
     "uuid" :attr.type/uuid
     "xml" :attr.type/xml
     :attr.type/unknown))
@@ -110,12 +112,18 @@
 (defn- json-agg [select-alias]
   (keyword (str "%json_agg." (name select-alias) ".*")))
 
+(def ^:private date-time-formatter
+  (-> (DateTimeFormatterBuilder.)
+      (.append DateTimeFormatter/ISO_LOCAL_DATE_TIME)
+      (.appendFraction ChronoField/MICRO_OF_SECOND 0 6 true)
+      .toFormatter))
+
 (defrecord PostgresAdapter [db-spec heql-config heql-meta-data]
   db/DbAdapter
   (to-sql [pg-adapter hsql]
     (hsql/format (result-set-hql hsql) :quoting :ansi))
   (coerce-date-time [_ value]
-    (LocalDateTime/parse value))
+    (LocalDateTime/parse value date-time-formatter))
   (select-clause [db-adapter heql-meta-data eql-nodes]
     (vec (map #(eql-node->select-expr db-adapter heql-meta-data %) eql-nodes)))
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]

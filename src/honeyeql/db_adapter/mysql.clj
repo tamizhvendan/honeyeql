@@ -5,7 +5,8 @@
             [honeyeql.db-adapter.core :as db]
             [clojure.string :as string])
   (:import [java.time LocalDateTime]
-           [java.time.format DateTimeFormatter]))
+           [java.time.temporal ChronoField]
+           [java.time.format DateTimeFormatterBuilder]))
 
 (defmethod heql-md/get-db-config "MySQL" [_]
   {:schema             {:default "xyz"
@@ -135,6 +136,12 @@
 (defn- fix-params [[x & xs]]
   (conj xs (string/replace x #"\?+ AS " " AS ")))
 
+(def ^:private date-time-formatter
+  (-> (DateTimeFormatterBuilder.)
+      (.appendPattern "yyyy-MM-dd HH:mm:ss")
+      (.appendFraction ChronoField/MICRO_OF_SECOND 0 6 true)
+      .toFormatter))
+
 (defrecord MySqlAdapter [db-spec heql-config heql-meta-data]
   db/DbAdapter
   (to-sql [mysql-adapter hsql]
@@ -142,7 +149,7 @@
         fix-lateral
         fix-params))
   (coerce-date-time [_ value]
-    (LocalDateTime/parse value (DateTimeFormatter/ofPattern "yyyy-MM-dd HH:mm:ss.SSSSSS")))
+    (LocalDateTime/parse value date-time-formatter))
   (select-clause [db-adapter heql-meta-data eql-nodes]
     [[(mysql-select-clause db-adapter heql-meta-data eql-nodes) :result]])
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]
