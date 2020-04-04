@@ -32,20 +32,18 @@
     ("bigint" "int8" "bigserial" "serial8") :attr.type/big-integer
     ("bit" "bit varying")  :attr.type/string
     ("boolean" "bool")     :attr.type/boolean
-    ("character" "char" "character varying" "varchar" "citext" "bpchar") :attr.type/string
-    "date" :attr.type/date
-    "decimal" :attr.type/decimal
+    ("character" "char" "character varying" "varchar" "citext" "bpchar" "text" "money") :attr.type/string
     ("real" "float4" "float8") :attr.type/float
     "double precision" :attr.type/double
+    ("numeric" "decimal") :attr.type/decimal
     "inet" :attr.type/ip-address
     ("integer" "int" "int2" "int4") :attr.type/integer
     "interval" :attr.type/time-span
     ("json" "jsonb") :attr.type/json
     ("macaddr" "macaddr8") :attr.type/string
-    ("money" "numeric") :attr.type/decimal
     ("smallint" "smallserial" "serial" "serial2" "serial4") :attr.type/integer
-    "text" :attr.type/string
     ; https://jdbc.postgresql.org/documentation/head/8-date-time.html
+    "date" :attr.type/date
     ("time" "time without time zone") :attr.type/time
     ("timetz" "time with time zone") :attr.type/time-with-time-zone
     ("timestamp" "timestamp without time zone") :attr.type/date-time
