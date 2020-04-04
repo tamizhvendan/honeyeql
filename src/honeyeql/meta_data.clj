@@ -6,8 +6,7 @@
             [clojure.string :as string]
             [honeyeql.db-adapter.core :as db]
             [honeyeql.debug :refer [trace>>]])
-  (:import [java.time OffsetDateTime LocalDateTime
-            LocalDate LocalTime]))
+  (:import [java.time OffsetDateTime LocalDateTime LocalDate LocalTime OffsetTime]))
 
 (defn datafied-result-set [db-spec result-set]
   (rs/datafiable-result-set result-set db-spec {:builder-fn rs/as-unqualified-lower-maps}))
@@ -408,6 +407,7 @@
       :attr.type/uuid (coerce uuid? #(java.util.UUID/fromString %) value)
       :attr.type/date (coerce local-date? #(LocalDate/parse %) value)
       :attr.type/time (coerce local-time? #(LocalTime/parse %) value)
+      :attr.type/time-with-time-zone (coerce local-time? #(OffsetTime/parse %) value)
       :attr.type/date-time (coerce local-date-time? #(db/coerce-date-time db-adapter %) value)
       :attr.type/date-time-with-time-zone (coerce offset-date-time? #(OffsetDateTime/parse %) value)
       value)))
