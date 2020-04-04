@@ -7,9 +7,7 @@
             [honeyeql.db-adapter.core :as db]
             [honeyeql.debug :refer [trace>>]])
   (:import [java.time OffsetDateTime LocalDateTime
-            LocalDate LocalTime]
-           [java.time.temporal ChronoField]
-           [java.time.format DateTimeFormatter DateTimeFormatterBuilder]))
+            LocalDate LocalTime]))
 
 (defn datafied-result-set [db-spec result-set]
   (rs/datafiable-result-set result-set db-spec {:builder-fn rs/as-unqualified-lower-maps}))
@@ -403,12 +401,6 @@
     x
     (parse-fn x)))
 
-(def ^:private date-time-with-time-zone-formatter
-  (-> (DateTimeFormatterBuilder.)
-      (.append DateTimeFormatter/ISO_OFFSET_DATE_TIME)
-      (.appendFraction ChronoField/MICRO_OF_SECOND 0 6 true)
-      .toFormatter))
-
 (defn coerce-attr-value [db-adapter attr-ident value]
   (let [heql-meta-data (:heql-meta-data db-adapter)
         attr-md (attr-meta-data heql-meta-data attr-ident)]
@@ -419,5 +411,3 @@
       :attr.type/date-time (coerce local-date-time? #(db/coerce-date-time db-adapter %) value)
       :attr.type/date-time-with-time-zone (coerce offset-date-time? #(OffsetDateTime/parse %) value)
       value)))
-
-#_ (java.time.Instant/parse "2006-02-15 05:05:03.000000")
