@@ -29,7 +29,7 @@
 ; Ref: https://www.postgresql.org/docs/current/datatype.html
 (defn- pg-type->col-type [type-name]
   (case type-name
-    ("bigint" "int8" "bigserial" "serial8") :attr.type/big-integer
+    ("bigint" "int8" "bigserial" "serial8") :attr.type/long
     ("bit" "bit varying")  :attr.type/string
     ("boolean" "bool")     :attr.type/boolean
     ("character" "char" "character varying" "varchar" "citext" "bpchar" "text" "money") :attr.type/string

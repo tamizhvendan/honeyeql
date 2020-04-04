@@ -18,9 +18,10 @@
 (defn- mysql-type->col-type [{:keys [type_name]}]
   (case type_name
     ("CHAR" "VARCHAR" "TINYTEXT" "TEXT" "MEDIUMTEXT" "LONGTEXT" "ENUM" "SET" "BINARY" "VARBINARY" "TINYBLOB" "BLOB" "LONGBLOB") :attr.type/string
-    ("TINYINT" "SMALLINT" "MEDIUMINT" "INT" "TINYINT UNSIGNED" "SMALLINT UNSIGNED" "MEDIUMINT UNSIGNED" "INT UNSIGNED") :attr.type/integer
+    ("TINYINT" "SMALLINT" "MEDIUMINT" "INT" "TINYINT UNSIGNED" "SMALLINT UNSIGNED" "MEDIUMINT UNSIGNED") :attr.type/integer
+    ("INT UNSIGNED" "BIGINT") :attr.type/long
     "BIT" :attr.type/string
-    "BIGINT" :attr.type/big-integer
+    "BIGINT UNSIGNED" :attr.type/big-integer
     ("DECIMAL", "NUMERIC") :attr.type/decimal
     ("REAL" "FLOAT") :attr.type/float
     "DOUBLE" :attr.type/double
