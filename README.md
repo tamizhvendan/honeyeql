@@ -17,7 +17,6 @@ HoneyEQL powers [GraphQLize](https://www.graphqlize.org).
 ## Upcoming Features
 
 - Filters
-- Pagination
 - Sorting
 - Aggregate Queries
 - DML Queries
@@ -31,6 +30,8 @@ HoneyEQL powers [GraphQLize](https://www.graphqlize.org).
     - [many-to-many relationship](#many-to-many-relationship)
     - Pagination
       - [limit and offset](#limit-and-offset)
+  - Coercion
+    - [Type Mappings](#type-mappings)
 - [Metadata](#metadata)
 
 ## Getting Started
@@ -151,33 +152,50 @@ Supports all kind of relationships as well
 ```clojure
 (heql/query
   db-adapter
-  [{'([] {:limit 2 :offset 2}) 
+  [{'([] {:limit 2 :offset 2})
    [:actor/actor-id :actor/first-name]}])
 ; returns
 ({:actor/actor-id 3, :actor/first-name "ED"}
  {:actor/actor-id 4, :actor/first-name "JENNIFER"})
 ```
 
-Both `limit` and `offset` can be applied on `one-to-many` and `many-to-many` relationships as well. 
+Both `limit` and `offset` can be applied on `one-to-many` and `many-to-many` relationships as well.
 
 ```clojure
 (heql/query-single
   db-adapter
-  [{[:country/country-id 2] 
+  [{[:country/country-id 2]
     [:country/country
      ; one-to-many relationship
-     {'(:country/cities {:limit 2 :offset 2}) 
+     {'(:country/cities {:limit 2 :offset 2})
        [:city/city]}]}])
 ```
+
 ```clojure
 (heql/query
   db-adapter
-  [{[:actor/actor-id 148] 
+  [{[:actor/actor-id 148]
     [:actor/first-name
     ; many-to-many relationship
     {'(:actor/films {:limit 1 :offset 2})
       [:film/title]}]}])
 ```
+
+### Type Mappings
+
+While retrieving the data from the database, HoneyEQL coerce the return value to the corresponding JVM type as mentioned in the below table.
+
+| Type             | Postgres                                                                                   | MySQL                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| java.lang.Long   | `integer`, `int`, `int2` `int4`, `smallint`, `smallserial`, `serial`, `serial2`, `serial4`, `bigint`,`int8`,`bigserial`,`serial8` | `SMALLINT`, `MEDIUMINT`, `INT`, `TINYINT UNSIGNED`, `SMALLINT UNSIGNED`, `MEDIUMINT UNSIGNED`, `YEAR`, `INT UNSIGNED`, `BIGINT` |
+| java.math.BigDecimal |  `real`, `float4`, `float8`, `double precision`,`numeric`,`decimal`                                                                                        |           `REAL`, `FLOAT`, `DOUBLE`, `DECIMAL`, `NUMERIC`                                                                                            |
+|   java.lang.String               |     `bit`, `bit varying`, `char`, `character varying`, `varchar`, `citext`, `bpchar`, `macaddr8`, `text`, `money`                                                                                       |       `CHAR`, `VARCHAR`, `TINYTEXT`, `TEXT`, `MEDIUMTEXT`, `LONGTEXT`, `ENUM`, `SET`, `BINARY`, `VARBINARY`, `TINYBLOB,` `BLOB`, `LONGBLOB`, `BIT`                                                                                                |
+|          java.util.UUID        |          `uuid`                                                                                  |                                                 --                                                      |
+| java.time.LocalDate | `date`| `DATE`|
+| java.time.LocalTime | `time`, `time without time zone`| `TIME`|
+| java.time.OffsetTime | `timetz`, `time with time zone` | --|
+| java.time.LocalDateTime | `timestamp`, `timestamp without time zone` | `DATETIME`, `TIMESTAMP` |
+| java.time.OffsetDateTime| `timestamptz`, `timestamp with time zone` | -- | 
 
 ## Metadata
 
