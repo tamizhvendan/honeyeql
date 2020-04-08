@@ -13,25 +13,29 @@
                         :ignore  #{}}
    :foreign-key-suffix "_id"})
 
+(#{"BIT" "TINYINT"} "BIT")
+
 ;; https://dev.mysql.com/doc/refman/8.0/en/data-types.html
 ;; https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-reference-type-conversions.html
-(defn- mysql-type->col-type [{:keys [type_name]}]
-  (case type_name
-    ("CHAR" "VARCHAR" "TINYTEXT" "TEXT" "MEDIUMTEXT" "LONGTEXT" "ENUM" "SET" "BINARY" "VARBINARY" "TINYBLOB" "BLOB" "LONGBLOB") :attr.type/string
-    ("TINYINT" "SMALLINT" "MEDIUMINT" "INT" "TINYINT UNSIGNED" "SMALLINT UNSIGNED" "MEDIUMINT UNSIGNED") :attr.type/integer
-    ("INT UNSIGNED" "BIGINT") :attr.type/long
-    "BIT" :attr.type/string
-    "BIGINT UNSIGNED" :attr.type/big-integer
-    ("DECIMAL", "NUMERIC") :attr.type/decimal
-    ("REAL" "FLOAT") :attr.type/float
-    "DOUBLE" :attr.type/double
-    "JSON" :attr.type/json
-    "DATE" :attr.type/date
-    "DATETIME" :attr.type/date-time
-    "TIMESTAMP" :attr.type/date-time
-    "TIME" :attr.type/time
-    "YEAR" :attr.type/integer
-    :attr.type/unknown))
+(defn- mysql-type->col-type [{:keys [type_name column_size]}]
+  (if (and (#{"BIT" "TINYINT"} type_name) (= 1 column_size))
+    :attr.type/boolean
+    (case type_name
+      ("CHAR" "VARCHAR" "TINYTEXT" "TEXT" "MEDIUMTEXT" "LONGTEXT" "ENUM" "SET" "BINARY" "VARBINARY" "TINYBLOB" "BLOB" "LONGBLOB") :attr.type/string
+      ("TINYINT" "SMALLINT" "MEDIUMINT" "INT" "TINYINT UNSIGNED" "SMALLINT UNSIGNED" "MEDIUMINT UNSIGNED") :attr.type/integer
+      ("INT UNSIGNED" "BIGINT") :attr.type/long
+      "BIT" :attr.type/string
+      "BIGINT UNSIGNED" :attr.type/big-integer
+      ("DECIMAL", "NUMERIC") :attr.type/decimal
+      ("REAL" "FLOAT") :attr.type/float
+      "DOUBLE" :attr.type/double
+      "JSON" :attr.type/json
+      "DATE" :attr.type/date
+      "DATETIME" :attr.type/date-time
+      "TIMESTAMP" :attr.type/date-time
+      "TIME" :attr.type/time
+      "YEAR" :attr.type/integer
+      :attr.type/unknown)))
 
 (defmethod heql-md/derive-attr-type "MySQL" [_ column-meta-data]
   (mysql-type->col-type column-meta-data))
@@ -143,14 +147,21 @@
       (.appendFraction ChronoField/MICRO_OF_SECOND 0 6 true)
       .toFormatter))
 
+(defn- coerce-boolean [value]
+  (if (integer? value)
+    (not= 0 value)
+    (= "base64:type16:AQ==" value)))
+
 (defrecord MySqlAdapter [db-spec heql-config heql-meta-data]
   db/DbAdapter
   (to-sql [mysql-adapter hsql]
     (-> (hsql/format (result-set-hql hsql) :quoting :mysql)
         fix-lateral
         fix-params))
-  (coerce-date-time [_ value]
-    (LocalDateTime/parse value date-time-formatter))
+  (coerce [_ value target-type]
+    (case target-type
+     :attr.type/date-time (LocalDateTime/parse value date-time-formatter)
+     :attr.type/boolean (coerce-boolean value)))
   (select-clause [db-adapter heql-meta-data eql-nodes]
     [[(mysql-select-clause db-adapter heql-meta-data eql-nodes) :result]])
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]

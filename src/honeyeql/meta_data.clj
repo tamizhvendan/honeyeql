@@ -408,6 +408,7 @@
       :attr.type/date (coerce local-date? #(LocalDate/parse %) value)
       :attr.type/time (coerce local-time? #(LocalTime/parse %) value)
       :attr.type/time-with-time-zone (coerce local-time? #(OffsetTime/parse %) value)
-      :attr.type/date-time (coerce local-date-time? #(db/coerce-date-time db-adapter %) value)
+      :attr.type/date-time (coerce local-date-time? #(db/coerce db-adapter % :attr.type/date-time) value)
+      :attr.type/boolean (coerce boolean? #(db/coerce db-adapter % :attr.type/boolean) value)
       :attr.type/date-time-with-time-zone (coerce offset-date-time? #(OffsetDateTime/parse %) value)
       value)))

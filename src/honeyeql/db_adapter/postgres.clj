@@ -120,8 +120,10 @@
   db/DbAdapter
   (to-sql [pg-adapter hsql]
     (hsql/format (result-set-hql hsql) :quoting :ansi))
-  (coerce-date-time [_ value]
-    (LocalDateTime/parse value date-time-formatter))
+  (coerce [_ value target-type]
+    (case target-type
+     :attr.type/date-time (LocalDateTime/parse value date-time-formatter)
+     :attr.type/boolean value))
   (select-clause [db-adapter heql-meta-data eql-nodes]
     (vec (map #(eql-node->select-expr db-adapter heql-meta-data %) eql-nodes)))
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]
