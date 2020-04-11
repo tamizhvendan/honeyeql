@@ -8,19 +8,6 @@ HoneyEQL powers [GraphQLize](https://www.graphqlize.org).
 
 > CAUTION: HoneyEQL is at its early stages now. **It is not production-ready yet!**. It currently supports Postgres (9.4 & above) and MySQL (8.0 & above) only.
 
-## Supported Features
-
-- Query by Primary Key(s)
-- Query entire table
-- Query 1-1, 1-n and m-n relationships
-
-## Upcoming Features
-
-- Filters
-- Sorting
-- Aggregate Queries
-- DML Queries
-
 ## Table of contents
 
 - [Getting Started](#getting-started)
@@ -30,6 +17,7 @@ HoneyEQL powers [GraphQLize](https://www.graphqlize.org).
     - [many-to-many relationship](#many-to-many-relationship)
     - Pagination
       - [limit and offset](#limit-and-offset)
+    - [Sorting](#sorting)
   - Coercion
     - [Type Mappings](#type-mappings)
 - [Metadata](#metadata)
@@ -152,8 +140,8 @@ Supports all kind of relationships as well
 ```clojure
 (heql/query
   db-adapter
-  [{'([] {:limit 2 :offset 2})
-   [:actor/actor-id :actor/first-name]}])
+  '[{([] {:limit 2 :offset 2})
+     [:actor/actor-id :actor/first-name]}])
 ; returns
 ({:actor/actor-id 3, :actor/first-name "ED"}
  {:actor/actor-id 4, :actor/first-name "JENNIFER"})
@@ -164,21 +152,60 @@ Both `limit` and `offset` can be applied on `one-to-many` and `many-to-many` rel
 ```clojure
 (heql/query-single
   db-adapter
-  [{[:country/country-id 2]
-    [:country/country
-     ; one-to-many relationship
-     {'(:country/cities {:limit 2 :offset 2})
+  '[{[:country/country-id 2]
+     [:country/country
+      ; one-to-many relationship
+      {(:country/cities {:limit 2 :offset 2})
        [:city/city]}]}])
 ```
 
 ```clojure
 (heql/query
   db-adapter
-  [{[:actor/actor-id 148]
-    [:actor/first-name
-    ; many-to-many relationship
-    {'(:actor/films {:limit 1 :offset 2})
-      [:film/title]}]}])
+  '[{[:actor/actor-id 148]
+     [:actor/first-name
+     ; many-to-many relationship
+     {(:actor/films {:limit 1 :offset 2})
+       [:film/title]}]}])
+```
+
+### Sorting
+
+HoneySQL supports sorting using the `:order-by` parameter. It takes a vector similar to HoneySQL and transform that to a corresponding `ORDER BY` SQL clause to sort the return value.
+
+```clojure
+; sorting by :language/name
+(heql/query
+  db-adapter
+  '[{([] {:order-by [:language/name]}) 
+     [:language/name]}])
+; returns
+({:language/name "English"} {:language/name "French"} {:language/name "German"}
+ {:language/name "Italian"} {:language/name "Japanese"}  {:language/name "Mandarin"})
+```
+
+```clojure
+; sorting by :language/name in descending order
+(heql/query
+  db-adapter
+  '[{([] {:order-by [[:language/name :desc]]}) ; vector of vector!
+     [:language/name]}])
+; returns
+({:language/name "Mandarin"} {:language/name "Japanese"} {:language/name "Italian"}
+ {:language/name "German"} {:language/name "French"}  {:language/name "English"})
+```
+
+```clojure
+; sorting by multiple attributes
+; :actor/first-name is ascending order and then :actor/last-name in descending order
+(heql/query
+  db-adapter
+  '[{([] {:order-by [:actor/first-name [:actor/last-name :desc]]
+          :limit    2}) 
+     [:actor/first-name :actor/last-name]}])
+; returns
+({:actor/first-name "ADAM" :actor/last-name  "HOPPER"} 
+ {:actor/first-name "ADAM" :actor/last-name  "GRANT"})
 ```
 
 ### Type Mappings
