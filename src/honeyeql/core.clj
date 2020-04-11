@@ -189,9 +189,7 @@
                               (trace>> :hsql)
                               (db/to-sql db-adapter)
                               (trace>> :sql)
-                              (jdbc-sql/query (:db-spec db-adapter))
-                              first
-                              :result)
+                              (db/query db-adapter))
                          :bigdec true
                          :key-fn #(json-key-fn field-naming-convention %)
                          :value-fn #(json-value-fn db-adapter field-naming-convention %1 %2)))))

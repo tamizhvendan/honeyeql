@@ -2,6 +2,7 @@
 
 (defprotocol DbAdapter
   (to-sql [db-adapter hsql])
+  (query [db-adapter sql])
   (select-clause [db-adapter heql-meta-data eql-nodes])
   (coerce [db-adapter value target-type])
   (resolve-one-to-one-relationship [db-adapter heql-meta-data hsql eql-node])

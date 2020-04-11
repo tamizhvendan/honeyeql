@@ -4,6 +4,7 @@
             [honeysql.format :as fmt]
             [honeysql.core :as hsql]
             [honeyeql.db-adapter.core :as db]
+            [next.jdbc.sql :as jdbc]
             [clojure.string :as string])
   (:import [java.time LocalDateTime]
            [java.time.temporal ChronoField]
@@ -120,6 +121,10 @@
   db/DbAdapter
   (to-sql [pg-adapter hsql]
     (hsql/format (result-set-hql hsql) :quoting :ansi))
+  (query [pg-adapter sql]
+         (-> (jdbc/query (:db-spec pg-adapter) sql)
+             first
+             :result))
   (coerce [_ value target-type]
     (case target-type
      :attr.type/date-time (LocalDateTime/parse value date-time-formatter)

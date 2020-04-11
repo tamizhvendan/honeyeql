@@ -3,7 +3,8 @@
             [honeyeql.core :as heql]
             [honeysql.core :as hsql]
             [honeyeql.db-adapter.core :as db]
-            [clojure.string :as string])
+            [clojure.string :as string]
+            [next.jdbc.sql :as jdbc])
   (:import [java.time LocalDateTime]
            [java.time.temporal ChronoField]
            [java.time.format DateTimeFormatterBuilder]))
@@ -87,7 +88,7 @@
    (let [select-clause (str "COALESCE(JSON_ARRAYAGG(`" (name alias)  "`.`result`), JSON_ARRAY())")]
      {:with   [[alias hsql]]
       :select [[(hsql/raw (if (= :rs alias)
-                            (str "CAST(" select-clause " AS CHAR)")
+                            "`rs`.`result`"
                             select-clause)) :result]]
       :from   [alias]})))
 
@@ -158,10 +159,15 @@
     (-> (hsql/format (result-set-hql hsql) :quoting :mysql)
         fix-lateral
         fix-params))
+  (query [mysql-adapter sql]
+         (let [result (->> (jdbc/query (:db-spec mysql-adapter) sql)
+                           (map :result)
+                           (string/join ","))]
+           (str "[" result "]")))
   (coerce [_ value target-type]
     (case target-type
-     :attr.type/date-time (LocalDateTime/parse value date-time-formatter)
-     :attr.type/boolean (coerce-boolean value)))
+      :attr.type/date-time (LocalDateTime/parse value date-time-formatter)
+      :attr.type/boolean (coerce-boolean value)))
   (select-clause [db-adapter heql-meta-data eql-nodes]
     [[(mysql-select-clause db-adapter heql-meta-data eql-nodes) :result]])
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]
