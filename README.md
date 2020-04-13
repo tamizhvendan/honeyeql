@@ -35,7 +35,7 @@ This documentation uses [deps](https://clojure.org/guides/deps_and_cli) and assu
 ```clojure
 ;; deps.edn
 {:paths ["src"]
- :deps  {org.graphqlize/honeyeql     {:mvn/version "0.1.0-alpha8"}
+ :deps  {org.graphqlize/honeyeql     {:mvn/version "0.1.0-alpha9"}
          hikari-cp                   {:mvn/version "2.10.0"}
          org.postgresql/postgresql   {:mvn/version "42.2.8"}
          mysql/mysql-connector-java  {:mvn/version "8.0.19"}}}
@@ -207,6 +207,32 @@ HoneyEQL supports sorting using the `:order-by` parameter. It takes a vector sim
 ({:actor/first-name "ADAM" :actor/last-name  "HOPPER"} 
  {:actor/first-name "ADAM" :actor/last-name  "GRANT"})
 ```
+
+We can sort the relationship query results as well.
+
+```clojure
+; sorting one-to-many relationship query results
+(heql/query
+  db-adapter
+  '[{[:country/country-id 2] 
+      [:country/country
+       ; sorting `:country/cities` by `:city/city` in descending order  
+       {(:country/cities {:order-by [[:city/city :desc]]}) 
+        [:city/city]}]}])
+```
+
+```clojure
+; sorting many-to-many relationship query results
+(heql/query
+  db-adapter
+  '[{[:actor/actor-id 148] 
+     [:actor/first-name
+      ; sorting `:actor/films` by `:film/title` in descending order   
+      {(:actor/films {:order-by [[:film/title :desc]]}) 
+       [:film/title]}]}])
+```
+
+> **NOTE:** Currently, soring the relationship query results is not supported in MySQL
 
 ### Type Mappings
 
