@@ -412,3 +412,6 @@
       :attr.type/boolean (coerce boolean? #(db/coerce db-adapter % :attr.type/boolean) value)
       :attr.type/date-time-with-time-zone (coerce offset-date-time? #(OffsetDateTime/parse %) value)
       value)))
+
+(defn db-product-name [heql-meta-data]
+  (get-in heql-meta-data [:db-config :db-product-name]))
