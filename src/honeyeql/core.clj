@@ -3,7 +3,7 @@
             [honeyeql.meta-data :as heql-md]
             [clojure.data.json :as json]
             [inflections.core :as inf]
-            [next.jdbc.sql :as jdbc-sql]
+            [honeysql.helpers :as hsql-helpers]
             [honeyeql.db-adapter.core :as db]
             [honeyeql.debug :refer [trace>>]]))
 
@@ -48,25 +48,36 @@
       (conj predicates :and)
       (first predicates))))
 
+(defn- hsql-column [heql-meta-data attr-ident eql-node]
+  (let [attr-col-name (heql-md/attr-column-name heql-meta-data attr-ident)
+        alias         (get-in eql-node [:alias :self])]
+    (keyword (str alias "." attr-col-name))))
+`
 (defn- order-by-clause [heql-meta-data eql-node clause]
   (if (keyword? clause)
-    (let [attr-col-name (heql-md/attr-column-name heql-meta-data clause)
-          alias         (get-in eql-node [:alias :self])]
-      (keyword (str alias "." attr-col-name)))
-    (let [[c t]         clause
-          attr-col-name (heql-md/attr-column-name heql-meta-data c)
-          alias         (get-in eql-node [:alias :self])]
-      [(keyword (str alias "." attr-col-name)) t])))
+    (hsql-column heql-meta-data eql-node clause)
+    (let [[c t]         clause]
+      [(hsql-column heql-meta-data eql-node c) t])))
 
 (defn- apply-order-by [hsql heql-meta-data clause eql-node]
   (assoc hsql :order-by (map #(order-by-clause heql-meta-data eql-node %) clause)))
 
-(defn- apply-params [heql-meta-data hsql eql-node]
-  (let [{:keys [limit offset order-by]} (:params eql-node)]
+(defn- apply-where [hsql db-adapter clause eql-node]
+  (hsql-helpers/merge-where 
+   hsql
+   (let [heql-meta-data (:heql-meta-data db-adapter)
+         [op col v]     clause
+         hsql-col       (hsql-column heql-meta-data col eql-node)]
+     [op hsql-col (heql-md/coerce-attr-value db-adapter col v)])))
+
+(defn- apply-params [db-adapter hsql eql-node]
+  (let [heql-meta-data (:heql-meta-data db-adapter)
+        {:keys [limit offset order-by where]} (:params eql-node)]
     (cond-> hsql
       limit  (assoc :limit limit)
       offset (assoc :offset offset)
       order-by (apply-order-by heql-meta-data order-by eql-node)
+      where (apply-where db-adapter where eql-node)
       :else identity)))
 
 (defmethod ^{:private true} eql->hsql :ident-join [db-adapter heql-meta-data eql-node]
@@ -75,7 +86,7 @@
                                                 (keyword (:self alias))]]
                                       :where  (eql-ident-key->hsql-predicate db-adapter key alias)
                                       :select (db/select-clause db-adapter heql-meta-data children)}
-        hsql                         (apply-params heql-meta-data hsql eql-node)]
+        hsql                         (apply-params db-adapter hsql eql-node)]
     (db/resolve-children-one-to-one-relationships db-adapter heql-meta-data hsql children)))
 
 (defmethod ^{:private true} eql->hsql :non-ident-join [db-adapter heql-meta-data eql-node]
@@ -84,7 +95,7 @@
         hsql                     {:from   [[(heql-md/entity-relation-ident heql-meta-data first-child-ident)
                                             (keyword (:self alias))]]
                                   :select (db/select-clause db-adapter heql-meta-data children)}
-        hsql                     (apply-params heql-meta-data hsql eql-node)]
+        hsql                     (apply-params db-adapter hsql eql-node)]
     (db/resolve-children-one-to-one-relationships db-adapter heql-meta-data hsql children)))
 
 (defn- one-to-one-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
@@ -99,7 +110,7 @@
                                                 (keyword (:self alias))]]
                                       :where  (one-to-one-join-predicate heql-meta-data join-attr-md alias)
                                       :select (db/select-clause db-adapter heql-meta-data children)}
-        hsql                         (apply-params heql-meta-data hsql eql-node)]
+        hsql                         (apply-params db-adapter hsql eql-node)]
     (db/resolve-one-to-one-relationship db-adapter heql-meta-data hsql eql-node)))
 
 (defn- one-to-many-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
@@ -114,7 +125,7 @@
                                                 (keyword (:self alias))]]
                                       :where  (one-to-many-join-predicate heql-meta-data join-attr-md alias)
                                       :select (db/select-clause db-adapter heql-meta-data children)}
-        hsql                         (apply-params heql-meta-data hsql eql-node)]
+        hsql                         (apply-params db-adapter hsql eql-node)]
     (db/resolve-one-to-many-relationship db-adapter heql-meta-data hsql eql-node)))
 
 (defn- many-to-many-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]
@@ -141,7 +152,7 @@
                                                 (keyword assoc-table-alias)]]
                                       :where  (many-to-many-join-predicate heql-meta-data join-attr-md alias assoc-table-alias)
                                       :select (db/select-clause db-adapter heql-meta-data children)}
-        hsql                         (apply-params heql-meta-data hsql eql-node)]
+        hsql                         (apply-params db-adapter hsql eql-node)]
     (db/resolve-many-to-many-relationship db-adapter heql-meta-data hsql eql-node)))
 
 (defn- json-key-fn [attribute-return-as key]
