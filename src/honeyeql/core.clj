@@ -52,12 +52,12 @@
   (let [attr-col-name (heql-md/attr-column-name heql-meta-data attr-ident)
         alias         (get-in eql-node [:alias :self])]
     (keyword (str alias "." attr-col-name))))
-`
+
 (defn- order-by-clause [heql-meta-data eql-node clause]
   (if (keyword? clause)
-    (hsql-column heql-meta-data eql-node clause)
+    (hsql-column heql-meta-data clause eql-node)
     (let [[c t]         clause]
-      [(hsql-column heql-meta-data eql-node c) t])))
+      [(hsql-column heql-meta-data c eql-node) t])))
 
 (defn- apply-order-by [hsql heql-meta-data clause eql-node]
   (assoc hsql :order-by (map #(order-by-clause heql-meta-data eql-node %) clause)))
@@ -66,9 +66,11 @@
   (hsql-helpers/merge-where 
    hsql
    (let [heql-meta-data (:heql-meta-data db-adapter)
-         [op col v]     clause
+         [op col v1 v2]     clause
          hsql-col       (hsql-column heql-meta-data col eql-node)]
-     [op hsql-col (heql-md/coerce-attr-value db-adapter col v)])))
+     (if v2 
+       [op hsql-col (heql-md/coerce-attr-value db-adapter col v1) (heql-md/coerce-attr-value db-adapter col v2)]
+       [op hsql-col (heql-md/coerce-attr-value db-adapter col v1)]))))
 
 (defn- apply-params [db-adapter hsql eql-node]
   (let [heql-meta-data (:heql-meta-data db-adapter)

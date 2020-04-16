@@ -7,7 +7,7 @@
             [next.jdbc.sql :as jdbc])
   (:import [java.time LocalDateTime]
            [java.time.temporal ChronoField]
-           [java.time.format DateTimeFormatterBuilder]))
+           [java.time.format DateTimeFormatterBuilder DateTimeParseException]))
 
 (defmethod heql-md/get-db-config "MySQL" [_]
   {:schema             {:default "xyz"
@@ -148,6 +148,12 @@
       (.appendFraction ChronoField/MICRO_OF_SECOND 0 6 true)
       .toFormatter))
 
+(defn- coerce-datetime [value]
+  (try 
+    (LocalDateTime/parse value date-time-formatter)
+    (catch DateTimeParseException _
+      (LocalDateTime/parse value))))
+
 (defn- coerce-boolean [value]
   (if (integer? value)
     (not= 0 value)
@@ -166,7 +172,7 @@
            (str "[" result "]")))
   (coerce [_ value target-type]
     (case target-type
-      :attr.type/date-time (LocalDateTime/parse value date-time-formatter)
+      :attr.type/date-time (coerce-datetime value)
       :attr.type/boolean (coerce-boolean value)))
   (select-clause [db-adapter heql-meta-data eql-nodes]
     [[(mysql-select-clause db-adapter heql-meta-data eql-nodes) :result]])
