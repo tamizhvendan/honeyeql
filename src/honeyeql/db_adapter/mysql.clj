@@ -98,14 +98,25 @@
     (let [[sql & args] (hsql/format v :quoting :mysql)]
       (cons (str "'" k "'" ", (" sql ")") args))))
 
+; HoneySQL raw doesn't treat String as parameter
+; (hsql/format (hsql/raw ["JOBJ(?, ?)" "foo" "bar"])) 
+; returns ["JOBJ(?, ?)foobar"] instead of ["JOBJ(?, ?)" "foo" "bar"]
+; this function is an workardound to convert String to StringBuilder 
+; which results in ["JOBJ(?, ?)??" #object[StringBuilder "foo"] #object[StringBuilder "bar"]]
+(defn- convert-string-args [arg]
+  (if (string? arg)
+    (StringBuilder. arg)
+    arg))
+
 (defn- json-object [obj]
   (let [json-kvs     (map json-kv obj)
         json-obj-str (format "JSON_OBJECT(%s)" (string/join ", " (map first json-kvs)))
         sql-args     (mapcat rest json-kvs)]
     (if (seq sql-args)
-      (-> (cons json-obj-str sql-args)
-          vec
-          hsql/raw)
+      (->> (map convert-string-args sql-args)
+           (cons json-obj-str)
+           vec
+           hsql/raw)
       (hsql/raw json-obj-str))))
 
 (defn- mysql-select-clause [db-adapter heql-meta-data eql-nodes]
@@ -142,6 +153,12 @@
 (defn- fix-params [[x & xs]]
   (conj xs (string/replace x #"\?+ AS " " AS ")))
 
+(defn- fix-string-builder-args [[x & xs]]
+  (conj (map (fn [arg]
+               (if (= StringBuilder (type arg))
+                 (str arg)
+                 arg)) xs) x))
+
 (def ^:private date-time-formatter
   (-> (DateTimeFormatterBuilder.)
       (.appendPattern "yyyy-MM-dd HH:mm:ss")
@@ -149,7 +166,7 @@
       .toFormatter))
 
 (defn- coerce-datetime [value]
-  (try 
+  (try
     (LocalDateTime/parse value date-time-formatter)
     (catch DateTimeParseException _
       (LocalDateTime/parse value))))
@@ -164,12 +181,13 @@
   (to-sql [mysql-adapter hsql]
     (-> (hsql/format (result-set-hql hsql) :quoting :mysql)
         fix-lateral
-        fix-params))
+        fix-params
+        fix-string-builder-args))
   (query [mysql-adapter sql]
-         (let [result (->> (jdbc/query (:db-spec mysql-adapter) sql)
-                           (map :result)
-                           (string/join ","))]
-           (str "[" result "]")))
+    (let [result (->> (jdbc/query (:db-spec mysql-adapter) sql)
+                      (map :result)
+                      (string/join ","))]
+      (str "[" result "]")))
   (coerce [_ value target-type]
     (case target-type
       :attr.type/date-time (coerce-datetime value)

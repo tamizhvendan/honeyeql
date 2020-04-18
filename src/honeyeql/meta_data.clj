@@ -411,6 +411,9 @@
       :attr.type/date-time (coerce local-date-time? #(db/coerce db-adapter % :attr.type/date-time) value)
       :attr.type/boolean (coerce boolean? #(db/coerce db-adapter % :attr.type/boolean) value)
       :attr.type/date-time-with-time-zone (coerce offset-date-time? #(OffsetDateTime/parse %) value)
+      :attr.type/ref (if (and (= :attr.ref.cardinality/many (:attr.ref/cardinality attr-md)) (nil? value))
+                       []
+                       value)
       value)))
 
 (defn db-product-name [heql-meta-data]
