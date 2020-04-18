@@ -18,6 +18,7 @@ HoneyEQL powers [GraphQLize](https://www.graphqlize.org).
     - Pagination
       - [limit and offset](#limit-and-offset)
     - [Sorting](#sorting)
+    - [Filtering](#filtering)
   - Coercion
     - [Type Mappings](#type-mappings)
 - [Metadata](#metadata)
@@ -233,6 +234,94 @@ We can sort the relationship query results as well.
 ```
 
 > **NOTE:** Currently, soring the relationship query results is not supported in MySQL
+
+
+### Filtering
+
+HoneyEQL supports filtering using the `:where` parameter. This parameter takes the value similar to HoneySQL's a `where` clause expect that instead of column name, we'll be using the attribute ident.
+
+```clojure
+(heql/query
+  db-adapter
+  `[{([] 
+      ; HoneySQL: {:where [:= city_id 3]}
+      {:where [:= :city/city-id 3]}) 
+     [:city/city]}])
+```
+
+Some sample queries
+
+```clojure
+; Not Equal To
+[{([] {:where [:<> :language/name "English"]}) 
+  [:language/name]}]
+```
+
+```clojure
+; Greater than
+[{([] {:where [:> :payment/amount 11.99M]}) 
+  [:payment/rental-id]}]
+```
+
+```clojure
+; Greater than and equal to
+[{([] {:where [:>= :payment/amount 11.99M]}) 
+  [:payment/rental-id]}]
+```
+
+```clojure
+; Less than
+[{([] {:where [:< :payment/amount 11.99M]}) 
+  [:payment/rental-id]}]
+```
+
+```clojure
+; Less than and equal to
+[{([] {:where [:<= :payment/amount 11.99M]}) 
+  [:payment/rental-id]}]
+```
+
+Date, Time & TimeStamp values can be used either as string or the using their corresponding type defined [in this mapping](#type-mappings).
+
+```clojure
+; Between two timestamps as strings
+[{([] {:where [:between :payment/payment-date "2005-08-23T21:00:00" "2005-08-23T21:03:00"]}) 
+  [:payment/rental-id]}]
+```
+```clojure
+; Between two timestamps as LocalDateTime
+(let [from (LocalDateTime/parse "2005-08-23T21:00:00")
+      to (LocalDateTime/parse "2005-08-23T21:03:00")]
+  (heql/query pg-adapter
+              `[{([] {:where [:between :payment/payment-date ~from ~to]}) 
+                [:payment/rental-id]}]))
+```
+
+#### Relationship Filtering
+
+We can filter the relelationship attribute as well!
+
+```clojure
+[{[:country/country-id 2] 
+  [:country/country
+   ; filtering one-to-many relationship
+   {(:country/cities {:where [:= :city/city "Batna"]}) 
+    [:city/city-id :city/city]}]}]
+; returns
+{:country/country "Algeria"
+ :cities [{:city/city-id 59 :city/city "Batna"}]}
+```
+
+```clojure
+[{[:actor/actor-id 148] 
+  [:actor/first-name
+   {(:actor/films {:where [:= :film/title "SEA VIRGIN"]}) 
+    [:film/title]}]}]
+; returns
+{:actor/first-name "EMILY"
+ :actor/films [{:film/title "SEA VIRGIN"}]})
+```
+
 
 ### Type Mappings
 
