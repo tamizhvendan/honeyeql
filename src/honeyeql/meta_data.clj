@@ -418,3 +418,7 @@
 
 (defn db-product-name [heql-meta-data]
   (get-in heql-meta-data [:db-config :db-product-name]))
+
+(defn attr-idents [entity-meta-data]
+  (let [{:entity/keys [req-attrs opt-attrs]} entity-meta-data]
+    (concat req-attrs opt-attrs)))
