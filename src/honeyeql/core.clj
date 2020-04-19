@@ -70,7 +70,9 @@
          hsql-col       (hsql-column heql-meta-data col eql-node)]
      (if v2 
        [op hsql-col (heql-md/coerce-attr-value db-adapter col v1) (heql-md/coerce-attr-value db-adapter col v2)]
-       [op hsql-col (heql-md/coerce-attr-value db-adapter col v1)]))))
+       (case op
+         (:in :not-in) [op hsql-col (map #(heql-md/coerce-attr-value db-adapter col %) v1)]
+         [op hsql-col (heql-md/coerce-attr-value db-adapter col v1)])))))
 
 (defn- apply-params [db-adapter hsql eql-node]
   (let [heql-meta-data (:heql-meta-data db-adapter)

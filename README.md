@@ -292,9 +292,26 @@ Date, Time & TimeStamp values can be used either as string or the using their co
 ; Between two timestamps as LocalDateTime
 (let [from (LocalDateTime/parse "2005-08-23T21:00:00")
       to (LocalDateTime/parse "2005-08-23T21:03:00")]
-  (heql/query pg-adapter
+  (heql/query db-adapter
               `[{([] {:where [:between :payment/payment-date ~from ~to]}) 
                 [:payment/rental-id]}]))
+```
+
+The same logic applies for UUIDs as well
+
+```clojure
+; in filter with implicit type coercion
+[{([] {:where [:in :customer/id ["847f09a7-39d1-4021-b43d-18ceb7ada8f6" "e5156dce-58ff-44f5-8533-932a7250bd29"]]}) 
+  [:customer/first-name]}]
+```
+
+```clojure
+; not-in filter with explicit type
+(let [customer-ids [#uuid "847f09a7-39d1-4021-b43d-18ceb7ada8f6"
+                    #uuid "e5156dce-58ff-44f5-8533-932a7250bd29"]]
+  (db/query 
+   db-adapter 
+   `[{([] {:where [:not-in :customer/id ~customer-ids]}) [:customer/first-name]}]))
 ```
 
 #### Relationship Filtering
