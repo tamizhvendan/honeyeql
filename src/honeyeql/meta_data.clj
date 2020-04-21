@@ -77,7 +77,8 @@
       :entity.ident/plural          (pluralize-entity-ident ident)
       :entity.relation/type         (case table_type
                                       "TABLE" :table
-                                      "VIEW" :view)
+                                      "VIEW" :view
+                                      "MATERIALIZED VIEW" :materialized-view)
       :entity.relation/schema       table_schem
       :entity.relation/name         table_name
       :entity/opt-attrs             #{}

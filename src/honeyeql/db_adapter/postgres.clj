@@ -57,7 +57,7 @@
   (pg-type->col-type (:type_name column-meta-data)))
 
 (defn- entities-meta-data [db-spec jdbc-meta-data]
-  (->> (into-array String ["TABLE" "VIEW"])
+  (->> (into-array String ["TABLE" "VIEW" "MATERIALIZED VIEW"])
        (.getTables jdbc-meta-data nil "%" nil)
        (heql-md/datafied-result-set db-spec)
        vec))
