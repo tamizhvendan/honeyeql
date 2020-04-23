@@ -62,20 +62,25 @@
 (defn- apply-order-by [hsql heql-meta-data clause eql-node]
   (assoc hsql :order-by (map #(order-by-clause heql-meta-data eql-node %) clause)))
 
+(defn- where-predicate [db-adapter clause eql-node]
+  (let [heql-meta-data (:heql-meta-data db-adapter)
+        [op col v1 v2] clause]
+    (case op
+      :and (concat [:and] (map #(where-predicate db-adapter % eql-node) (rest clause)))
+      :or (concat [:or] (map #(where-predicate db-adapter % eql-node) (rest clause)))
+      :not (conj [:not] (where-predicate db-adapter (second clause) eql-node))
+      (let [hsql-col       (hsql-column heql-meta-data col eql-node)]
+        (case op 
+          (:in :not-in) [op hsql-col (map #(heql-md/coerce-attr-value db-adapter col %) v1)]
+          (if v2
+            [op hsql-col (heql-md/coerce-attr-value db-adapter col v1) (heql-md/coerce-attr-value db-adapter col v2)]
+            [op hsql-col (heql-md/coerce-attr-value db-adapter col v1)]))))))
+
 (defn- apply-where [hsql db-adapter clause eql-node]
-  (hsql-helpers/merge-where 
-   hsql
-   (let [heql-meta-data (:heql-meta-data db-adapter)
-         [op col v1 v2]     clause
-         hsql-col       (hsql-column heql-meta-data col eql-node)]
-     (if v2 
-       [op hsql-col (heql-md/coerce-attr-value db-adapter col v1) (heql-md/coerce-attr-value db-adapter col v2)]
-       (case op
-         (:in :not-in) [op hsql-col (map #(heql-md/coerce-attr-value db-adapter col %) v1)]
-         [op hsql-col (heql-md/coerce-attr-value db-adapter col v1)])))))
+  (hsql-helpers/merge-where hsql (where-predicate db-adapter clause eql-node)))
 
 (defn- apply-params [db-adapter hsql eql-node]
-  (let [heql-meta-data (:heql-meta-data db-adapter)
+  (let [heql-meta-data                        (:heql-meta-data db-adapter)
         {:keys [limit offset order-by where]} (:params eql-node)]
     (cond-> hsql
       limit  (assoc :limit limit)
