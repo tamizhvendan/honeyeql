@@ -314,6 +314,30 @@ The same logic applies for UUIDs as well
    `[{([] {:where [:not-in :customer/id ~customer-ids]}) [:customer/first-name]}]))
 ```
 
+We can also filter the results using logical operators `and`, `or` & `not`.
+
+```clojure
+[{([] {:where [:and 
+                [:= :payment/customer-id 1] 
+                [:> :payment/amount 5.99M]]}) 
+  [:payment/payment-id :payment/amount]}]  
+```
+
+```clojure
+[{([] {:where [:or 
+                [:= :language/name "English"] 
+                [:= :language/name "French"]]}) 
+  [:language/id :language/name]}]  
+```
+
+```clojure
+[{([] {:where [:not 
+                [:or 
+                  [:= :language/name "English"] 
+                  [:= :language/name "French"]]]}) 
+  [:language/language-id :language/name]}]
+```
+
 #### Relationship Filtering
 
 We can filter the relelationship attribute as well!
