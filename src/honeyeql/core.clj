@@ -29,6 +29,7 @@
 (defn column-alias [field-naming-convention attr-ident]
   (case field-naming-convention
     :qualified-kebab-case (str (namespace attr-ident) "/" (name attr-ident))
+    :unqualified-kebab-case (name attr-ident)
     :unqualified-camel-case (inf/camel-case (name attr-ident) :lower)))
 
 (defmulti eql->hsql (fn [db-adapter heql-meta-data eql-node] (find-join-type heql-meta-data eql-node)))
