@@ -32,6 +32,27 @@
     :unqualified-kebab-case (name attr-ident)
     :unqualified-camel-case (inf/camel-case (name attr-ident) :lower)))
 
+(defn- one-to-one-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
+  [:=
+   (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data left)))
+   (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data right)))])
+
+(defn- one-to-many-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
+  [:=
+   (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data left)))
+   (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data right)))])
+
+(defn- many-to-many-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]
+                                                    :as                   join-attr-md} alias assoc-table-alias]
+  (let [{:attr.column.ref.associative/keys [left-ident right-ident]} join-attr-md]
+    [:and
+     [:=
+      (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data left)))
+      (keyword (str assoc-table-alias "." (heql-md/attr-column-name heql-meta-data left-ident)))]
+     [:=
+      (keyword (str assoc-table-alias "." (heql-md/attr-column-name heql-meta-data right-ident)))
+      (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data right)))]]))
+
 (defmulti eql->hsql (fn [db-adapter heql-meta-data eql-node] (find-join-type heql-meta-data eql-node)))
 
 (defmethod ^{:private true} eql->hsql :root [db-adapter heql-meta-data eql-node]
@@ -63,19 +84,51 @@
 (defn- apply-order-by [hsql heql-meta-data clause eql-node]
   (assoc hsql :order-by (map #(order-by-clause heql-meta-data eql-node %) clause)))
 
-(defn- where-predicate [db-adapter clause eql-node]
+(defn- hsql-prediate [db-adapter eql-node clause]
+  (let [[op col v1 v2] clause
+        heql-meta-data (:heql-meta-data db-adapter)
+        hsql-col       (hsql-column heql-meta-data col eql-node)]
+    (case op
+      (:in :not-in) [op hsql-col (map #(heql-md/coerce-attr-value db-adapter col %) v1)]
+      (if v2
+        [op hsql-col (heql-md/coerce-attr-value db-adapter col v1) (heql-md/coerce-attr-value db-adapter col v2)]
+        [op hsql-col (heql-md/coerce-attr-value db-adapter col v1)]))))
+
+(defn- hsql-join-predicate [db-adapter eql-node join-attr-ident self-alias]
   (let [heql-meta-data (:heql-meta-data db-adapter)
-        [op col v1 v2] clause]
+        join-attr-md (heql-md/attr-meta-data heql-meta-data join-attr-ident)
+        ref-type (:attr.column.ref/type join-attr-md)
+        alias {:self self-alias
+               :parent (get-in eql-node [:alias :self])}]
+    (case ref-type
+      :attr.column.ref.type/one-to-one [[[(heql-md/entity-relation-ident heql-meta-data (:attr.column.ref/right join-attr-md)) (keyword self-alias)]]
+                                        (one-to-one-join-predicate heql-meta-data join-attr-md alias)])))
+
+#_ n
+#_ (hsql-join-predicate db n :payment/customer)
+
+(defn- nested-obj-predicate [db-adapter eql-node clause]
+  (let [[op [join-attr-ident attr-ident] v1 v2] clause
+        self-alias (str (gensym))
+        self-eql-node {:alias {:self self-alias}}
+        [from join-pred] (hsql-join-predicate db-adapter eql-node join-attr-ident self-alias)]
+    [:exists (hsql-helpers/merge-where
+              {:select [1]
+               :from   from
+               :where  join-pred}
+              (hsql-prediate db-adapter self-eql-node [op attr-ident v1 v2]))]))
+
+#_ (nested-obj-predicate db n c)
+
+(defn- where-predicate [db-adapter clause eql-node]
+  (let [[op col] clause]
     (case op
       :and (concat [:and] (map #(where-predicate db-adapter % eql-node) (rest clause)))
       :or (concat [:or] (map #(where-predicate db-adapter % eql-node) (rest clause)))
       :not (conj [:not] (where-predicate db-adapter (second clause) eql-node))
-      (let [hsql-col       (hsql-column heql-meta-data col eql-node)]
-        (case op 
-          (:in :not-in) [op hsql-col (map #(heql-md/coerce-attr-value db-adapter col %) v1)]
-          (if v2
-            [op hsql-col (heql-md/coerce-attr-value db-adapter col v1) (heql-md/coerce-attr-value db-adapter col v2)]
-            [op hsql-col (heql-md/coerce-attr-value db-adapter col v1)]))))))
+      (if (keyword? col)
+        (hsql-prediate db-adapter eql-node clause)
+        (nested-obj-predicate db-adapter eql-node clause)))))
 
 (defn- apply-where [hsql db-adapter clause eql-node]
   (hsql-helpers/merge-where hsql (where-predicate db-adapter clause eql-node)))
@@ -108,11 +161,6 @@
         hsql                     (apply-params db-adapter hsql eql-node)]
     (db/resolve-children-one-to-one-relationships db-adapter heql-meta-data hsql children)))
 
-(defn- one-to-one-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
-  [:=
-   (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data left)))
-   (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data right)))])
-
 (defmethod ^{:private true} eql->hsql :one-to-one-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
         join-attr-md                 (heql-md/attr-meta-data heql-meta-data key)
@@ -123,11 +171,6 @@
         hsql                         (apply-params db-adapter hsql eql-node)]
     (db/resolve-one-to-one-relationship db-adapter heql-meta-data hsql eql-node)))
 
-(defn- one-to-many-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
-  [:=
-   (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data left)))
-   (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data right)))])
-
 (defmethod ^{:private true} eql->hsql :one-to-many-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
         join-attr-md                 (heql-md/attr-meta-data heql-meta-data key)
@@ -137,17 +180,6 @@
                                       :select (db/select-clause db-adapter heql-meta-data children)}
         hsql                         (apply-params db-adapter hsql eql-node)]
     (db/resolve-one-to-many-relationship db-adapter heql-meta-data hsql eql-node)))
-
-(defn- many-to-many-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]
-                                                    :as                   join-attr-md} alias assoc-table-alias]
-  (let [{:attr.column.ref.associative/keys [left-ident right-ident]} join-attr-md]
-    [:and
-     [:=
-      (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data left)))
-      (keyword (str assoc-table-alias "." (heql-md/attr-column-name heql-meta-data left-ident)))]
-     [:=
-      (keyword (str assoc-table-alias "." (heql-md/attr-column-name heql-meta-data right-ident)))
-      (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data right)))]]))
 
 (defmethod ^{:private true} eql->hsql :many-to-many-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
