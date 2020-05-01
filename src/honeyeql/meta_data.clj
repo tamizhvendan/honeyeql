@@ -273,11 +273,11 @@
                    :attr.ref/type                           left-entity-ident
                    :attr.entity/ident                       left-entity-ident
                    :attr.column.ref/type                    :attr.column.ref.type/many-to-many
-                   :attr.column.ref/left                    ref-attr
+                   :attr.column.ref/left                    r-ref-attr
                    :attr.column.ref.associative/ident       entity-ident
-                   :attr.column.ref.associative/left-ident  self-attr
-                   :attr.column.ref.associative/right-ident r-self-attr
-                   :attr.column.ref/right                   r-ref-attr})
+                   :attr.column.ref.associative/left-ident  r-self-attr
+                   :attr.column.ref.associative/right-ident self-attr
+                   :attr.column.ref/right                   ref-attr})
         (assoc-in [:attributes many-to-many-rev-attr-ident]
                   {:attr/ident                              many-to-many-rev-attr-ident
                    :attr.ident/camel-case                   (attribute-ident-in-camel-case many-to-many-rev-attr-ident)
@@ -287,11 +287,11 @@
                    :attr.ref/type                           right-entity-ident
                    :attr.entity/ident                       right-entity-ident
                    :attr.column.ref/type                    :attr.column.ref.type/many-to-many
-                   :attr.column.ref/left                    r-ref-attr
+                   :attr.column.ref/left                    ref-attr
                    :attr.column.ref.associative/ident       entity-ident
-                   :attr.column.ref.associative/left-ident  r-self-attr
-                   :attr.column.ref.associative/right-ident self-attr
-                   :attr.column.ref/right                   ref-attr})
+                   :attr.column.ref.associative/left-ident  self-attr
+                   :attr.column.ref.associative/right-ident r-self-attr
+                   :attr.column.ref/right                   r-ref-attr})
         (update-in [:entities left-entity-ident :entity/req-attrs]
                    conj many-to-many-rev-attr-ident)
         (update-in [:entities right-entity-ident :entity/req-attrs]

@@ -47,11 +47,11 @@
   (let [{:attr.column.ref.associative/keys [left-ident right-ident]} join-attr-md]
     [:and
      [:=
-      (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data left)))
+      (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data left)))
       (keyword (str assoc-table-alias "." (heql-md/attr-column-name heql-meta-data left-ident)))]
      [:=
       (keyword (str assoc-table-alias "." (heql-md/attr-column-name heql-meta-data right-ident)))
-      (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data right)))]]))
+      (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data right)))]]))
 
 (defmulti eql->hsql (fn [db-adapter heql-meta-data eql-node] (find-join-type heql-meta-data eql-node)))
 
@@ -98,11 +98,22 @@
   (let [heql-meta-data (:heql-meta-data db-adapter)
         join-attr-md (heql-md/attr-meta-data heql-meta-data join-attr-ident)
         ref-type (:attr.column.ref/type join-attr-md)
-        alias {:self self-alias
-               :parent (get-in eql-node [:alias :self])}]
+        alias {:self   self-alias
+               :parent (get-in eql-node [:alias :self])}
+        from-relation-ident (heql-md/entity-relation-ident heql-meta-data (:attr.column.ref/right join-attr-md))
+        from-clause [from-relation-ident (keyword self-alias)]]
     (case ref-type
-      :attr.column.ref.type/one-to-one [[[(heql-md/entity-relation-ident heql-meta-data (:attr.column.ref/right join-attr-md)) (keyword self-alias)]]
-                                        (one-to-one-join-predicate heql-meta-data join-attr-md alias)])))
+      :attr.column.ref.type/one-to-one [[from-clause]
+                                        (one-to-one-join-predicate heql-meta-data join-attr-md alias)]
+      :attr.column.ref.type/one-to-many [[from-clause]
+                                        (one-to-many-join-predicate heql-meta-data join-attr-md alias)]
+      :attr.column.ref.type/many-to-many (let [assoc-table-alias (str (gensym))
+                                               assoc-table-from-clause [(->> (:attr.column.ref.associative/ident join-attr-md)
+                                                                             (heql-md/entity-meta-data heql-meta-data)
+                                                                             :entity.relation/ident)
+                                                                        (keyword assoc-table-alias)]]
+                                           [[from-clause assoc-table-from-clause]
+                                           (many-to-many-join-predicate heql-meta-data join-attr-md alias assoc-table-alias)]))))
 
 #_ n
 #_ (hsql-join-predicate db n :payment/customer)
