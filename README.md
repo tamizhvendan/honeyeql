@@ -392,7 +392,7 @@ To filter authors who has **at-least** one course with the rating `5`, we can ac
   [:author/first-name :author/last-name]}]
 ```
 
-If we want to filter only the authors who has got the rating `5` in all their courses, we can achieve it by
+If we want to filter only the authors who has got the rating `5` in **all** their courses, we can achieve it by
 
 ```clojure
 [{([] {:where [:not [:<> [:author/courses :course/rating] 5]]}) 
