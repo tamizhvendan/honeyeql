@@ -235,7 +235,7 @@ We can sort the relationship query results as well.
        [:film/title]}]}])
 ```
 
-> **NOTE:** Currently, soring the relationship query results is not supported in MySQL
+> **NOTE:** Currently, sorting the relationship query results is not supported in MySQL
 
 
 ### Filtering
