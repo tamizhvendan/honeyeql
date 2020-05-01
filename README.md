@@ -19,6 +19,8 @@ HoneyEQL powers [GraphQLize](https://www.graphqlize.org).
       - [limit and offset](#limit-and-offset)
     - [Sorting](#sorting)
     - [Filtering](#filtering)
+      - [Filter Based On Relationship Attributes](#filter-based-on-relationship-attributes)
+      - [Filtering Relationships](#filtering-relationships)
   - Coercion
     - [Type Mappings](#type-mappings)
 - [Metadata](#metadata)
@@ -36,13 +38,13 @@ This documentation uses [deps](https://clojure.org/guides/deps_and_cli) and assu
 ```clojure
 ;; deps.edn
 {:paths ["src"]
- :deps  {org.graphqlize/honeyeql     {:mvn/version "0.1.0-alpha14"}
+ :deps  {org.graphqlize/honeyeql     {:mvn/version "0.1.0-alpha16"}
          hikari-cp                   {:mvn/version "2.10.0"}
          org.postgresql/postgresql   {:mvn/version "42.2.8"}
          mysql/mysql-connector-java  {:mvn/version "8.0.19"}}}
 ```
 
-The next step is initializing the `db-adapter` using either [db-spec-map](https://cljdoc.org/d/seancorfield/next.jdbc/1.0.409/doc/getting-started#the-db-spec-hash-map) or
+The next step is initializing the `db-adapter` using either a [db-spec-map](https://cljdoc.org/d/seancorfield/next.jdbc/1.0.409/doc/getting-started#the-db-spec-hash-map) or a [DataSource](https://docs.oracle.com/javase/7/docs/api/javax/sql/DataSource.html).
 
 ### Postgres with db-spec map
 
@@ -56,7 +58,7 @@ The next step is initializing the `db-adapter` using either [db-spec-map](https:
                                      :password "postgres"}))
 ```
 
-### MySQL with db connection pool
+### MySQL with a data source (via connection pool)
 
 ```clojure
 (ns core
@@ -338,9 +340,69 @@ We can also filter the results using logical operators `and`, `or` & `not`.
   [:language/language-id :language/name]}]
 ```
 
-#### Relationship Filtering
+#### Filter Based On Relationship Attributes
 
-We can filter the relelationship attribute as well!
+With HoneyEQL, we can filter the results based on the attributes of a relationship. The only difference in the syntax is, in the place of the attribute ident, we will be using a vector of two attribute idents. The first ident is the relationship attribute and then second one is the attribute of the related entity. 
+
+For example, to get all the cities of a county using the country' name,
+
+![](https://www.graphqlize.org/img/address_city_country_er_diagram.png)
+
+we can use the following query.
+
+```clojure
+; filtering by one-to-one relationship attribute
+[{([] {:where [:= [:city/country :country/country] "Algeria"]}) 
+  [:city/city-id :city/city]}]
+```
+
+If the relationship attribute is refers a one-to-many or many-to-many relationship, the filter condition yield the results if **any** of the related entities satisfy the condition.
+
+For the above schema, we can get a list of countries which has at-least one city that starts with `Ab`.
+
+```clojure
+; filtering by one-to-many relationship attribute
+[{([] {:where [:like [:country/cities :city/city] "Ab%"]}) 
+ [:country/country-id :country/country]}]
+```
+
+For many-to-many relationships also, the query looks similar.
+
+![](https://www.graphqlize.org/img/film_actor_er_diagram.png)
+
+
+For the above schema, to get the actors who are part of at-lease one film which has the word `LIFE` in its title.
+
+```clojure
+; filtering by many-to-many relationship attribute
+[{([] {:where [:like [:actor/films :film/title] "%LIFE%"] }) 
+ [:actor/first-name :actor/last-name]}]
+```
+
+If we want to retrieve only certain entities only if **all** of its related entities satisfy the condition, then we need to used the `:not` and the reverse the filter condition together.
+
+Let's assume that we have schema like below 
+
+![](https://www.graphqlize.org/img/author_course_er_diagram.png)
+
+To filter authors who has **at-least** one course with the rating `5`, we can achieve it using the following query.
+
+```clojure
+[{([] {:where [:= [:author/courses :course/rating] 5]}) 
+  [:author/first-name :author/last-name]}]
+```
+
+If we want to filter only the authors who has got the rating `5` in all their courses, we can achieve it by
+
+```clojure
+[{([] {:where [:not [:<> [:author/courses :course/rating] 5]]}) 
+  [:author/first-name :author/last-name]}]
+```
+
+
+#### Filtering Relationships
+
+We can filter the relationships as well!
 
 ```clojure
 [{[:country/country-id 2] 
