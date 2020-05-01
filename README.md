@@ -379,9 +379,9 @@ For the above schema, to get the actors who are part of at-lease one film which 
  [:actor/first-name :actor/last-name]}]
 ```
 
-If we want to retrieve only certain entities only if **all** of its related entities satisfy the condition, then we need to used the `:not` and the reverse the filter condition together.
+If we want to retrieve only certain entities only if **all** of its related entities satisfy the condition, then we need to used the `:not` and the reverse of the filter condition together.
 
-Let's assume that we have schema like below 
+Let's assume that we have a schema like below 
 
 ![](https://www.graphqlize.org/img/author_course_er_diagram.png)
 
