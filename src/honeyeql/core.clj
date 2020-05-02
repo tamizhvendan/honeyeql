@@ -84,7 +84,7 @@
 (defn- apply-order-by [hsql heql-meta-data clause eql-node]
   (assoc hsql :order-by (map #(order-by-clause heql-meta-data eql-node %) clause)))
 
-(defn- hsql-prediate [db-adapter eql-node clause]
+(defn- hsql-predicate [db-adapter eql-node clause]
   (let [[op col v1 v2] clause
         heql-meta-data (:heql-meta-data db-adapter)
         hsql-col       (hsql-column heql-meta-data col eql-node)]
@@ -94,42 +94,46 @@
         [op hsql-col (heql-md/coerce-attr-value db-adapter col v1) (heql-md/coerce-attr-value db-adapter col v2)]
         [op hsql-col (heql-md/coerce-attr-value db-adapter col v1)]))))
 
-(defn- hsql-join-predicate [db-adapter eql-node join-attr-ident self-alias]
-  (let [heql-meta-data (:heql-meta-data db-adapter)
-        join-attr-md (heql-md/attr-meta-data heql-meta-data join-attr-ident)
-        ref-type (:attr.column.ref/type join-attr-md)
-        alias {:self   self-alias
-               :parent (get-in eql-node [:alias :self])}
+(defn- hsql-join-predicate [db-adapter eql-node join-attr-md self-alias]
+  (let [heql-meta-data      (:heql-meta-data db-adapter)
+        ref-type            (:attr.column.ref/type join-attr-md)
+        alias               {:self   self-alias
+                             :parent (get-in eql-node [:alias :self])}
         from-relation-ident (heql-md/entity-relation-ident heql-meta-data (:attr.column.ref/right join-attr-md))
-        from-clause [from-relation-ident (keyword self-alias)]]
+        from-clause         [from-relation-ident (keyword self-alias)]]
     (case ref-type
       :attr.column.ref.type/one-to-one [[from-clause]
                                         (one-to-one-join-predicate heql-meta-data join-attr-md alias)]
       :attr.column.ref.type/one-to-many [[from-clause]
-                                        (one-to-many-join-predicate heql-meta-data join-attr-md alias)]
-      :attr.column.ref.type/many-to-many (let [assoc-table-alias (str (gensym))
+                                         (one-to-many-join-predicate heql-meta-data join-attr-md alias)]
+      :attr.column.ref.type/many-to-many (let [assoc-table-alias       (str (gensym))
                                                assoc-table-from-clause [(->> (:attr.column.ref.associative/ident join-attr-md)
                                                                              (heql-md/entity-meta-data heql-meta-data)
                                                                              :entity.relation/ident)
                                                                         (keyword assoc-table-alias)]]
                                            [[from-clause assoc-table-from-clause]
-                                           (many-to-many-join-predicate heql-meta-data join-attr-md alias assoc-table-alias)]))))
+                                            (many-to-many-join-predicate heql-meta-data join-attr-md alias assoc-table-alias)]))))
 
-#_ n
-#_ (hsql-join-predicate db n :payment/customer)
+#_n
+#_(hsql-join-predicate db n :payment/customer)
 
 (defn- nested-obj-predicate [db-adapter eql-node clause]
   (let [[op [join-attr-ident attr-ident] v1 v2] clause
-        self-alias (str (gensym))
-        self-eql-node {:alias {:self self-alias}}
-        [from join-pred] (hsql-join-predicate db-adapter eql-node join-attr-ident self-alias)]
+        heql-meta-data                          (:heql-meta-data db-adapter)
+        self-alias                              (str (gensym))
+        self-eql-node                           {:alias {:self self-alias}}
+        join-attr-md                            (heql-md/attr-meta-data heql-meta-data join-attr-ident)
+        [from join-pred]                        (hsql-join-predicate db-adapter eql-node join-attr-md self-alias)
+        attr-ident                              (if (qualified-keyword? attr-ident)
+                                                  attr-ident
+                                                  (keyword (name (:attr.ref/type join-attr-md)) (name attr-ident)))]
     [:exists (hsql-helpers/merge-where
               {:select [1]
                :from   from
                :where  join-pred}
-              (hsql-prediate db-adapter self-eql-node [op attr-ident v1 v2]))]))
+              (hsql-predicate db-adapter self-eql-node [op attr-ident v1 v2]))]))
 
-#_ (nested-obj-predicate db n c)
+#_(nested-obj-predicate db n c)
 
 (defn- where-predicate [db-adapter clause eql-node]
   (let [[op col] clause]
@@ -138,7 +142,7 @@
       :or (concat [:or] (map #(where-predicate db-adapter % eql-node) (rest clause)))
       :not (conj [:not] (where-predicate db-adapter (second clause) eql-node))
       (if (keyword? col)
-        (hsql-prediate db-adapter eql-node clause)
+        (hsql-predicate db-adapter eql-node clause)
         (nested-obj-predicate db-adapter eql-node clause)))))
 
 (defn- apply-where [hsql db-adapter clause eql-node]
