@@ -129,8 +129,8 @@
 
 (defn- nested-entity-predicate [db-adapter eql-node clause]
   (let [[op col]   clause
-        join-attr-ident  (if (= :has op) col (first col))
-        attr-ident       (when-not (= :has op) (second col))
+        join-attr-ident  (if (= :have op) col (first col))
+        attr-ident       (when-not (= :have op) (second col))
         heql-meta-data   (:heql-meta-data db-adapter)
         self-alias       (str (gensym))
         self-eql-node    {:alias {:self self-alias}}
@@ -151,7 +151,7 @@
       :and (concat [:and] (map #(where-predicate db-adapter % eql-node) (rest clause)))
       :or (concat [:or] (map #(where-predicate db-adapter % eql-node) (rest clause)))
       :not (conj [:not] (where-predicate db-adapter (second clause) eql-node))
-      :has (nested-entity-predicate db-adapter eql-node clause)
+      :have (nested-entity-predicate db-adapter eql-node clause)
       (if (keyword? col)
         (hsql-predicate db-adapter eql-node clause)
         (nested-entity-predicate db-adapter eql-node clause)))))
