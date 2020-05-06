@@ -403,19 +403,20 @@
 (defn- coerce [type-check-fn parse-fn x]
   (if (type-check-fn x)
     x
-    (parse-fn x)))
+    (when x
+      (parse-fn x))))
 
 (defn coerce-attr-value [db-adapter attr-ident value]
   (let [heql-meta-data (:heql-meta-data db-adapter)
         attr-md (attr-meta-data heql-meta-data attr-ident)]
     (case (:attr/type attr-md)
-      :attr.type/uuid (coerce (every-pred some? uuid?) #(java.util.UUID/fromString %) value)
-      :attr.type/date (coerce (every-pred some? local-date?) #(LocalDate/parse %) value)
-      :attr.type/time (coerce (every-pred some? local-time?) #(LocalTime/parse %) value)
-      :attr.type/time-with-time-zone (coerce (every-pred some? local-time?) #(OffsetTime/parse %) value)
-      :attr.type/date-time (coerce (every-pred some? local-date-time?) #(db/coerce db-adapter % :attr.type/date-time) value)
-      :attr.type/boolean (coerce (every-pred some? boolean?) #(db/coerce db-adapter % :attr.type/boolean) value)
-      :attr.type/date-time-with-time-zone (coerce (every-pred some? offset-date-time?) #(OffsetDateTime/parse %) value)
+      :attr.type/uuid (coerce uuid? #(java.util.UUID/fromString %) value)
+      :attr.type/date (coerce local-date? #(LocalDate/parse %) value)
+      :attr.type/time (coerce local-time? #(LocalTime/parse %) value)
+      :attr.type/time-with-time-zone (coerce local-time? #(OffsetTime/parse %) value)
+      :attr.type/date-time (coerce local-date-time? #(db/coerce db-adapter % :attr.type/date-time) value)
+      :attr.type/boolean (coerce boolean? #(db/coerce db-adapter % :attr.type/boolean) value)
+      :attr.type/date-time-with-time-zone (coerce offset-date-time? #(OffsetDateTime/parse %) value)
       :attr.type/ref (if (and (= :attr.ref.cardinality/many (:attr.ref/cardinality attr-md)) (nil? value))
                        []
                        value)
