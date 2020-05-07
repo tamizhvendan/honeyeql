@@ -84,6 +84,8 @@
       :entity/opt-attrs             #{}
       :entity/req-attrs             #{}
       :entity.relation/foreign-keys #{}
+      :entity/attrs                 #{}
+      :entity/rel-attrs             #{}
       :entity.relation/ident        (relation-ident db-config table-meta-data)}]))
 
 (defn- entities-meta-data [db-config db-meta-data]
@@ -109,29 +111,30 @@
                                 {:keys [table_schem table_name column_name data_type column_size
                                         remarks is_nullable is_autoincrement type_name ordinal_position]
                                  :as   column-meta-data}]
-  (let [attr-ident            (attribute-ident db-config column-meta-data)
-        entity-ident          (entity-ident db-config column-meta-data)
-        is-nullable           (coerce-boolean is_nullable)
-        entity-attr-qualifier (if is-nullable :entity/opt-attrs :entity/req-attrs)]
-    (update-in
-     (assoc-in heql-meta-data [:attributes attr-ident]
-               {:attr/ident                     attr-ident
-                :attr.ident/camel-case          (attribute-ident-in-camel-case attr-ident)
-                :attr/doc                       remarks
-                :attr/type                      (derive-attr-type db-config column-meta-data)
-                :attr/nullable                  is-nullable
-                :attr.column/name               column_name
-                :attr.column/schema             table_schem
-                :attr.column/relation           table_name
-                :attr.column/size               column_size
-                :attr.column/auto-incrementable (coerce-boolean is_autoincrement)
-                :attr.column/jdbc-type          data_type
-                :attr.column/db-type            type_name
-                :attr.column/ident              (column-ident db-config column-meta-data)
-                :attr.column/ordinal-position   ordinal_position
-                :attr.entity/ident              entity-ident})
-     [:entities entity-ident entity-attr-qualifier]
-     conj attr-ident)))
+  (let [attr-ident                (attribute-ident db-config column-meta-data)
+        entity-ident              (entity-ident db-config column-meta-data)
+        is-nullable               (coerce-boolean is_nullable)
+        entity-req-attr-qualifier (if is-nullable :entity/opt-attrs :entity/req-attrs)
+        attr-type                 (derive-attr-type db-config column-meta-data)
+        entity-attr-qualifier     (if-not (= :attr.type/ref attr-type) :entity/attrs :entity/rel-attrs)]
+    (-> (assoc-in heql-meta-data [:attributes attr-ident]
+                  {:attr/ident                     attr-ident
+                   :attr.ident/camel-case          (attribute-ident-in-camel-case attr-ident)
+                   :attr/doc                       remarks
+                   :attr/type                      attr-type
+                   :attr/nullable                  is-nullable
+                   :attr.column/name               column_name
+                   :attr.column/schema             table_schem
+                   :attr.column/relation           table_name
+                   :attr.column/size               column_size
+                   :attr.column/auto-incrementable (coerce-boolean is_autoincrement)
+                   :attr.column/jdbc-type          data_type
+                   :attr.column/db-type            type_name
+                   :attr.column/ident              (column-ident db-config column-meta-data)
+                   :attr.column/ordinal-position   ordinal_position
+                   :attr.entity/ident              entity-ident})
+        (update-in [:entities entity-ident entity-req-attr-qualifier] conj attr-ident)
+        (update-in [:entities entity-ident entity-attr-qualifier] conj attr-ident))))
 
 (defn- add-attributes-meta-data [db-meta-data {:keys [db-config]
                                                :as   heql-meta-data}]
@@ -408,7 +411,7 @@
 
 (defn coerce-attr-value [db-adapter attr-ident value]
   (let [heql-meta-data (:heql-meta-data db-adapter)
-        attr-md (attr-meta-data heql-meta-data attr-ident)]
+        attr-md        (attr-meta-data heql-meta-data attr-ident)]
     (case (:attr/type attr-md)
       :attr.type/uuid (coerce uuid? #(java.util.UUID/fromString %) value)
       :attr.type/date (coerce local-date? #(LocalDate/parse %) value)

@@ -7,7 +7,8 @@
             [honeyeql.db-adapter.core :as db]
             [honeyeql.debug :refer [trace>>]]))
 
-(def default-heql-config {:field/naming-convention :qualified-kebab-case})
+(def default-heql-config {:field/naming-convention  :qualified-kebab-case
+                          :field/support-select-all true})
 
 (defn find-join-type [heql-meta-data eql-node]
   (let [{node-type :type
@@ -117,18 +118,17 @@
 #_n
 #_(hsql-join-predicate db n :payment/customer)
 
-
 (defn- nested-entity-attr-predicate [db-adapter eql-node clause hsql join-attr-md attr-ident]
-  (let [[op _ v1 v2]   clause
-        attr-ident       (if (qualified-keyword? attr-ident)
-                           attr-ident
-                           (keyword (name (:attr.ref/type join-attr-md)) (name attr-ident)))]
+  (let [[op _ v1 v2] clause
+        attr-ident   (if (qualified-keyword? attr-ident)
+                       attr-ident
+                       (keyword (name (:attr.ref/type join-attr-md)) (name attr-ident)))]
     (hsql-helpers/merge-where
      hsql
      (hsql-predicate db-adapter eql-node [op attr-ident v1 v2]))))
 
 (defn- nested-entity-predicate [db-adapter eql-node clause]
-  (let [[op col]   clause
+  (let [[op col]         clause
         join-attr-ident  (if (= :have op) col (first col))
         attr-ident       (when-not (= :have op) (second col))
         heql-meta-data   (:heql-meta-data db-adapter)
@@ -136,9 +136,9 @@
         self-eql-node    {:alias {:self self-alias}}
         join-attr-md     (heql-md/attr-meta-data heql-meta-data join-attr-ident)
         [from join-pred] (hsql-join-predicate db-adapter eql-node join-attr-md self-alias)
-        hsql {:select [1]
-              :from   from
-              :where  join-pred}]
+        hsql             {:select [1]
+                          :from   from
+                          :where  join-pred}]
     [:exists (if attr-ident
                (nested-entity-attr-predicate db-adapter self-eql-node clause hsql join-attr-md attr-ident)
                hsql)]))
@@ -238,15 +238,28 @@
     return-value
     (inf/transform-keys return-value (comp keyword second))))
 
-(defn- add-alias-and-ident
-  ([eql-node]
-   (add-alias-and-ident eql-node nil))
-  ([eql-node parent-alias]
+(defn- resolve-eql-nodes [{:keys [entities]} wild-card-select-node]
+  (->> (:key wild-card-select-node)
+       namespace
+       keyword
+       entities
+       :entity/attrs
+       (map #(merge wild-card-select-node
+                    {:key          %
+                     :dispatch-key %
+                     :attr-ident   %}))))
+
+(defn-
+  enrich-eql-node
+  "Adds ident & alias to the eql node and also resolve wild-card-select props"
+  ([heql-meta-data eql-node]
+   (enrich-eql-node heql-meta-data eql-node nil))
+  ([heql-meta-data eql-node parent-alias]
    (let [attr-ident (eql-node->attr-ident eql-node)]
      (case (:type eql-node)
        :root (update (assoc eql-node :attr-ident attr-ident) :children
                      (fn [eql-nodes]
-                       (vec (map #(add-alias-and-ident %) eql-nodes))))
+                       (vec (map #(enrich-eql-node heql-meta-data %) eql-nodes))))
        :join (let [self-alias (gensym)]
                (update (assoc eql-node
                               :alias {:self   self-alias
@@ -254,7 +267,12 @@
                               :attr-ident attr-ident)
                        :children
                        (fn [eql-nodes]
-                         (vec (map #(add-alias-and-ident % self-alias) eql-nodes)))))
+                         (let [eql-nodes             (map #(enrich-eql-node heql-meta-data % self-alias) eql-nodes)
+                               [props joins]         ((juxt filter remove) #(= :prop (:type %)) eql-nodes)
+                               wild-card-select-node (some #(when (= "*" (name (:key %))) %) props)]
+                           (if wild-card-select-node
+                             (concat (resolve-eql-nodes heql-meta-data wild-card-select-node) joins)
+                             eql-nodes)))))
        :prop (assoc-in (assoc eql-node :attr-ident attr-ident) [:alias :parent] parent-alias)))))
 
 (defn query [db-adapter eql-query]
@@ -262,7 +280,7 @@
         field-naming-convention (:field/naming-convention (:heql-config db-adapter))]
     (map  #(transform-keys field-naming-convention %)
           (json/read-str (->> (eql/query->ast eql-query)
-                              add-alias-and-ident
+                              (enrich-eql-node heql-meta-data)
                               (trace>> :eql-ast)
                               (eql->hsql db-adapter heql-meta-data)
                               (trace>> :hsql)
