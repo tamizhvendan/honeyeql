@@ -111,7 +111,7 @@ Supports all kind of relationships as well
 (heql/query-single
   db-adapter
   {[:city/city-id 3] [:city/city
-                       {:city/country [:country/country]}]})
+                      {:city/country [:country/country]}]})
 ```
 
 ### one-to-many relationship
@@ -122,7 +122,7 @@ Supports all kind of relationships as well
 (heql/query-single
   db-adapter
   {[:country/country-id 2] [:country/country
-                             {:country/cities [:city/city]}]})
+                            {:country/cities [:city/city]}]})
 ```
 
 ### many-to-many relationship
@@ -133,7 +133,7 @@ Supports all kind of relationships as well
 (heql/query-single
   db-adapter
   {[:actor/actor-id 148] [:actor/first-name
-                           {:actor/films [:film/title]}]})
+                          {:actor/films [:film/title]}]})
 ```
 
 ### Pagination
