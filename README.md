@@ -38,7 +38,7 @@ This documentation uses [deps](https://clojure.org/guides/deps_and_cli) and assu
 ```clojure
 ;; deps.edn
 {:paths ["src"]
- :deps  {org.graphqlize/honeyeql     {:mvn/version "0.1.0-alpha21"}
+ :deps  {org.graphqlize/honeyeql     {:mvn/version "0.1.0-alpha22"}
          hikari-cp                   {:mvn/version "2.10.0"}
          org.postgresql/postgresql   {:mvn/version "42.2.8"}
          mysql/mysql-connector-java  {:mvn/version "8.0.19"}}}
@@ -86,15 +86,15 @@ Then we query the database using either `query-single` to retrieve a single item
 ; ...
 (heql/query-single
   db-adapter
-  [{[:actor/actor-id 1] [:actor/first-name
-                         :actor/last-name]}])
+  {[:actor/actor-id 1] [:actor/first-name
+                         :actor/last-name]})
 ; returns
 {:actor/first-name "PENELOPE"
  :actor/last-name  "GUINESS"}
 
 (heql/query
   db-adapter
-  [{[] [:language/name]}])
+  {[] [:language/name]})
 ; returns
 ({:language/name "English"} {:language/name "Italian"}
  {:language/name "Japanese"} {:language/name "Mandarin"}
@@ -110,8 +110,8 @@ Supports all kind of relationships as well
 ```clojure
 (heql/query-single
   db-adapter
-  [{[:city/city-id 3] [:city/city
-                       {:city/country [:country/country]}]}])
+  {[:city/city-id 3] [:city/city
+                       {:city/country [:country/country]}]})
 ```
 
 ### one-to-many relationship
@@ -121,8 +121,8 @@ Supports all kind of relationships as well
 ```clojure
 (heql/query-single
   db-adapter
-  [{[:country/country-id 2] [:country/country
-                             {:country/cities [:city/city]}]}])
+  {[:country/country-id 2] [:country/country
+                             {:country/cities [:city/city]}]})
 ```
 
 ### many-to-many relationship
@@ -132,8 +132,8 @@ Supports all kind of relationships as well
 ```clojure
 (heql/query-single
   db-adapter
-  [{[:actor/actor-id 148] [:actor/first-name
-                           {:actor/films [:film/title]}]}])
+  {[:actor/actor-id 148] [:actor/first-name
+                           {:actor/films [:film/title]}]})
 ```
 
 ### Pagination
@@ -143,8 +143,8 @@ Supports all kind of relationships as well
 ```clojure
 (heql/query
   db-adapter
-  '[{([] {:limit 2 :offset 2})
-     [:actor/actor-id :actor/first-name]}])
+  '{([] {:limit 2 :offset 2})
+    [:actor/actor-id :actor/first-name]})
 ; returns
 ({:actor/actor-id 3, :actor/first-name "ED"}
  {:actor/actor-id 4, :actor/first-name "JENNIFER"})
@@ -155,21 +155,21 @@ Both `limit` and `offset` can be applied on `one-to-many` and `many-to-many` rel
 ```clojure
 (heql/query-single
   db-adapter
-  '[{[:country/country-id 2]
-     [:country/country
-      ; one-to-many relationship
-      {(:country/cities {:limit 2 :offset 2})
-       [:city/city]}]}])
+  '{[:country/country-id 2]
+    [:country/country
+    ; one-to-many relationship
+    {(:country/cities {:limit 2 :offset 2})
+      [:city/city]}]})
 ```
 
 ```clojure
 (heql/query
   db-adapter
-  '[{[:actor/actor-id 148]
-     [:actor/first-name
-     ; many-to-many relationship
-     {(:actor/films {:limit 1 :offset 2})
-       [:film/title]}]}])
+  '{[:actor/actor-id 148]
+    [:actor/first-name
+    ; many-to-many relationship
+    {(:actor/films {:limit 1 :offset 2})
+      [:film/title]}]})
 ```
 
 ### Sorting
@@ -180,8 +180,8 @@ HoneyEQL supports sorting using the `:order-by` parameter. It takes a vector sim
 ; sorting by :language/name
 (heql/query
   db-adapter
-  '[{([] {:order-by [:language/name]}) 
-     [:language/name]}])
+  '{([] {:order-by [:language/name]}) 
+    [:language/name]})
 ; returns
 ({:language/name "English"} {:language/name "French"} {:language/name "German"}
  {:language/name "Italian"} {:language/name "Japanese"}  {:language/name "Mandarin"})
@@ -191,8 +191,8 @@ HoneyEQL supports sorting using the `:order-by` parameter. It takes a vector sim
 ; sorting by :language/name in descending order
 (heql/query
   db-adapter
-  '[{([] {:order-by [[:language/name :desc]]}) ; vector of vector!
-     [:language/name]}])
+  '{([] {:order-by [[:language/name :desc]]}) ; vector of vector!
+    [:language/name]})
 ; returns
 ({:language/name "Mandarin"} {:language/name "Japanese"} {:language/name "Italian"}
  {:language/name "German"} {:language/name "French"}  {:language/name "English"})
@@ -203,9 +203,9 @@ HoneyEQL supports sorting using the `:order-by` parameter. It takes a vector sim
 ; :actor/first-name is ascending order and then :actor/last-name in descending order
 (heql/query
   db-adapter
-  '[{([] {:order-by [:actor/first-name [:actor/last-name :desc]]
-          :limit    2}) 
-     [:actor/first-name :actor/last-name]}])
+  '{([] {:order-by [:actor/first-name [:actor/last-name :desc]]
+         :limit    2}) 
+    [:actor/first-name :actor/last-name]})
 ; returns
 ({:actor/first-name "ADAM" :actor/last-name  "HOPPER"} 
  {:actor/first-name "ADAM" :actor/last-name  "GRANT"})
@@ -217,22 +217,22 @@ We can sort the relationship query results as well.
 ; sorting one-to-many relationship query results
 (heql/query
   db-adapter
-  '[{[:country/country-id 2] 
-      [:country/country
-       ; sorting `:country/cities` by `:city/city` in descending order  
-       {(:country/cities {:order-by [[:city/city :desc]]}) 
-        [:city/city]}]}])
+  '{[:country/country-id 2] 
+    [:country/country
+     ; sorting `:country/cities` by `:city/city` in descending order  
+     {(:country/cities {:order-by [[:city/city :desc]]}) 
+      [:city/city]}]})
 ```
 
 ```clojure
 ; sorting many-to-many relationship query results
 (heql/query
   db-adapter
-  '[{[:actor/actor-id 148] 
-     [:actor/first-name
-      ; sorting `:actor/films` by `:film/title` in descending order   
-      {(:actor/films {:order-by [[:film/title :desc]]}) 
-       [:film/title]}]}])
+  '{[:actor/actor-id 148] 
+    [:actor/first-name
+     ; sorting `:actor/films` by `:film/title` in descending order   
+     {(:actor/films {:order-by [[:film/title :desc]]}) 
+      [:film/title]}]})
 ```
 
 > **NOTE:** Currently, sorting the relationship query results is not supported in MySQL
@@ -245,50 +245,50 @@ HoneyEQL supports filtering using the `:where` parameter. This parameter takes t
 ```clojure
 (heql/query
   db-adapter
-  `[{([] 
-      ; HoneySQL: {:where [:= city_id 3]}
-      {:where [:= :city/city-id 3]}) 
-     [:city/city]}])
+  `{([] 
+     ; HoneySQL: {:where [:= city_id 3]}
+     {:where [:= :city/city-id 3]}) 
+    [:city/city]})
 ```
 
 Some sample queries
 
 ```clojure
 ; Not Equal To
-[{([] {:where [:<> :language/name "English"]}) 
-  [:language/name]}]
+{([] {:where [:<> :language/name "English"]}) 
+ [:language/name]}
 ```
 
 ```clojure
 ; Greater than
-[{([] {:where [:> :payment/amount 11.99M]}) 
-  [:payment/rental-id]}]
+{([] {:where [:> :payment/amount 11.99M]}) 
+ [:payment/rental-id]}
 ```
 
 ```clojure
 ; Greater than and equal to
-[{([] {:where [:>= :payment/amount 11.99M]}) 
-  [:payment/rental-id]}]
+{([] {:where [:>= :payment/amount 11.99M]}) 
+ [:payment/rental-id]}
 ```
 
 ```clojure
 ; Less than
-[{([] {:where [:< :payment/amount 11.99M]}) 
-  [:payment/rental-id]}]
+{([] {:where [:< :payment/amount 11.99M]}) 
+ [:payment/rental-id]}
 ```
 
 ```clojure
 ; Less than and equal to
-[{([] {:where [:<= :payment/amount 11.99M]}) 
-  [:payment/rental-id]}]
+{([] {:where [:<= :payment/amount 11.99M]}) 
+ [:payment/rental-id]}
 ```
 
 Date, Time & TimeStamp values can be used either as string or the using their corresponding type defined [in this mapping](#type-mappings).
 
 ```clojure
 ; Between two timestamps as strings
-[{([] {:where [:between :payment/payment-date "2005-08-23T21:00:00" "2005-08-23T21:03:00"]}) 
-  [:payment/rental-id]}]
+{([] {:where [:between :payment/payment-date "2005-08-23T21:00:00" "2005-08-23T21:03:00"]}) 
+ [:payment/rental-id]}
 ```
 ```clojure
 ; Between two timestamps as LocalDateTime
@@ -303,8 +303,8 @@ The same logic applies for UUIDs as well
 
 ```clojure
 ; in filter with implicit type coercion
-[{([] {:where [:in :customer/id ["847f09a7-39d1-4021-b43d-18ceb7ada8f6" "e5156dce-58ff-44f5-8533-932a7250bd29"]]}) 
-  [:customer/first-name]}]
+{([] {:where [:in :customer/id ["847f09a7-39d1-4021-b43d-18ceb7ada8f6" "e5156dce-58ff-44f5-8533-932a7250bd29"]]}) 
+ [:customer/first-name]}
 ```
 
 ```clojure
@@ -313,31 +313,31 @@ The same logic applies for UUIDs as well
                     #uuid "e5156dce-58ff-44f5-8533-932a7250bd29"]]
   (db/query 
    db-adapter 
-   `[{([] {:where [:not-in :customer/id ~customer-ids]}) [:customer/first-name]}]))
+   `{([] {:where [:not-in :customer/id ~customer-ids]}) [:customer/first-name]}))
 ```
 
 We can also filter the results using logical operators `and`, `or` & `not`.
 
 ```clojure
-[{([] {:where [:and 
+{([] {:where [:and 
                 [:= :payment/customer-id 1] 
                 [:> :payment/amount 5.99M]]}) 
-  [:payment/payment-id :payment/amount]}]  
+ [:payment/payment-id :payment/amount]}  
 ```
 
 ```clojure
-[{([] {:where [:or 
+{([] {:where [:or 
                 [:= :language/name "English"] 
                 [:= :language/name "French"]]}) 
-  [:language/id :language/name]}]  
+ [:language/id :language/name]} 
 ```
 
 ```clojure
-[{([] {:where [:not 
+{([] {:where [:not 
                 [:or 
                   [:= :language/name "English"] 
                   [:= :language/name "French"]]]}) 
-  [:language/language-id :language/name]}]
+ [:language/language-id :language/name]}
 ```
 
 #### Filter Based On Relationship Attributes
@@ -352,8 +352,8 @@ we can use the following query.
 
 ```clojure
 ; filtering by one-to-one relationship attribute
-[{([] {:where [:= [:city/country :country/country] "Algeria"]}) 
-  [:city/city-id :city/city]}]
+{([] {:where [:= [:city/country :country/country] "Algeria"]}) 
+ [:city/city-id :city/city]}
 ```
 
 If the relationship attribute is refers a one-to-many or many-to-many relationship, the filter condition yield the results if **any** of the related entities satisfy the condition.
@@ -362,8 +362,8 @@ For the above schema, we can get a list of countries which has at-least one city
 
 ```clojure
 ; filtering by one-to-many relationship attribute
-[{([] {:where [:like [:country/cities :city/city] "Ab%"]}) 
- [:country/country-id :country/country]}]
+{([] {:where [:like [:country/cities :city/city] "Ab%"]}) 
+ [:country/country-id :country/country]}
 ```
 
 For many-to-many relationships also, the query looks similar.
@@ -375,8 +375,8 @@ For the above schema, to get the actors who are part of at-lease one film which 
 
 ```clojure
 ; filtering by many-to-many relationship attribute
-[{([] {:where [:like [:actor/films :film/title] "%LIFE%"] }) 
- [:actor/first-name :actor/last-name]}]
+{([] {:where [:like [:actor/films :film/title] "%LIFE%"] }) 
+ [:actor/first-name :actor/last-name]}
 ```
 
 If we want to retrieve only certain entities only if **all** of its related entities satisfy the condition, then we need to used the `:not` and the reverse of the filter condition together.
@@ -388,15 +388,15 @@ Let's assume that we have a schema like below
 To filter authors who has **at-least** one course with the rating `5`, we can achieve it using the following query.
 
 ```clojure
-[{([] {:where [:= [:author/courses :course/rating] 5]}) 
-  [:author/first-name :author/last-name]}]
+{([] {:where [:= [:author/courses :course/rating] 5]}) 
+  [:author/first-name :author/last-name]}
 ```
 
 If we want to filter only the authors who has got the rating `5` in **all** their courses, we can achieve it by
 
 ```clojure
-[{([] {:where [:not [:<> [:author/courses :course/rating] 5]]}) 
-  [:author/first-name :author/last-name]}]
+{([] {:where [:not [:<> [:author/courses :course/rating] 5]]}) 
+  [:author/first-name :author/last-name]}
 ```
 
 
@@ -405,21 +405,21 @@ If we want to filter only the authors who has got the rating `5` in **all** thei
 We can filter the relationships as well!
 
 ```clojure
-[{[:country/country-id 2] 
-  [:country/country
-   ; filtering one-to-many relationship
-   {(:country/cities {:where [:= :city/city "Batna"]}) 
-    [:city/city-id :city/city]}]}]
+{[:country/country-id 2] 
+ [:country/country
+  ; filtering one-to-many relationship
+  {(:country/cities {:where [:= :city/city "Batna"]}) 
+   [:city/city-id :city/city]}]}
 ; returns
 {:country/country "Algeria"
  :cities [{:city/city-id 59 :city/city "Batna"}]}
 ```
 
 ```clojure
-[{[:actor/actor-id 148] 
-  [:actor/first-name
-   {(:actor/films {:where [:= :film/title "SEA VIRGIN"]}) 
-    [:film/title]}]}]
+{[:actor/actor-id 148] 
+ [:actor/first-name
+  {(:actor/films {:where [:= :film/title "SEA VIRGIN"]}) 
+   [:film/title]}]}
 ; returns
 {:actor/first-name "EMILY"
  :actor/films [{:film/title "SEA VIRGIN"}]})

@@ -277,7 +277,8 @@
 
 (defn query [db-adapter eql-query]
   (let [heql-meta-data          (:heql-meta-data db-adapter)
-        field-naming-convention (:field/naming-convention (:heql-config db-adapter))]
+        field-naming-convention (:field/naming-convention (:heql-config db-adapter))
+        eql-query (if (vector? eql-query) eql-query (vector eql-query))]
     (map  #(transform-keys field-naming-convention %)
           (json/read-str (->> (eql/query->ast eql-query)
                               (enrich-eql-node heql-meta-data)

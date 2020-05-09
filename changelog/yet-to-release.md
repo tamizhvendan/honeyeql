@@ -1,3 +1,15 @@
+## Syntax Improvement
+
+```clojure
+; earlier
+[{[:author/id 1] 
+ [:author/first-name]}]
+
+; new
+{[:author/id 1] 
+ [:author/first-name]}
+```
+
 ## have
 
 ```clojure
@@ -13,4 +25,12 @@
 [{([] {:where [:have :author/courses]}) 
   [:author/* 
    {:author/courses [:course/*]}]}]
+```
+
+## Bug Fix
+
+Null Check
+
+```clojure
+
 ```
