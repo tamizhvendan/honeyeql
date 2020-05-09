@@ -84,14 +84,19 @@ Then we query the database using either `query-single` to retrieve a single item
             [honeyeql.core :as heql]))
 
 ; ...
+; select first_name, last_name 
+; from actor 
+; where actor_id = 1
 (heql/query-single
   db-adapter
   {[:actor/actor-id 1] [:actor/first-name
-                         :actor/last-name]})
+                        :actor/last-name]})
 ; returns
 {:actor/first-name "PENELOPE"
  :actor/last-name  "GUINESS"}
 
+; select name
+; from language
 (heql/query
   db-adapter
   {[] [:language/name]})
