@@ -197,46 +197,60 @@
                [:entities right-entity-ident :entity/req-attrs]
                conj one-to-many-attr-ident)))
 
+(defn- one-to-one-attr-name-result [db-config {:keys [pktable_schem pktable_name fkcolumn_name]}]
+  (let [n (foreign-key-column->attr-name db-config fkcolumn_name)]
+    (if (= fkcolumn_name n)
+      [n (-> (entity-ident db-config pktable_schem pktable_name)
+           name
+           (str "_by_" fkcolumn_name))]
+      [n])))
+
+#_ (one-to-one-attr-name-result cfg {:fktable_schem "public"
+                                     :fktable_name "continent"
+                                     :fkcolumn_name "continent_identifier"})
+
 (defn- add-fk-rel-meta-data [db-config heql-meta-data
                              {:keys [fktable_schem fktable_name fkcolumn_name fk_name
-                                     pktable_schem pktable_name pkcolumn_name]}]
+                                     pktable_schem pktable_name pkcolumn_name]
+                              :as   fk-md}]
   ; TODO: https://github.com/graphqlize/graphqlize/issues/14
   ; If fk column name doesn't have suffix, ignoring the corresponding one-to-one & one-to-many relationship. 
-  (if (= fkcolumn_name (foreign-key-column->attr-name db-config fkcolumn_name))
-    heql-meta-data
-    (let [one-to-one-attr-name  (foreign-key-column->attr-name db-config fkcolumn_name)
-          one-to-one-attr-ident (attribute-ident db-config fktable_schem fktable_name one-to-one-attr-name)
-          left-attr-ident       (attribute-ident db-config fktable_schem fktable_name fkcolumn_name)
-          left-entity-ident     (entity-ident db-config fktable_schem fktable_name)
-          right-attr-ident      (attribute-ident db-config pktable_schem pktable_name pkcolumn_name)
-          right-entity-ident    (entity-ident db-config pktable_schem pktable_name)
-          is-nullable           (get-in heql-meta-data [:attributes left-attr-ident :attr/nullable])]
-      (-> (assoc-in heql-meta-data [:attributes one-to-one-attr-ident]
-                    {:attr/ident            one-to-one-attr-ident
-                     :attr.ident/camel-case (attribute-ident-in-camel-case one-to-one-attr-ident)
-                     :attr/type             :attr.type/ref
-                     :attr/nullable         is-nullable
-                     :attr.ref/cardinality  :attr.ref.cardinality/one
-                     :attr.ref/type         right-entity-ident
-                     :attr.entity/ident     left-entity-ident
-                     :attr.column.ref/type  :attr.column.ref.type/one-to-one
-                     :attr.column.ref/left  left-attr-ident
-                     :attr.column.ref/right right-attr-ident
-                     :attr.column/ident     (column-ident db-config {:table_schem         fktable_schem
-                                                                     :table_name          fktable_name
-                                                                     :column_name         one-to-one-attr-name
-                                                                     :relationship-column true})})
-          (update-in [:entities left-entity-ident (if is-nullable :entity/opt-attrs :entity/req-attrs)]
-                     conj one-to-one-attr-ident)
-          (update-in [:entities left-entity-ident :entity.relation/foreign-keys]
-                     conj {:entity.relation.foreign-key/name      fk_name
-                           :entity.relation.foreign-key/self-attr left-attr-ident
-                           :entity.relation.foreign-key/ref-attr  right-attr-ident})
-          (add-one-to-many-metadata {:left-entity-ident     left-entity-ident
-                                     :left-attr-ident       left-attr-ident
-                                     :right-entity-ident    right-entity-ident
-                                     :right-attr-ident      right-attr-ident
-                                     :one-to-one-attr-ident one-to-one-attr-ident})))))
+  (let [[one-to-one-attr-name modified-one-to-one-attr-name]  (one-to-one-attr-name-result db-config fk-md)
+        one-to-one-attr-ident (attribute-ident db-config fktable_schem fktable_name (if modified-one-to-one-attr-name 
+                                                                                      modified-one-to-one-attr-name
+                                                                                      one-to-one-attr-name))
+        ident-for-one-to-many-ident (attribute-ident db-config fktable_schem fktable_name one-to-one-attr-name)
+        left-attr-ident       (attribute-ident db-config fktable_schem fktable_name fkcolumn_name)
+        left-entity-ident     (entity-ident db-config fktable_schem fktable_name)
+        right-attr-ident      (attribute-ident db-config pktable_schem pktable_name pkcolumn_name)
+        right-entity-ident    (entity-ident db-config pktable_schem pktable_name)
+        is-nullable           (get-in heql-meta-data [:attributes left-attr-ident :attr/nullable])]
+    (-> (assoc-in heql-meta-data [:attributes one-to-one-attr-ident]
+                  {:attr/ident            one-to-one-attr-ident
+                   :attr.ident/camel-case (attribute-ident-in-camel-case one-to-one-attr-ident)
+                   :attr/type             :attr.type/ref
+                   :attr/nullable         is-nullable
+                   :attr.ref/cardinality  :attr.ref.cardinality/one
+                   :attr.ref/type         right-entity-ident
+                   :attr.entity/ident     left-entity-ident
+                   :attr.column.ref/type  :attr.column.ref.type/one-to-one
+                   :attr.column.ref/left  left-attr-ident
+                   :attr.column.ref/right right-attr-ident
+                   :attr.column/ident     (column-ident db-config {:table_schem         fktable_schem
+                                                                   :table_name          fktable_name
+                                                                   :column_name         one-to-one-attr-name
+                                                                   :relationship-column true})})
+        (update-in [:entities left-entity-ident (if is-nullable :entity/opt-attrs :entity/req-attrs)]
+                   conj one-to-one-attr-ident)
+        (update-in [:entities left-entity-ident :entity.relation/foreign-keys]
+                   conj {:entity.relation.foreign-key/name      fk_name
+                         :entity.relation.foreign-key/self-attr left-attr-ident
+                         :entity.relation.foreign-key/ref-attr  right-attr-ident})
+        (add-one-to-many-metadata {:left-entity-ident     left-entity-ident
+                                   :left-attr-ident       left-attr-ident
+                                   :right-entity-ident    right-entity-ident
+                                   :right-attr-ident      right-attr-ident
+                                   :one-to-one-attr-ident ident-for-one-to-many-ident}))))
 
 (defn- add-relationships-meta-data [db-meta-data {:keys [db-config]
                                                   :as   heql-meta-data}]

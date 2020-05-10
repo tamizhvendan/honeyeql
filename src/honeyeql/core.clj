@@ -7,7 +7,7 @@
             [honeyeql.db-adapter.core :as db]
             [honeyeql.debug :refer [trace>>]]))
 
-(def default-heql-config {:field/naming-convention  :qualified-kebab-case
+(def default-heql-config {:attr/naming-convention  :qualified-kebab-case
                           :field/support-select-all true})
 
 (defn find-join-type [heql-meta-data eql-node]
@@ -27,8 +27,8 @@
     (and (= :prop type) (keyword? key)) key
     (and (= :join type) dispatch-key) key))
 
-(defn column-alias [field-naming-convention attr-ident]
-  (case field-naming-convention
+(defn column-alias [attr-naming-convention attr-ident]
+  (case attr-naming-convention
     :qualified-kebab-case (str (namespace attr-ident) "/" (name attr-ident))
     :unqualified-kebab-case (name attr-ident)
     :unqualified-camel-case (inf/camel-case (name attr-ident) :lower)))
@@ -277,9 +277,9 @@
 
 (defn query [db-adapter eql-query]
   (let [heql-meta-data          (:heql-meta-data db-adapter)
-        field-naming-convention (:field/naming-convention (:heql-config db-adapter))
+        attr-naming-convention (:attr/naming-convention (:heql-config db-adapter))
         eql-query (if (vector? eql-query) eql-query (vector eql-query))]
-    (map  #(transform-keys field-naming-convention %)
+    (map  #(transform-keys attr-naming-convention %)
           (json/read-str (->> (eql/query->ast eql-query)
                               (enrich-eql-node heql-meta-data)
                               (trace>> :eql-ast)
@@ -289,8 +289,8 @@
                               (trace>> :sql)
                               (db/query db-adapter))
                          :bigdec true
-                         :key-fn #(json-key-fn field-naming-convention %)
-                         :value-fn #(json-value-fn db-adapter field-naming-convention %1 %2)))))
+                         :key-fn #(json-key-fn attr-naming-convention %)
+                         :value-fn #(json-value-fn db-adapter attr-naming-convention %1 %2)))))
 
 (defn query-single [db-adapter eql-query]
   (first (query db-adapter eql-query)))
