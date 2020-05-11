@@ -7,8 +7,23 @@
             [honeyeql.db-adapter.core :as db]
             [honeyeql.debug :refer [trace>>]]))
 
-(def default-heql-config {:attr/naming-convention  :qualified-kebab-case
-                          :field/support-select-all true})
+(def default-heql-config {:attr/naming-convention :qualified-kebab-case
+                          :eql/mode               :eql.mode/lenient})
+
+(defn- transform-honeyeql-query [eql-query]
+  (if-not (keyword? eql-query)
+    (let [first-key (ffirst eql-query)]
+      (if (coll? first-key)
+        (if (or (list? first-key) (= [] first-key) (not (map? (second first-key))))
+          eql-query
+          {(seq first-key) (->> (eql-query first-key)
+                                (map transform-honeyeql-query)
+                                vec)})
+        eql-query))
+    eql-query))
+
+(defn transform-honeyeql-queries [eql-queries]
+  (vec (map transform-honeyeql-query eql-queries)))
 
 (defn find-join-type [heql-meta-data eql-node]
   (let [{node-type :type
@@ -276,9 +291,12 @@
        :prop (assoc-in (assoc eql-node :attr-ident attr-ident) [:alias :parent] parent-alias)))))
 
 (defn query [db-adapter eql-query]
-  (let [heql-meta-data          (:heql-meta-data db-adapter)
-        attr-naming-convention (:attr/naming-convention (:heql-config db-adapter))
-        eql-query (if (vector? eql-query) eql-query (vector eql-query))]
+  (let [{:keys [heql-meta-data heql-config]} db-adapter
+        attr-naming-convention               (:attr/naming-convention heql-config)
+        eql-query                            (if (vector? eql-query) eql-query (vector eql-query))
+        eql-query                            (case (:eql/mode heql-config)
+                                               :eql.mode/lenient (trace>> :transformed-eql (transform-honeyeql-queries eql-query))
+                                               :eql.mode/strict  eql-query)]
     (map  #(transform-keys attr-naming-convention %)
           (json/read-str (->> (eql/query->ast eql-query)
                               (enrich-eql-node heql-meta-data)

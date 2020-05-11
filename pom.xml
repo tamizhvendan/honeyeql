@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.graphqlize</groupId>
   <artifactId>honeyeql</artifactId>
-  <version>0.1.0-alpha22</version>
+  <version>0.1.0-alpha23</version>
 
   <name>Honey EQL</name>
   <description>HoneyEQL enables you to query database using the EQL.</description>
@@ -26,11 +26,6 @@
       <groupId>org.clojure</groupId>
       <artifactId>data.json</artifactId>
       <version>1.0.0</version>
-    </dependency>
-    <dependency>
-      <groupId>org.clojure</groupId>
-      <artifactId>clojure</artifactId>
-      <version>1.10.1</version>
     </dependency>
     <dependency>
       <groupId>edn-query-language</groupId>
