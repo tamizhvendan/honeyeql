@@ -10,17 +10,21 @@
 (def default-heql-config {:attr/naming-convention :qualified-kebab-case
                           :eql/mode               :eql.mode/lenient})
 
+(defn- eql-ident? [x]
+  (and (vector? x) ((comp not map? second) x)))
+
 (defn- transform-honeyeql-query [eql-query]
-  (if-not (keyword? eql-query)
-    (let [first-key (ffirst eql-query)]
-      (if (coll? first-key)
-        (if (or (list? first-key) (= [] first-key) (not (map? (second first-key))))
-          eql-query
-          {(seq first-key) (->> (eql-query first-key)
-                                (map transform-honeyeql-query)
-                                vec)})
-        eql-query))
-    eql-query))
+  (if (keyword? eql-query) 
+    eql-query
+   (let [first-key (ffirst eql-query)
+         props     (->> (eql-query first-key)
+                        (map transform-honeyeql-query)
+                        vec)]
+     (cond
+       (keyword? first-key) {first-key props}
+       (list? first-key) {first-key props}
+       (eql-ident? first-key) {first-key props}
+       :else {(apply list first-key) props}))))
 
 (defn transform-honeyeql-queries [eql-queries]
   (vec (map transform-honeyeql-query eql-queries)))
