@@ -27,7 +27,8 @@
         :else {(apply list first-key) props}))))
 
 (defn transform-honeyeql-queries [eql-queries]
-  (vec (map transform-honeyeql-query eql-queries)))
+  (let [eql-queries (if (vector? eql-queries) eql-queries (vector eql-queries))]
+    (vec (map transform-honeyeql-query eql-queries))))
 
 (defn find-join-type [heql-meta-data eql-node]
   (let [{node-type :type
@@ -300,7 +301,6 @@
 (defn query [db-adapter eql-query]
   (let [{:keys [heql-meta-data heql-config]} db-adapter
         attr-naming-convention               (:attr/naming-convention heql-config)
-        eql-query                            (if (vector? eql-query) eql-query (vector eql-query))
         eql-query                            (case (:eql/mode heql-config)
                                                :eql.mode/lenient (trace>> :transformed-eql (transform-honeyeql-queries eql-query))
                                                :eql.mode/strict  eql-query)]
