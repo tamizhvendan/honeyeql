@@ -67,7 +67,7 @@ HoneyEQL transforms the EQL into single efficient SQL and query the database usi
 
 ## Documentation
 
-[![cljdoc badge](https://cljdoc.org/badge/graphqlize/honeyeql)](https://cljdoc.org/d/graphqlize/honeyeql/CURRENT)
+[![cljdoc badge](https://cljdoc.org/badge/org.graphqlize/honeyeql)](https://cljdoc.org/d/org.graphqlize/honeyeql/CURRENT)
 
 ## Acknowledgements
 
