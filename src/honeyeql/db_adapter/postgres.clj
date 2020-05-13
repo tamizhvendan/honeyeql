@@ -100,7 +100,7 @@
                                 (->> (heql-md/attr-column-name attr-md)
                                      (str parent ".")
                                      keyword))]
-    [select-attr-expr (heql/column-alias :qualified-kebab-case attr-ident)]))
+    [select-attr-expr (heql/column-alias :naming-convention/qualified-kebab-case attr-ident)]))
 
 (defn- assoc-one-to-one-hsql-queries [db-adapter heql-meta-data hsql eql-nodes]
   (if-let [one-to-one-join-children

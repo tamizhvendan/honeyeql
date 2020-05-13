@@ -7,7 +7,7 @@
             [honeyeql.db-adapter.core :as db]
             [honeyeql.debug :refer [trace>>]]))
 
-(def default-heql-config {:attr/naming-convention :qualified-kebab-case
+(def default-heql-config {:attr/naming-convention :naming-convention/qualified-kebab-case
                           :eql/mode               :eql.mode/lenient})
 
 (defn- eql-ident? [x]
@@ -49,9 +49,9 @@
 
 (defn column-alias [attr-naming-convention attr-ident]
   (case attr-naming-convention
-    :qualified-kebab-case (str (namespace attr-ident) "/" (name attr-ident))
-    :unqualified-kebab-case (name attr-ident)
-    :unqualified-camel-case (inf/camel-case (name attr-ident) :lower)))
+    :naming-convention/qualified-kebab-case (str (namespace attr-ident) "/" (name attr-ident))
+    :naming-convention/unqualified-kebab-case (name attr-ident)
+    :naming-convention/unqualified-camel-case (inf/camel-case (name attr-ident) :lower)))
 
 (defn- one-to-one-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
   [:=
@@ -244,17 +244,17 @@
     (db/resolve-many-to-many-relationship db-adapter heql-meta-data hsql eql-node)))
 
 (defn- json-key-fn [attribute-return-as key]
-  (if (= :qualified-kebab-case attribute-return-as)
+  (if (= :naming-convention/qualified-kebab-case attribute-return-as)
     (keyword key)
     [(keyword key) (column-alias attribute-return-as (keyword key))]))
 
 (defn- json-value-fn [db-adapter attribute-return-as json-key json-value]
-  (if (= :qualified-kebab-case attribute-return-as)
+  (if (= :naming-convention/qualified-kebab-case attribute-return-as)
     (heql-md/coerce-attr-value db-adapter json-key json-value)
     (heql-md/coerce-attr-value db-adapter (first json-key) json-value)))
 
 (defn- transform-keys [attribute-return-as return-value]
-  (if (= :qualified-kebab-case attribute-return-as)
+  (if (= :naming-convention/qualified-kebab-case attribute-return-as)
     return-value
     (inf/transform-keys return-value (comp keyword second))))
 

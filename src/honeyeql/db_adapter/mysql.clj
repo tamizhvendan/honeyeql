@@ -129,7 +129,7 @@
                    attr-column-ref-type  (heql-md/attr-column-ref-type attr-md)]
                (assoc
                 obj
-                (heql/column-alias :qualified-kebab-case attr-ident)
+                (heql/column-alias :naming-convention/qualified-kebab-case attr-ident)
                 (case attr-column-ref-type
                   :attr.column.ref.type/one-to-one (keyword (str parent "__" self) "result")
                   (:attr.column.ref.type/one-to-many
