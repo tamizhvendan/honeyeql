@@ -7,7 +7,7 @@
             [honeyeql.db-adapter.core :as db]
             [honeyeql.debug :refer [trace>>]]))
 
-(def default-heql-config {:attr/naming-convention :naming-convention/qualified-kebab-case
+(def default-heql-config {:attr/return-as :naming-convention/qualified-kebab-case
                           :eql/mode               :eql.mode/lenient})
 
 (defn- eql-ident? [x]
@@ -300,7 +300,7 @@
 
 (defn query [db-adapter eql-query]
   (let [{:keys [heql-meta-data heql-config]} db-adapter
-        attr-naming-convention               (:attr/naming-convention heql-config)
+        attr-naming-convention               (:attr/return-as heql-config)
         eql-query                            (case (:eql/mode heql-config)
                                                :eql.mode/lenient (trace>> :transformed-eql (transform-honeyeql-queries eql-query))
                                                :eql.mode/strict  eql-query)]

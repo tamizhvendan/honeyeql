@@ -1,3 +1,5 @@
+# Getting Started
+
 Let's get started by adding HoneyEQL to your project.
 
 [![Clojars Project](https://clojars.org/org.graphqlize/honeyeql/latest-version.svg)](https://clojars.org/org.graphqlize/honeyeql)
@@ -17,7 +19,7 @@ This documentation uses [deps](https://clojure.org/guides/deps_and_cli) and assu
 
 The next step is initializing the `db-adapter` using either a [db-spec-map](https://cljdoc.org/d/seancorfield/next.jdbc/1.0.409/doc/getting-started#the-db-spec-hash-map) or a [DataSource](https://docs.oracle.com/javase/7/docs/api/javax/sql/DataSource.html).
 
-### Postgres with db-spec map
+## Postgres with db-spec map
 
 ```clojure
 (ns core
@@ -29,7 +31,7 @@ The next step is initializing the `db-adapter` using either a [db-spec-map](http
                                      :password "postgres"}))
 ```
 
-### MySQL with a data source (via connection pool)
+## MySQL with a data source (via connection pool)
 
 ```clojure
 (ns core

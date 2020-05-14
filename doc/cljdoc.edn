@@ -1,7 +1,7 @@
 {:cljdoc.doc/tree [["Readme" {:file "README.md"}]
                    ["Getting Started" {:file "doc/getting-started.md"}]
+                   ["Attributes" {:file "doc/attributes.md"}]
                    ["Query Syntax" {:file "doc/query-syntax.md"}]
-                   ["Entity And Attributes Schema" {:file "doc/schema.md"}]
                    ["Sorting" {:file "doc/sorting.md"}]
                    ["Pagination" {:file "doc/pagination.md"}]
                    ["Filters" {:file "doc/filters.md"}]
