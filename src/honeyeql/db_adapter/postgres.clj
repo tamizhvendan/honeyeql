@@ -1,4 +1,4 @@
-(ns honeyeql.db-adapter.postgres
+(ns ^:no-doc honeyeql.db-adapter.postgres
   (:require [honeyeql.meta-data :as heql-md]
             [honeyeql.core :as heql]
             [honeysql.format :as fmt]

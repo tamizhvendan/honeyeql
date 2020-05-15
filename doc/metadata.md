@@ -1,9 +1,10 @@
-## Metadata
+# Metadata
 
-In addition to querying, HoneyEQL supports quering the metadata of the database also.
+In addition to querying, HoneyEQL supports querying the metadata of the database also.
 
 ```clojure
-(heql/meta-data db-adapter)
+(:heql-meta-data db-adapter)
+
 ; returns
 {:entities ...
  :attributes ...

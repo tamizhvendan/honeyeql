@@ -1,4 +1,4 @@
-### Sorting
+# Sorting
 
 HoneyEQL supports sorting using the `:order-by` parameter. It takes a vector similar to HoneySQL and transform that to a corresponding `ORDER BY` SQL clause to sort the return value.
 

@@ -55,7 +55,9 @@ Then we query the database using either `query-single` to retrieve a single item
 (ns core
   (:require ; ...
             [honeyeql.core :as heql]))
+```
 
+```clojure
 ; ...
 ; select first_name, last_name 
 ; from actor 
@@ -67,12 +69,15 @@ Then we query the database using either `query-single` to retrieve a single item
 ; returns
 {:actor/first-name "PENELOPE"
  :actor/last-name  "GUINESS"}
+```
 
+```clojure
 ; select name
 ; from language
 (heql/query
   db-adapter
   {[] [:language/name]})
+
 ; returns
 ({:language/name "English"} {:language/name "Italian"}
  {:language/name "Japanese"} {:language/name "Mandarin"}

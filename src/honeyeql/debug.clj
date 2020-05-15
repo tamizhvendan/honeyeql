@@ -1,4 +1,4 @@
-(ns honeyeql.debug)
+(ns ^:no-doc honeyeql.debug)
 
 (defn trace>> [key value]
   (tap> {key value})

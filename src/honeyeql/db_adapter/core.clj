@@ -1,4 +1,4 @@
-(ns honeyeql.db-adapter.core)
+(ns ^:no-doc honeyeql.db-adapter.core)
 
 (defprotocol DbAdapter
   (to-sql [db-adapter hsql])

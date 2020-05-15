@@ -7,8 +7,8 @@
             [honeyeql.db-adapter.core :as db]
             [honeyeql.debug :refer [trace>>]]))
 
-(def default-heql-config {:attr/return-as :naming-convention/qualified-kebab-case
-                          :eql/mode               :eql.mode/lenient})
+(def ^:no-doc default-heql-config {:attr/return-as :naming-convention/qualified-kebab-case
+                                   :eql/mode       :eql.mode/lenient})
 
 (defn- eql-ident? [x]
   (and (vector? x) ((comp not map? second) x)))
@@ -26,11 +26,11 @@
         (eql-ident? first-key) {first-key props}
         :else {(apply list first-key) props}))))
 
-(defn transform-honeyeql-queries [eql-queries]
+(defn- transform-honeyeql-queries [eql-queries]
   (let [eql-queries (if (vector? eql-queries) eql-queries (vector eql-queries))]
     (vec (map transform-honeyeql-query eql-queries))))
 
-(defn find-join-type [heql-meta-data eql-node]
+(defn ^:no-doc find-join-type [heql-meta-data eql-node]
   (let [{node-type :type
          node-key  :key} eql-node]
     (cond
@@ -47,7 +47,7 @@
     (and (= :prop type) (keyword? key)) key
     (and (= :join type) dispatch-key) key))
 
-(defn column-alias [attr-naming-convention attr-ident]
+(defn ^:no-doc column-alias [attr-naming-convention attr-ident]
   (case attr-naming-convention
     :naming-convention/qualified-kebab-case (str (namespace attr-ident) "/" (name attr-ident))
     :naming-convention/unqualified-kebab-case (name attr-ident)
@@ -74,7 +74,7 @@
       (keyword (str assoc-table-alias "." (heql-md/attr-column-name heql-meta-data right-ident)))
       (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data right)))]]))
 
-(defmulti eql->hsql (fn [db-adapter heql-meta-data eql-node] (find-join-type heql-meta-data eql-node)))
+(defmulti ^:no-doc eql->hsql (fn [db-adapter heql-meta-data eql-node] (find-join-type heql-meta-data eql-node)))
 
 (defmethod ^{:private true} eql->hsql :root [db-adapter heql-meta-data eql-node]
   (eql->hsql db-adapter heql-meta-data (first (:children eql-node))))
@@ -149,8 +149,8 @@
 
 (defn- nested-entity-predicate [db-adapter eql-node clause]
   (let [[op col]         clause
-        join-attr-ident  (if (= :have op) col (first col))
-        attr-ident       (when-not (= :have op) (second col))
+        join-attr-ident  (if (= :exists op) col (first col))
+        attr-ident       (when-not (= :exists op) (second col))
         heql-meta-data   (:heql-meta-data db-adapter)
         self-alias       (str (gensym))
         self-eql-node    {:alias {:self self-alias}}
@@ -171,7 +171,7 @@
       :and (concat [:and] (map #(where-predicate db-adapter % eql-node) (rest clause)))
       :or (concat [:or] (map #(where-predicate db-adapter % eql-node) (rest clause)))
       :not (conj [:not] (where-predicate db-adapter (second clause) eql-node))
-      :have (nested-entity-predicate db-adapter eql-node clause)
+      :exists (nested-entity-predicate db-adapter eql-node clause)
       (if (keyword? col)
         (hsql-predicate db-adapter eql-node clause)
         (nested-entity-predicate db-adapter eql-node clause)))))
