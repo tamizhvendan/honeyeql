@@ -1,4 +1,4 @@
-(ns honeyeql.db-adapter.mysql
+(ns ^:no-doc honeyeql.db-adapter.mysql
   (:require [honeyeql.meta-data :as heql-md]
             [honeyeql.core :as heql]
             [honeysql.core :as hsql]
