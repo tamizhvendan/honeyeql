@@ -286,7 +286,7 @@ If we want to filter only the authors who has got the rating `5` in **all** thei
 
 Using HoneyEQL, we can also filter by the existence of relationship attributes. 
 
-For the above `author-course` schema, if we want to filter the authors who have at-least once course, we can do query it as
+For the above `author-course` schema, if we want to filter the authors who have at-least one course, we can query it as
 
 ```clojure
 ; :eql.mode/lenient syntax
