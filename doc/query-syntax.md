@@ -5,7 +5,7 @@ HoneyEQL uses [EDN Query Language](https://edn-query-language.org)(EQL) to query
 HoneyEQL supports two modes of using EQL.
 
 1. `:eql.mode/strict` - The query should adhere to the specifications of EQL. 
-2. `:eql.mode/lenient` - It supports both EQL specifications and HoneyEQL overrides of EQL specifications.
+2. `:eql.mode/lenient` - It supports both EQL specifications and HoneyEQL overrides of EQL specifications for ease of use.
 
 Based on your requirements, you can choose between either of these during the initialization of HoneyEQL. By default HoneyEQL supports `:eql.mode/lenient`.
 
@@ -23,6 +23,24 @@ To select the list of attributes that we want to see in the output, we'll be usi
  :customer/last-name]
 ```
 
+### HoneyEQL Override
+
+The EQL specification is agonistic of the data storage and hence it doesn't provide anything specific to database querying. As per the EQL standard, if we want to select (query) all the columns of a table, we need to specify it explicitly.
+
+```clojure
+[:actor/actor-id
+ :actor/first-name
+ :actor/last-name
+ :actor/last-update]
+```
+If a table has a lot of columns, specifying all of them in the select vector may be hard. Hence HoneyEQL provides a override to select all the columns of a table using the special attribute `*`.  
+
+```clojure
+[:actor/*]
+```
+
+During query resolution, HoneyEQL replaces this attribute with all the attributes of the corresponding table. 
+
 ### Selecting Join Attributes
 
 If the attribute that we want to select is a join (relationship) attribute, then we will be using a Clojure map with a single key-value pair. The key will be the join attribute and the value will be the vector of attributes that we want to select from the related entity. 
@@ -31,7 +49,7 @@ If the attribute that we want to select is a join (relationship) attribute, then
 [:customer/customer-id
  :customer/first-name 
  :customer/last-name
-
+ ; one to many 
  {:customer/rentals
   [:rental/rental-id
    :rental/rental-date]}]
@@ -43,11 +61,15 @@ We can have more than one join attributes as well.
 [:customer/customer-id
  :customer/first-name 
  :customer/last-name
-
+ ; one to one
+ {:customer/address
+  [:address/postal-code
+   :address/phone]}
+ ; one to many 
  {:customer/rentals
   [:rental/rental-id
    :rental/rental-date]}
- 
+ ; many to many 
  {:customer/payments
   [:payment/payment-id
    :payment/payment-date
@@ -155,36 +177,50 @@ and the following examples uses parameters on the join attributes.
    [:film/title]}]}
 ```
 
+### HoneyEQL Override
 
-### one-to-one relationship
-
-![](https://www.graphqlize.org/img/address_city_country_er_diagram.png)
+The EQL specification uses Clojure list for defining parameters. Because of this while using we need to use [Quote](https://clojure.org/guides/weird_characters#_quote) to prevent it from being treated as function.
 
 ```clojure
-(heql/query-single
+(heql/query
   db-adapter
-  {[:city/city-id 3] [:city/city
-                      {:city/country [:country/country]}]})
+  '{[:actor/actor-id 148] ; ignoring the quote here will return an error
+    [:actor/first-name
+     {(:actor/films {:order-by [[:film/title :desc]]}) 
+      [:film/title]}]})
 ```
 
-### one-to-many relationship
-
-![](https://www.graphqlize.org/img/address_city_country_er_diagram.png)
+If the query involves any dynamic parameter, then we need to use [Syntax Quote](https://clojure.org/guides/weird_characters#syntax_quote) along with [Unquote](https://clojure.org/guides/weird_characters#unquote).
 
 ```clojure
-(heql/query-single
-  db-adapter
-  {[:country/country-id 2] [:country/country
-                            {:country/cities [:city/city]}]})
+(let [actor-id 148]
+  (heql/query
+    db-adapter
+    `{[:actor/actor-id ~actor-id] ; syntax quote + unquote
+      [:actor/first-name
+      {(:actor/films {:order-by [[:film/title :desc]]}) 
+        [:film/title]}]}))
 ```
 
-### many-to-many relationship
+In a real-world application, these scenarios are more prevalent and hence HoneyEQL overrides this parameter specification by using a **vector instead of a list**.
 
-![](https://www.graphqlize.org/img/film_actor_er_diagram.png)
+The above query using a vector in the `:eql.mode/lenient` mode would look like
 
 ```clojure
-(heql/query-single
-  db-adapter
-  {[:actor/actor-id 148] [:actor/first-name
-                          {:actor/films [:film/title]}]})
+(let [actor-id 148]
+  (heql/query
+    db-adapter
+    {[:actor/actor-id actor-id]
+      [:actor/first-name
+      {[:actor/films {:order-by [[:film/title :desc]]}]
+        [:film/title]}]}))
+```
+
+It works on parameters on the idents as well.
+
+```clojure
+{[[:customer/customer-id 148] {:order-by [:customer/first-name]}]
+ [:customer/customer-id
+  :customer/first-name 
+  :customer/last-name]}
 ```
