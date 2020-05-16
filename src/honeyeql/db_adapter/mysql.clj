@@ -92,11 +92,17 @@
                             select-clause)) :result]]
       :from   [alias]})))
 
+(defn- function-attribute-json-v [k [op v]]
+  (list (format "'%s', %s(`%s`.`%s`)" k (name op) (namespace v) (name v))))
+
 (defn- json-kv [[k v]]
-  (if (keyword? v)
-    (list (str "'" k "'" ", "  "`" (namespace v) "`.`" (name v) "`"))
-    (let [[sql & args] (hsql/format v :quoting :mysql)]
-      (cons (str "'" k "'" ", (" sql ")") args))))
+  (cond
+    (keyword? v) (list (format "'%s', `%s`.`%s`" k (namespace v) (name v)))
+    (vector? v) (function-attribute-json-v k v)
+    :else (let [[sql & args] (hsql/format v :quoting :mysql)]
+            (cons (str "'" k "'" ", (" sql ")") args))))
+
+#_(json-kv ["course/count-of-title" [:count :G__249077/title]])
 
 ; HoneySQL raw doesn't treat String as parameter
 ; (hsql/format (hsql/raw ["JOBJ(?, ?)" "foo" "bar"])) 
@@ -119,24 +125,37 @@
            hsql/raw)
       (hsql/raw json-obj-str))))
 
+(defn- select-clause-alias [{:keys [attr-ident key function-attribute-ident]}]
+  (let [attr-ident (if function-attribute-ident
+                     (keyword (namespace attr-ident) (str (name (first key)) "-of-" (name attr-ident)))
+                     attr-ident)]
+    (heql/column-alias :naming-convention/qualified-kebab-case attr-ident)))
+
+(defn- select-clause-column [{:keys [function-attribute-ident alias key]} attr-md]
+  (let [column-name           (heql-md/attr-column-name attr-md)
+        {:keys [_ parent]} alias
+        c (keyword (name parent) (name column-name))]
+    (if function-attribute-ident
+      [(first key) c]
+      c)))
+
 (defn- mysql-select-clause [db-adapter heql-meta-data eql-nodes]
   (json-object
    (reduce (fn [obj {:keys [attr-ident alias]
                      :as   eql-node}]
              (let [{:keys [self parent]} alias
                    attr-md               (heql-md/attr-meta-data heql-meta-data attr-ident)
-                   column-name           (heql-md/attr-column-name attr-md)
                    attr-column-ref-type  (heql-md/attr-column-ref-type attr-md)]
                (assoc
                 obj
-                (heql/column-alias :naming-convention/qualified-kebab-case attr-ident)
+                (select-clause-alias eql-node)
                 (case attr-column-ref-type
                   :attr.column.ref.type/one-to-one (keyword (str parent "__" self) "result")
                   (:attr.column.ref.type/one-to-many
                    :attr.column.ref.type/many-to-many) (result-set-hql
                                                         (heql/eql->hsql db-adapter heql-meta-data eql-node)
                                                         (keyword (str parent "__" self)))
-                  (keyword (name parent) (name column-name)))))) {} eql-nodes)))
+                  (select-clause-column eql-node attr-md))))) {} eql-nodes)))
 
 (defn- assoc-one-to-one-hsql-queries [db-adapter heql-meta-data hsql eql-nodes]
   (->> (filter #(= :one-to-one-join (heql/find-join-type heql-meta-data %)) eql-nodes)

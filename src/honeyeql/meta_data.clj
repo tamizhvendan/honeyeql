@@ -374,7 +374,7 @@
 (defn attr-meta-data [heql-meta-data attr-ident]
   (if-let [attr-meta-data (get-in heql-meta-data [:attributes attr-ident])]
     attr-meta-data
-    (throw (Exception. (str "attribute " attr-ident " not found")))))
+    (throw (ex-info (str "attribute " attr-ident " not found") {:type :heql.exception/attr-not-found}))))
 
 (defn entity-relation-ident [heql-meta-data attr-ident]
   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
@@ -425,7 +425,12 @@
 
 (defn coerce-attr-value [db-adapter attr-ident value]
   (let [heql-meta-data (:heql-meta-data db-adapter)
-        attr-md        (attr-meta-data heql-meta-data attr-ident)]
+        attr-md        (try 
+                         (attr-meta-data heql-meta-data attr-ident)
+                         (catch Throwable ex
+                           (if (and (= :heql.exception/attr-not-found (:type (ex-data ex))))
+                             {:attr/type :attr.type/unknown}
+                             (throw ex))))]
     (case (:attr/type attr-md)
       :attr.type/uuid (coerce uuid? #(java.util.UUID/fromString %) value)
       :attr.type/date (coerce local-date? #(LocalDate/parse %) value)

@@ -14,17 +14,18 @@
   (and (vector? x) ((comp not map? second) x)))
 
 (defn- transform-honeyeql-query [eql-query]
-  (if (keyword? eql-query)
-    eql-query
-    (let [first-key (ffirst eql-query)
-          props     (->> (eql-query first-key)
-                         (map transform-honeyeql-query)
-                         vec)]
-      (cond
-        (keyword? first-key) {first-key props}
-        (list? first-key) {first-key props}
-        (eql-ident? first-key) {first-key props}
-        :else {(apply list first-key) props}))))
+  (cond
+    (keyword? eql-query) eql-query
+    (vector? eql-query) eql-query
+    (map? eql-query) (let [first-key (ffirst eql-query)
+                           props     (->> (eql-query first-key)
+                                          (map transform-honeyeql-query)
+                                          vec)]
+                       (cond
+                         (keyword? first-key) {first-key props}
+                         (list? first-key) {first-key props}
+                         (eql-ident? first-key) {first-key props}
+                         :else {(apply list first-key) props}))))
 
 (defn- transform-honeyeql-queries [eql-queries]
   (let [eql-queries (if (vector? eql-queries) eql-queries (vector eql-queries))]
@@ -42,10 +43,16 @@
                                                         keyword)
       (and (= :join node-type) (seq node-key) (even? (count node-key))) :ident-join)))
 
+(defn- function-attribute-ident? [x]
+  (vector? x))
+
 (defn- eql-node->attr-ident [{:keys [key type dispatch-key]}]
   (cond
-    (and (= :prop type) (keyword? key)) key
+    (and (= :prop type) (or (keyword? key) (function-attribute-ident? key))) (if (function-attribute-ident? key)
+                                                                               (second key)
+                                                                               key)
     (and (= :join type) dispatch-key) key))
+
 
 (defn ^:no-doc column-alias [attr-naming-convention attr-ident]
   (case attr-naming-convention
@@ -134,9 +141,6 @@
                                                                         (keyword assoc-table-alias)]]
                                            [[from-clause assoc-table-from-clause]
                                             (many-to-many-join-predicate heql-meta-data join-attr-md alias assoc-table-alias)]))))
-
-#_n
-#_(hsql-join-predicate db n :payment/customer)
 
 (defn- nested-entity-attr-predicate [db-adapter eql-node clause hsql join-attr-md attr-ident]
   (let [[op _ v1 v2] clause
@@ -269,14 +273,27 @@
                      :dispatch-key %
                      :attr-ident   %}))))
 
+(declare enrich-eql-node)
+
+(defn resolve-wid-card-attributes [{:keys [heql-config heql-meta-data]
+                                    :as   db-adapter} self-alias eql-nodes]
+  (let [eql-nodes             (map #(enrich-eql-node db-adapter % self-alias) eql-nodes)]
+    (if (= :eql.mode/lenient (:eql/mode heql-config))
+      (let [[props joins]         ((juxt filter remove) #(= :prop (:type %)) eql-nodes)
+            wild-card-select-node (some #(when (and (keyword? (:key %))
+                                                    (= "*" (name (:key %)))) %) props)]
+        (if wild-card-select-node
+          (concat (resolve-eql-nodes heql-meta-data wild-card-select-node) joins)
+          eql-nodes))
+      eql-nodes)))
+
 (defn-
   enrich-eql-node
   "Adds ident & alias to the eql node and also resolve wild-card-select props"
   ([db-adapter eql-node]
    (enrich-eql-node db-adapter eql-node nil))
   ([db-adapter eql-node parent-alias]
-   (let [attr-ident                           (eql-node->attr-ident eql-node)
-         {:keys [heql-meta-data heql-config]} db-adapter]
+   (let [attr-ident                           (eql-node->attr-ident eql-node)]
      (case (:type eql-node)
        :root (update (assoc eql-node :attr-ident attr-ident) :children
                      (fn [eql-nodes]
@@ -287,16 +304,10 @@
                                       :parent parent-alias}
                               :attr-ident attr-ident)
                        :children
-                       (fn [eql-nodes]
-                         (let [eql-nodes             (map #(enrich-eql-node db-adapter % self-alias) eql-nodes)]
-                           (if (= :eql.mode/lenient (:eql/mode heql-config))
-                             (let [[props joins]         ((juxt filter remove) #(= :prop (:type %)) eql-nodes)
-                                   wild-card-select-node (some #(when (= "*" (name (:key %))) %) props)]
-                               (if wild-card-select-node
-                                 (concat (resolve-eql-nodes heql-meta-data wild-card-select-node) joins)
-                                 eql-nodes))
-                             eql-nodes)))))
-       :prop (assoc-in (assoc eql-node :attr-ident attr-ident) [:alias :parent] parent-alias)))))
+                       (partial resolve-wid-card-attributes db-adapter self-alias)))
+       :prop (-> (assoc eql-node :attr-ident attr-ident) 
+                 (assoc-in [:alias :parent] parent-alias)
+                 (assoc :function-attribute-ident (function-attribute-ident? (:key eql-node))))))))
 
 (defn query [db-adapter eql-query]
   (let [{:keys [heql-meta-data heql-config]} db-adapter
