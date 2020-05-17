@@ -183,14 +183,18 @@
 (defn- apply-where [hsql db-adapter clause eql-node]
   (hsql-helpers/merge-where hsql (where-predicate db-adapter clause eql-node)))
 
+(defn- apply-group-by [hsql heql-meta-data clause eql-node]
+  (apply hsql-helpers/group hsql (map #(hsql-column heql-meta-data % eql-node) clause)))
+
 (defn- apply-params [db-adapter hsql eql-node]
   (let [heql-meta-data                        (:heql-meta-data db-adapter)
-        {:keys [limit offset order-by where]} (:params eql-node)]
+        {:keys [limit offset order-by where group-by]} (:params eql-node)]
     (cond-> hsql
       limit  (assoc :limit limit)
       offset (assoc :offset offset)
       order-by (apply-order-by heql-meta-data order-by eql-node)
       where (apply-where db-adapter where eql-node)
+      group-by (apply-group-by heql-meta-data group-by eql-node)
       :else identity)))
 
 (defmethod ^{:private true} eql->hsql :ident-join [db-adapter heql-meta-data eql-node]
