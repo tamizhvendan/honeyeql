@@ -53,7 +53,6 @@
                                                                                key)
     (and (= :join type) dispatch-key) key))
 
-
 (defn ^:no-doc column-alias [attr-naming-convention attr-ident]
   (case attr-naming-convention
     :naming-convention/qualified-kebab-case (str (namespace attr-ident) "/" (name attr-ident))
@@ -98,24 +97,38 @@
       (conj predicates :and)
       (first predicates))))
 
-(defn- hsql-column [heql-meta-data attr-ident eql-node]
-  (let [attr-col-name (heql-md/attr-column-name heql-meta-data attr-ident)
-        alias         (get-in eql-node [:alias :self])]
-    (keyword (str alias "." attr-col-name))))
+(defn- resolve-group-by-column [db-adapter eql-node attr-ident]
+  (->> (:children eql-node)
+       (filter #(= attr-ident (:key %))) 
+       first
+       :alias
+       (db/resolve-one-to-one-relationship-alias db-adapter)))
 
-(defn- order-by-clause [heql-meta-data eql-node clause]
+(defn- hsql-column
+  ([db-adapter attr-ident eql-node]
+   (hsql-column db-adapter attr-ident eql-node false))
+  ([db-adapter attr-ident eql-node group-by-column]
+   (let [heql-meta-data (:heql-meta-data db-adapter)
+         attr-md        (heql-md/attr-meta-data heql-meta-data attr-ident)
+         attr-col-name  (:attr.column/name attr-md)
+         attr-type      (:attr.column.ref/type attr-md)
+         {:keys [self]} (:alias eql-node)]
+     (if (and group-by-column (= :attr.column.ref.type/one-to-one attr-type))
+       (resolve-group-by-column db-adapter eql-node attr-ident)
+       (keyword (str self "." attr-col-name))))))
+
+(defn- order-by-clause [db-adapter eql-node clause]
   (if (keyword? clause)
-    (hsql-column heql-meta-data clause eql-node)
+    (hsql-column db-adapter clause eql-node)
     (let [[c t]         clause]
-      [(hsql-column heql-meta-data c eql-node) t])))
+      [(hsql-column db-adapter c eql-node) t])))
 
 (defn- apply-order-by [hsql heql-meta-data clause eql-node]
   (assoc hsql :order-by (map #(order-by-clause heql-meta-data eql-node %) clause)))
 
 (defn- hsql-predicate [db-adapter eql-node clause]
   (let [[op col v1 v2] clause
-        heql-meta-data (:heql-meta-data db-adapter)
-        hsql-col       (hsql-column heql-meta-data col eql-node)]
+        hsql-col       (hsql-column db-adapter col eql-node)]
     (case op
       (:in :not-in) [op hsql-col (map #(heql-md/coerce-attr-value db-adapter col %) v1)]
       (if v2
@@ -183,18 +196,17 @@
 (defn- apply-where [hsql db-adapter clause eql-node]
   (hsql-helpers/merge-where hsql (where-predicate db-adapter clause eql-node)))
 
-(defn- apply-group-by [hsql heql-meta-data clause eql-node]
-  (apply hsql-helpers/group hsql (map #(hsql-column heql-meta-data % eql-node) clause)))
+(defn- apply-group-by [hsql db-adapter clause eql-node]
+  (apply hsql-helpers/group hsql (map #(hsql-column db-adapter % eql-node true) clause)))
 
 (defn- apply-params [db-adapter hsql eql-node]
-  (let [heql-meta-data                        (:heql-meta-data db-adapter)
-        {:keys [limit offset order-by where group-by]} (:params eql-node)]
+  (let [{:keys [limit offset order-by where group-by]} (:params eql-node)]
     (cond-> hsql
       limit  (assoc :limit limit)
       offset (assoc :offset offset)
-      order-by (apply-order-by heql-meta-data order-by eql-node)
+      order-by (apply-order-by db-adapter order-by eql-node)
       where (apply-where db-adapter where eql-node)
-      group-by (apply-group-by heql-meta-data group-by eql-node)
+      group-by (apply-group-by db-adapter group-by eql-node)
       :else identity)))
 
 (defmethod ^{:private true} eql->hsql :ident-join [db-adapter heql-meta-data eql-node]
@@ -309,7 +321,7 @@
                               :attr-ident attr-ident)
                        :children
                        (partial resolve-wid-card-attributes db-adapter self-alias)))
-       :prop (-> (assoc eql-node :attr-ident attr-ident) 
+       :prop (-> (assoc eql-node :attr-ident attr-ident)
                  (assoc-in [:alias :parent] parent-alias)
                  (assoc :function-attribute-ident (function-attribute-ident? (:key eql-node))))))))
 

@@ -213,6 +213,8 @@
       :attr.type/boolean (coerce-boolean value)))
   (select-clause [db-adapter heql-meta-data eql-nodes]
     [[(mysql-select-clause db-adapter heql-meta-data eql-nodes) :result]])
+  (resolve-one-to-one-relationship-alias [db-adapter {:keys [parent self]}]
+                                         (keyword (format "%s__%s" parent self) "result"))
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]
     (assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql eql-nodes))
   (resolve-one-to-one-relationship [db-adapter heql-meta-data hsql {:keys [children]}]

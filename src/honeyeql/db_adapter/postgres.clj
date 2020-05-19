@@ -142,6 +142,8 @@
     (case target-type
      :attr.type/date-time (LocalDateTime/parse value date-time-formatter)
      :attr.type/boolean value))
+  (resolve-one-to-one-relationship-alias [db-adapter {:keys [parent self]}]
+                                         (keyword (format "%s__%s" parent self)))
   (select-clause [db-adapter heql-meta-data eql-nodes]
     (vec (map #(eql-node->select-expr db-adapter heql-meta-data %) eql-nodes)))
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]
