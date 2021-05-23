@@ -5,6 +5,7 @@
             [inflections.core :as inf]
             [honeysql.helpers :as hsql-helpers]
             [honeyeql.db-adapter.core :as db]
+            [clojure.string :as str]
             [honeyeql.debug :refer [trace>>]]))
 
 (def ^:no-doc default-heql-config {:attr/return-as :naming-convention/qualified-kebab-case
@@ -99,7 +100,7 @@
 
 (defn- resolve-group-by-column [db-adapter eql-node attr-ident]
   (->> (:children eql-node)
-       (filter #(= attr-ident (:key %))) 
+       (filter #(= attr-ident (:key %)))
        first
        :alias
        (db/resolve-one-to-one-relationship-alias db-adapter)))
@@ -278,10 +279,17 @@
     return-value
     (inf/transform-keys return-value (comp keyword second))))
 
+(defn- handle-non-default-schema [entity-name]
+  (if (str/includes? (name entity-name) ".")
+   (let [[schema-name table-name] (str/split (name entity-name) #"\.")]
+     (keyword schema-name table-name))
+   entity-name))
+
 (defn- resolve-eql-nodes [{:keys [entities]} wild-card-select-node]
   (->> (:key wild-card-select-node)
        namespace
        keyword
+       handle-non-default-schema
        entities
        :entity/attrs
        (map #(merge wild-card-select-node
