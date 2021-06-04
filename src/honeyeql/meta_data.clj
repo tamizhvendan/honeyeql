@@ -197,26 +197,52 @@
                [:entities right-entity-ident :entity/req-attrs]
                conj one-to-many-attr-ident)))
 
+(defn- add-one-to-one-metadata [heql-meta-data
+                                {:keys [left-entity-ident left-attr-ident
+                                        right-entity-ident right-attr-ident
+                                        one-to-one-attr-ident]}]
+  (let [one-to-many-attr-ident (one-to-many-attr-ident left-entity-ident right-entity-ident one-to-one-attr-ident)]
+    (update-in (assoc-in heql-meta-data
+                         [:attributes one-to-many-attr-ident]
+                         {:attr/ident            one-to-many-attr-ident
+                          :attr.ident/camel-case (attribute-ident-in-camel-case one-to-many-attr-ident)
+                          :attr/type             :attr.type/ref
+                          :attr/nullable         false
+                          :attr.ref/cardinality  :attr.ref.cardinality/many
+                          :attr.ref/type         left-entity-ident
+                          :attr.entity/ident     right-entity-ident
+                          :attr.column.ref/type  :attr.column.ref.type/one-to-many
+                          :attr.column.ref/left  right-attr-ident
+                          :attr.column.ref/right left-attr-ident})
+               [:entities right-entity-ident :entity/req-attrs]
+               conj one-to-many-attr-ident)))
+
 (defn- one-to-one-attr-name-result [db-config {:keys [pktable_schem pktable_name fkcolumn_name]}]
   (let [n (foreign-key-column->attr-name db-config fkcolumn_name)]
     (if (= fkcolumn_name n)
       [n (-> (entity-ident db-config pktable_schem pktable_name)
-           name
-           (str "_by_" fkcolumn_name))]
+             name
+             (str "_by_" fkcolumn_name))]
       [n])))
 
-#_ (one-to-one-attr-name-result cfg {:fktable_schem "public"
-                                     :fktable_name "continent"
-                                     :fkcolumn_name "continent_identifier"})
+(defn- one-to-one-relationship? [db-config heql-meta-data {:keys [fktable_schem fktable_name fkcolumn_name]}]
+  (let [attr-ident (attribute-ident db-config fktable_schem fktable_name fkcolumn_name)
+        e-ident (entity-ident db-config fktable_schem fktable_name)
+        e-primary-keys (get-in heql-meta-data [:entities e-ident :entity.relation/primary-key :entity.relation.primary-key/attrs])]
+    (= e-primary-keys #{attr-ident})))
 
-(defn- add-fk-rel-meta-data [db-config heql-meta-data
-                             {:keys [fktable_schem fktable_name fkcolumn_name fk_name
-                                     pktable_schem pktable_name pkcolumn_name]
-                              :as   fk-md}]
-  ; TODO: https://github.com/graphqlize/graphqlize/issues/14
-  ; If fk column name doesn't have suffix, ignoring the corresponding one-to-one & one-to-many relationship. 
+(comment
+  (one-to-one-relationship? cfg hmd fd)
+  (attribute-ident cfg "public" "site" "id")
+  (entity-ident cfg "public" "site")
+  (get-in hmd [:entities :site :entity.relation/primary-key :entity.relation.primary-key/attrs]))
+
+(defn- add-fk-one-to-many-rel-metadata [db-config heql-meta-data
+                                        {:keys [fktable_schem fktable_name fkcolumn_name fk_name
+                                                pktable_schem pktable_name pkcolumn_name]
+                                         :as   fk-md}] 
   (let [[one-to-one-attr-name modified-one-to-one-attr-name]  (one-to-one-attr-name-result db-config fk-md)
-        one-to-one-attr-ident (attribute-ident db-config fktable_schem fktable_name (if modified-one-to-one-attr-name 
+        one-to-one-attr-ident (attribute-ident db-config fktable_schem fktable_name (if modified-one-to-one-attr-name
                                                                                       modified-one-to-one-attr-name
                                                                                       one-to-one-attr-name))
         ident-for-one-to-many-ident (attribute-ident db-config fktable_schem fktable_name one-to-one-attr-name)
@@ -251,6 +277,11 @@
                                    :right-entity-ident    right-entity-ident
                                    :right-attr-ident      right-attr-ident
                                    :one-to-one-attr-ident ident-for-one-to-many-ident}))))
+
+(defn- add-fk-rel-meta-data [db-config heql-meta-data fk-md]
+  (if (one-to-one-relationship? db-config heql-meta-data fk-md)
+    heql-meta-data
+    (add-fk-one-to-many-rel-metadata db-config heql-meta-data fk-md)))
 
 (defn- add-relationships-meta-data [db-meta-data {:keys [db-config]
                                                   :as   heql-meta-data}]
@@ -425,7 +456,7 @@
 
 (defn coerce-attr-value [db-adapter attr-ident value]
   (let [heql-meta-data (:heql-meta-data db-adapter)
-        attr-md        (try 
+        attr-md        (try
                          (attr-meta-data heql-meta-data attr-ident)
                          (catch Throwable ex
                            (if (and (= :heql.exception/attr-not-found (:type (ex-data ex))))
