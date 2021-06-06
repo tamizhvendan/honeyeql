@@ -341,6 +341,7 @@
                                                :eql.mode/strict  eql-query)]
     (map  #(transform-keys attr-naming-convention %)
           (json/read-str (->> (eql/query->ast eql-query)
+                              (trace>> :raw-eql-ast)
                               (enrich-eql-node db-adapter)
                               (trace>> :eql-ast)
                               (eql->hsql db-adapter heql-meta-data)

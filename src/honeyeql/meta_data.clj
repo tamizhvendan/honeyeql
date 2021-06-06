@@ -231,16 +231,10 @@
         e-primary-keys (get-in heql-meta-data [:entities e-ident :entity.relation/primary-key :entity.relation.primary-key/attrs])]
     (= e-primary-keys #{attr-ident})))
 
-(comment
-  (one-to-one-relationship? cfg hmd fd)
-  (attribute-ident cfg "public" "site" "id")
-  (entity-ident cfg "public" "site")
-  (get-in hmd [:entities :site :entity.relation/primary-key :entity.relation.primary-key/attrs]))
-
 (defn- add-fk-one-to-many-rel-metadata [db-config heql-meta-data
                                         {:keys [fktable_schem fktable_name fkcolumn_name fk_name
                                                 pktable_schem pktable_name pkcolumn_name]
-                                         :as   fk-md}] 
+                                         :as   fk-md}]
   (let [[one-to-one-attr-name modified-one-to-one-attr-name]  (one-to-one-attr-name-result db-config fk-md)
         one-to-one-attr-ident (attribute-ident db-config fktable_schem fktable_name (if modified-one-to-one-attr-name
                                                                                       modified-one-to-one-attr-name
@@ -278,9 +272,60 @@
                                    :right-attr-ident      right-attr-ident
                                    :one-to-one-attr-ident ident-for-one-to-many-ident}))))
 
+(defn- add-fk-one-to-one-rel-metadata [db-config heql-meta-data {:keys [fktable_schem fktable_name fkcolumn_name fk_name
+                                                                        pktable_schem pktable_name pkcolumn_name]}]
+  (let [child-attr-ident (attribute-ident db-config fktable_schem fktable_name pktable_name)
+        parent-attr-ident (attribute-ident db-config pktable_schem pktable_name fktable_name)
+        left-attr-ident       (attribute-ident db-config fktable_schem fktable_name fkcolumn_name)
+        left-entity-ident     (entity-ident db-config fktable_schem fktable_name)
+        right-attr-ident      (attribute-ident db-config pktable_schem pktable_name pkcolumn_name)
+        right-entity-ident    (entity-ident db-config pktable_schem pktable_name)]
+    (-> (assoc-in heql-meta-data [:attributes child-attr-ident]
+                  {:attr/ident            child-attr-ident
+                   :attr.ident/camel-case (attribute-ident-in-camel-case child-attr-ident)
+                   :attr/type             :attr.type/ref
+                   :attr/nullable         false
+                   :attr.ref/cardinality  :attr.ref.cardinality/one
+                   :attr.ref/type         right-entity-ident
+                   :attr.entity/ident     left-entity-ident
+                   :attr.column.ref/type  :attr.column.ref.type/one-to-one
+                   :attr.column.ref/left  left-attr-ident
+                   :attr.column.ref/right right-attr-ident
+                   :attr.column/ident     (column-ident db-config {:table_schem         fktable_schem
+                                                                   :table_name          fktable_name
+                                                                   :column_name         pktable_name
+                                                                   :relationship-column true})})
+        (update-in [:entities left-entity-ident :entity/req-attrs]
+                   conj child-attr-ident)
+        (update-in [:entities left-entity-ident :entity.relation/foreign-keys]
+                   conj {:entity.relation.foreign-key/name      fk_name
+                         :entity.relation.foreign-key/self-attr left-attr-ident
+                         :entity.relation.foreign-key/ref-attr  right-attr-ident})
+        (assoc-in [:attributes parent-attr-ident]
+                  {:attr/ident            parent-attr-ident
+                   :attr.ident/camel-case (attribute-ident-in-camel-case parent-attr-ident)
+                   :attr/type             :attr.type/ref
+                   :attr/nullable         true
+                   :attr.ref/cardinality  :attr.ref.cardinality/one
+                   :attr.ref/type         left-entity-ident
+                   :attr.entity/ident     right-entity-ident
+                   :attr.column.ref/type  :attr.column.ref.type/one-to-one
+                   :attr.column.ref/left  right-attr-ident
+                   :attr.column.ref/right left-attr-ident
+                   :attr.column/ident     (column-ident db-config {:table_schem         pktable_schem
+                                                                   :table_name          pktable_name
+                                                                   :column_name         fktable_name
+                                                                   :relationship-column true})})
+        (update-in [:entities right-entity-ident :entity/opt-attrs]
+                   conj parent-attr-ident)
+        (update-in [:entities right-entity-ident :entity.relation/foreign-keys]
+                   conj {:entity.relation.foreign-key/name      fk_name
+                         :entity.relation.foreign-key/self-attr right-attr-ident
+                         :entity.relation.foreign-key/ref-attr  left-attr-ident}))))
+
 (defn- add-fk-rel-meta-data [db-config heql-meta-data fk-md]
   (if (one-to-one-relationship? db-config heql-meta-data fk-md)
-    heql-meta-data
+    (add-fk-one-to-one-rel-metadata db-config heql-meta-data fk-md)
     (add-fk-one-to-many-rel-metadata db-config heql-meta-data fk-md)))
 
 (defn- add-relationships-meta-data [db-meta-data {:keys [db-config]
