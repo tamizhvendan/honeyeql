@@ -264,10 +264,22 @@
         hsql                         (apply-params db-adapter hsql eql-node)]
     (db/resolve-many-to-many-relationship db-adapter heql-meta-data hsql eql-node)))
 
-(defn- json-key-fn [attribute-return-as key]
-  (if (= :naming-convention/qualified-kebab-case attribute-return-as)
-    (keyword key)
-    [(keyword key) (column-alias attribute-return-as (keyword key))]))
+(defn- json-key-fn [attribute-return-as aggregate-attr-convention key]
+  (let [default-key (keyword key)]
+    
+    (if (= :naming-convention/qualified-kebab-case attribute-return-as)
+      (if (= :aggregate-attr-naming-convention/vector aggregate-attr-convention)
+        (if-let [[_ aggr-fun attr-name] (first (re-seq #"(.*)-of-(.*)" (name default-key)))]
+          [(keyword aggr-fun) (keyword (namespace default-key) attr-name)]
+          default-key)
+        default-key)
+      [default-key (column-alias attribute-return-as default-key)])))
+
+(comment
+  (json-key-fn a c k)
+  (first nil))
+
+
 
 (defn- json-value-fn [db-adapter attribute-return-as json-key json-value]
   (if (= :naming-convention/qualified-kebab-case attribute-return-as)
@@ -281,9 +293,9 @@
 
 (defn- handle-non-default-schema [entity-name]
   (if (str/includes? (name entity-name) ".")
-   (let [[schema-name table-name] (str/split (name entity-name) #"\.")]
-     (keyword schema-name table-name))
-   entity-name))
+    (let [[schema-name table-name] (str/split (name entity-name) #"\.")]
+      (keyword schema-name table-name))
+    entity-name))
 
 (defn- resolve-eql-nodes [{:keys [entities]} wild-card-select-node]
   (->> (:key wild-card-select-node)
@@ -296,6 +308,13 @@
                     {:key          %
                      :dispatch-key %
                      :attr-ident   %}))))
+
+
+(defn select-clause-alias [{:keys [attr-ident key function-attribute-ident]}]
+  (let [attr-ident (if function-attribute-ident
+                     (keyword (namespace attr-ident) (str (name (first key)) "-of-" (name attr-ident)))
+                     attr-ident)]
+    (column-alias :naming-convention/qualified-kebab-case attr-ident)))
 
 (declare enrich-eql-node)
 
@@ -335,11 +354,11 @@
 
 (defn query [db-adapter eql-query]
   (let [{:keys [heql-meta-data heql-config]} db-adapter
-        attr-naming-convention               (:attr/return-as heql-config)
+        {:attr/keys [return-as aggregate-attr-convention]} heql-config
         eql-query                            (case (:eql/mode heql-config)
                                                :eql.mode/lenient (trace>> :transformed-eql (transform-honeyeql-queries eql-query))
                                                :eql.mode/strict  eql-query)]
-    (map  #(transform-keys attr-naming-convention %)
+    (map  #(transform-keys return-as %)
           (json/read-str (->> (eql/query->ast eql-query)
                               (trace>> :raw-eql-ast)
                               (enrich-eql-node db-adapter)
@@ -350,8 +369,8 @@
                               (trace>> :sql)
                               (db/query db-adapter))
                          :bigdec true
-                         :key-fn #(json-key-fn attr-naming-convention %)
-                         :value-fn #(json-value-fn db-adapter attr-naming-convention %1 %2)))))
+                         :key-fn #(json-key-fn return-as aggregate-attr-convention %)
+                         :value-fn #(json-value-fn db-adapter return-as %1 %2)))))
 
 (defn query-single [db-adapter eql-query]
   (first (query db-adapter eql-query)))

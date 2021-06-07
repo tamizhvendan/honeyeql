@@ -125,12 +125,6 @@
            hsql/raw)
       (hsql/raw json-obj-str))))
 
-(defn- select-clause-alias [{:keys [attr-ident key function-attribute-ident]}]
-  (let [attr-ident (if function-attribute-ident
-                     (keyword (namespace attr-ident) (str (name (first key)) "-of-" (name attr-ident)))
-                     attr-ident)]
-    (heql/column-alias :naming-convention/qualified-kebab-case attr-ident)))
-
 (defn- select-clause-column [{:keys [function-attribute-ident alias key]} attr-md]
   (let [column-name           (heql-md/attr-column-name attr-md)
         {:keys [_ parent]} alias
@@ -148,7 +142,7 @@
                    attr-column-ref-type  (heql-md/attr-column-ref-type attr-md)]
                (assoc
                 obj
-                (select-clause-alias eql-node)
+                (heql/select-clause-alias eql-node)
                 (case attr-column-ref-type
                   :attr.column.ref.type/one-to-one (keyword (str parent "__" self) "result")
                   (:attr.column.ref.type/one-to-many

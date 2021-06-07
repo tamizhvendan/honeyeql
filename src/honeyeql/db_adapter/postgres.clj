@@ -99,12 +99,6 @@
       (keyword (str "%" (name (first key)) "." (name c)))
       c)))
 
-(defn- select-clause-alias [{:keys [attr-ident key function-attribute-ident]}]
-  (let [attr-ident (if function-attribute-ident
-                     (keyword (namespace attr-ident) (str (name (first key)) "-of-" (name attr-ident)))
-                     attr-ident)]
-    (heql/column-alias :naming-convention/qualified-kebab-case attr-ident)))
-
 (defn- eql-node->select-expr [db-adapter heql-meta-data {:keys [attr-ident alias]
                                                          :as   eql-node}]
   (let [{:keys [parent self]} alias
@@ -113,7 +107,7 @@
                                 :attr.column.ref.type/one-to-one (keyword (str parent "__" self))
                                 (:attr.column.ref.type/one-to-many :attr.column.ref.type/many-to-many) (heql/eql->hsql db-adapter heql-meta-data eql-node)
                                 (hsql-column-name eql-node attr-md))]
-    [select-attr-expr (select-clause-alias eql-node)]))
+    [select-attr-expr (heql/select-clause-alias eql-node)]))
 
 (defn- assoc-one-to-one-hsql-queries [db-adapter heql-meta-data hsql eql-nodes]
   (if-let [one-to-one-join-children
