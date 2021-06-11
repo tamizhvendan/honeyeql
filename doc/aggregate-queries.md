@@ -96,19 +96,51 @@ We can use the aggregate functions over the `one-to-many` and `many-to-many` rel
 ## Group By Queries
 
 The aggregate functions often paired along with the GROUP BY operation and HoneySQL supports it as well!
-For the above schema, we can group the courses by their rating and get their count using the following query
+For the above schema, we can group the courses by their rating and get their count using the following queries
 
 ```clojure
-; :eql.mode/lenient syntax
 ; group all courses ratings
-{`([] {:group-by [:course/rating]}) [:course/rating
-                                     [:count :course/rating]]}
 
 ; :eql.mode/lenient syntax
+{[[] {:group-by [:course/rating]}] [:course/rating
+                                    [:count :course/rating]]}
+; :eql.mode/strict syntax
+`[{([] {:group-by [:course/rating]}) [:course/rating
+                                      [:count :course/rating]]}]
+
+
+; returns - default convention
+(#:course{:rating 5 :count-of-rating 3} 
+ #:course{:rating 4 :count-of-rating 1})
+; returns (for :aggregate-attr-naming-convention/vector)
+({:course/rating 5 [:count :course/rating] 3} 
+ {:course/rating 4 [:count :course/rating] 1})
+
+
 ; group all courses ratings of a given author `1`
+
+; :eql.mode/lenient syntax
 {[:author/id 1] [:author/first-name
                  :author/last-name
-                 {`(:author/courses {:group-by [:course/rating]}) 
+                 {[:author/courses {:group-by [:course/rating]}]
                    [:course/rating 
                     [:count :course/rating]]}]}
+
+; :eql.mode/strict syntax
+`[{[:author/id 1] [:author/first-name
+                   :author/last-name
+                   {(:author/courses {:group-by [:course/rating]})
+                     [:course/rating 
+                      [:count :course/rating]]}]}]
+
+; returns
+#:author{:first-name "John",
+         :last-name "Doe",
+         :courses [#:course{:rating 4 :count-of-rating 1} 
+                   #:course{:rating 5 :count-of-rating 1}]}
+; returns (for :aggregate-attr-naming-convention/vector)
+(#:author{:first-name "John",
+          :last-name "Doe",
+          :courses [{:course/rating 4 [:count :course/rating] 1} 
+                    {:course/rating 5 [:count :course/rating] 1}]})
 ```

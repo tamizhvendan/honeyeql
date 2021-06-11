@@ -8,4 +8,5 @@
                    ["Aggregate Queries" {:file "doc/aggregate-queries.md"}]
                    ["Configuration" {:file "doc/configuration.md"}]
                    ["Coercion" {:file "doc/coercion.md"}]
-                   ["Metadata" {:file "doc/metadata.md"}]]}
+                   ["Metadata" {:file "doc/metadata.md"}]
+                   ["Debugging & Troubleshooting" {:file "doc/debugging.md"}]]}
