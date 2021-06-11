@@ -5,6 +5,7 @@
                    ["Sorting" {:file "doc/sorting.md"}]
                    ["Pagination" {:file "doc/pagination.md"}]
                    ["Filters" {:file "doc/filters.md"}]
+                   ["Aggregate Queries" {:file "doc/aggregate-queries.md"}]
                    ["Configuration" {:file "doc/configuration.md"}]
                    ["Coercion" {:file "doc/coercion.md"}]
                    ["Metadata" {:file "doc/metadata.md"}]]}

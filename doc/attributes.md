@@ -49,39 +49,6 @@ The actual keyword part of an attribute refers to the column name in kebab-case.
 
 HoneyEQL identifies the relationships between database tables using their foreign keys, and generate appropriate join (relationship) attributes.
 
-### One to One
-
-![](https://www.graphqlize.org/img/address_city_country_er_diagram.png)
-
-For the database table relationships like above, HoneyEQL infers two `one-to-one` relationships.
-
-- An `address` is associated with a `city` via `city_id` column in the `address` table.
-
-- A `city` is associated with a `country` via `country_id` column in the `city` table.
-
-In this scenario, HoneyEQL generates two attributes representing these two relationships.
-
-```clojure
-:address/city
-:city/country
-```
-
-The generated attribute keyword is the kebab-case version of the corresponding column name with the id suffix (\_id) removed.
-
-Here are some of the examples.
-
-Here are some of the examples.
-
-| Table/View Name | Column Name            | Attribute                   |
-| --------------- | ---------------------- | --------------------------- |
-| film_actor      | actor_id               | :film-actor/actor           |
-| film            | original_language_id   | :film/originalLanguage      |
-| employee        | reports_to_employee_id | :employee/reportsToEmployee |
-
-By default, HoneyEQL assumes `_id` as the suffix for foreign keys in both Postgres and MySQL.
-
-> In future, HoneyEQL will provide a configuration to override this default behavior.
-
 ### One to Many
 
 ![](https://www.graphqlize.org/img/address_city_country_er_diagram.png)
@@ -134,6 +101,54 @@ If the column name (`language_id`) after the removal of the foreign key suffix (
 
 If the column name (`original_language_id`) after the removal of the foreign key suffix (`original_language`) did not match the source table name, then HoneyEQL removes the foreign key suffix and concatenate with the pluralized form of the target table and then convert it to its *kebab-case* version (`original-language-films`).
 
+### One to One (Reverse side of One to Many)
+
+![](https://www.graphqlize.org/img/address_city_country_er_diagram.png)
+
+For the database table relationships like above, HoneyEQL infers two `one-to-one` relationships.
+
+- An `address` is associated with a `city` via `city_id` column in the `address` table.
+
+- A `city` is associated with a `country` via `country_id` column in the `city` table.
+
+In this scenario, HoneyEQL generates two attributes representing these two relationships.
+
+```clojure
+:address/city
+:city/country
+```
+
+The generated attribute keyword is the kebab-case version of the corresponding column name with the id suffix (\_id) removed.
+
+Here are some of the examples.
+
+| Table/View Name | Column Name            | Attribute                   |
+| --------------- | ---------------------- | --------------------------- |
+| film_actor      | actor_id               | :film-actor/actor           |
+| film            | original_language_id   | :film/originalLanguage      |
+| employee        | reports_to_employee_id | :employee/reportsToEmployee |
+
+By default, HoneyEQL assumes `_id` as the suffix for foreign keys in both Postgres and MySQL.
+
+> In future, HoneyEQL will provide a configuration to override this default behavior.
+
+### One to One
+
+HoneyEQL infers one to one relationship if the primary key and a foreign key of a table are same. 
+
+![](https://www.graphqlize.org/img/one-to-one-relationship.png)
+
+For the above DB schema, HoneyEQL infers two `one-to-one` relationships.
+
+- An `site` is associated with a `site-meta-dataum` via `site_id` column in the `site-meta-dataum` table.
+- An `site-meta-dataum` is associated with a `site` via `site_id` column in the `site-meta-dataum` table.
+
+For this example, HoneyEQL generates two attributes
+
+```clojure
+:site/site-meta-datum
+:site-meta-datum/site
+```
 
 ### Many to Many
 
