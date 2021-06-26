@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.graphqlize</groupId>
   <artifactId>honeyeql</artifactId>
-  <version>0.1.0-alpha36</version>
+  <version>0.1.0-alpha37</version>
 
   <name>Honey EQL</name>
   <description>HoneyEQL enables you to query database using the EQL.</description>
@@ -48,7 +48,7 @@
     <dependency>
       <groupId>seancorfield</groupId>
       <artifactId>next.jdbc</artifactId>
-      <version>1.0.13</version>
+      <version>1.2.674</version>
     </dependency>
   </dependencies>
 
