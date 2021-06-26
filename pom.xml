@@ -46,7 +46,7 @@
       <version>0.13.2</version>
     </dependency>
     <dependency>
-      <groupId>seancorfield</groupId>
+      <groupId>com.github.seancorfield</groupId>
       <artifactId>next.jdbc</artifactId>
       <version>1.2.674</version>
     </dependency>
