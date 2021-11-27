@@ -92,10 +92,16 @@
                             select-clause)) :result]]
       :from   [alias]})))
 
-(defn- function-attribute-json-v [k [op v]]
-  (list (format "'%s', %s(`%s`.`%s`)" k 
-                (name (if (vector? op) (first op) op)) 
-                (namespace v) (name v))))
+(defn- function-attribute-json-v [k [op v arg]]
+  (let [op (if (vector? op) (first op) op)]
+    (if (= :cast op)
+      (list (format "'%s', CAST(`%s`.`%s` AS %s)" k
+                    (namespace v) 
+                    (name v)
+                    (name arg)))
+      (list (format "'%s', %s(`%s`.`%s`)" k
+                   (name op)
+                   (namespace v) (name v))))))
 
 (defn- json-kv [[k v]]
   (cond
@@ -104,7 +110,6 @@
     :else (let [[sql & args] (hsql/format v :quoting :mysql)]
             (cons (str "'" k "'" ", (" sql ")") args))))
 
-#_(json-kv ["course/count-of-title" [:count :G__249077/title]])
 
 ; HoneySQL raw doesn't treat String as parameter
 ; (hsql/format (hsql/raw ["JOBJ(?, ?)" "foo" "bar"])) 
@@ -132,7 +137,12 @@
         {:keys [_ parent]} alias
         c (keyword (name parent) (name column-name))]
     (if function-attribute-ident
-      [(first key) c]
+      (let [[sqlfn _ arg2] (if (heql/alias-attribute-ident? key)
+                             (first key)
+                             key)]
+        (if arg2
+          [sqlfn c arg2]
+          [sqlfn c]))
       c)))
 
 (defn- mysql-select-clause [db-adapter heql-meta-data eql-nodes]

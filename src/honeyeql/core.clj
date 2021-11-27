@@ -34,7 +34,7 @@
 
 (defn- function-attribute-ident? [x]
   (and (vector? x)
-       (#{:sum :count :max :min :avg} (first x))))
+       (#{:sum :count :max :min :avg :cast} (first x))))
 
 (defn alias-attribute-ident? [x]
   (and (vector? x)
