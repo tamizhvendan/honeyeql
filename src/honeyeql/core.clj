@@ -32,6 +32,15 @@
   (let [eql-queries (if (vector? eql-queries) eql-queries (vector eql-queries))]
     (vec (map transform-honeyeql-query eql-queries))))
 
+(defn- function-attribute-ident? [x]
+  (and (vector? x)
+       (#{:sum :count :max :min :avg} (first x))))
+
+(defn alias-attribute-ident? [x]
+  (and (vector? x)
+       (= (count x) 3)
+       (= :as (second x))))
+
 (defn ^:no-doc find-join-type [heql-meta-data eql-node]
   (let [{node-type :type
          node-key  :key} eql-node]
@@ -42,17 +51,17 @@
                                                         name
                                                         (str "-join")
                                                         keyword)
+      (and (= :join node-type) (alias-attribute-ident? node-key)) (-> (heql-md/attr-column-ref-type heql-meta-data (first node-key))
+                                                                      name
+                                                                      (str "-join")
+                                                                      keyword)
       (and (= :join node-type) (seq node-key) (even? (count node-key))) :ident-join)))
-
-(defn- function-attribute-ident? [x]
-  (and (vector? x)
-       (#{:sum :count :max :min :avg} (first x))))
 
 (defn- eql-node->attr-ident [{:keys [key type dispatch-key]}]
   (cond
-    (and (= :prop type) (keyword? key)) key 
+    (and (= :prop type) (keyword? key)) key
     (and (= :prop type) (function-attribute-ident? key)) (second key)
-    (and (= :prop type) (vector? key)) (first key)
+    (and (= :prop type) (alias-attribute-ident? key)) (first key)
     (and (= :join type) dispatch-key) key))
 
 (defn ^:no-doc column-alias [attr-naming-convention attr-ident]
@@ -220,6 +229,8 @@
         hsql                         (apply-params db-adapter hsql eql-node)]
     (db/resolve-children-one-to-one-relationships db-adapter heql-meta-data hsql children)))
 
+#_n
+
 (defmethod ^{:private true} eql->hsql :non-ident-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [children alias]} eql-node
         first-child-ident        (eql-node->attr-ident (first children))
@@ -231,6 +242,9 @@
 
 (defmethod ^{:private true} eql->hsql :one-to-one-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
+        key                          (if (alias-attribute-ident? key)
+                                       (first key)
+                                       key)
         join-attr-md                 (heql-md/attr-meta-data heql-meta-data key)
         hsql                         {:from   [[(heql-md/ref-entity-relation-ident heql-meta-data key)
                                                 (keyword (:self alias))]]
@@ -241,6 +255,9 @@
 
 (defmethod ^{:private true} eql->hsql :one-to-many-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
+        key                          (if (alias-attribute-ident? key)
+                                       (first key)
+                                       key)
         join-attr-md                 (heql-md/attr-meta-data heql-meta-data key)
         hsql                         {:from   [[(heql-md/ref-entity-relation-ident heql-meta-data key)
                                                 (keyword (:self alias))]]
@@ -251,8 +268,10 @@
 
 (defmethod ^{:private true} eql->hsql :many-to-many-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
+        key                          (if (alias-attribute-ident? key)
+                                       (first key)
+                                       key)
         join-attr-md                 (heql-md/attr-meta-data heql-meta-data key)
-
         assoc-table-alias            (gensym)
         hsql                         {:from   [[(heql-md/ref-entity-relation-ident heql-meta-data key)
                                                 (keyword (:self alias))]
@@ -308,7 +327,7 @@
 (defn select-clause-alias [{:keys [attr-ident key function-attribute-ident]}]
   (let [attr-ident (cond
                      function-attribute-ident (keyword (namespace attr-ident) (str (name (first key)) "-of-" (name attr-ident)))
-                     (vector? key) (second key)
+                     (alias-attribute-ident? key) (nth key 2)
                      :else attr-ident)]
     (column-alias :naming-convention/qualified-kebab-case attr-ident)))
 

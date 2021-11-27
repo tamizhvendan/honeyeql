@@ -138,7 +138,9 @@
    (reduce (fn [obj {:keys [attr-ident alias]
                      :as   eql-node}]
              (let [{:keys [self parent]} alias
-                   attr-md               (heql-md/attr-meta-data heql-meta-data attr-ident)
+                   attr-md               (heql-md/attr-meta-data heql-meta-data (if (heql/alias-attribute-ident? attr-ident)
+                                                                                  (first attr-ident)
+                                                                                  attr-ident))
                    attr-column-ref-type  (heql-md/attr-column-ref-type attr-md)]
                (assoc
                 obj

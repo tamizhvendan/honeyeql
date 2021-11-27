@@ -97,8 +97,8 @@
 (defn- hsql-column-name [{:keys [alias function-attribute-ident key]} attr-md]
   (let [{:keys [parent]} alias
         c (->> (heql-md/attr-column-name attr-md)
-             (str parent ".")
-             keyword)]
+               (str parent ".")
+               keyword)]
     (if function-attribute-ident
       (keyword (str "%" (name (first key)) "." (name c)))
       c)))
@@ -106,7 +106,9 @@
 (defn- eql-node->select-expr [db-adapter heql-meta-data {:keys [attr-ident alias]
                                                          :as   eql-node}]
   (let [{:keys [parent self]} alias
-        attr-md               (heql-md/attr-meta-data heql-meta-data attr-ident)
+        attr-md               (heql-md/attr-meta-data heql-meta-data (if (heql/alias-attribute-ident? attr-ident)
+                                                                       (first attr-ident)
+                                                                       attr-ident))
         select-attr-expr      (case (:attr.column.ref/type attr-md)
                                 :attr.column.ref.type/one-to-one (keyword (str parent "__" self))
                                 (:attr.column.ref.type/one-to-many :attr.column.ref.type/many-to-many) (heql/eql->hsql db-adapter heql-meta-data eql-node)
@@ -133,15 +135,15 @@
   (to-sql [pg-adapter hsql]
     (hsql/format (result-set-hql hsql) :quoting :ansi))
   (query [pg-adapter sql]
-         (-> (jdbc/query (:db-spec pg-adapter) sql)
-             first
-             :result))
+    (-> (jdbc/query (:db-spec pg-adapter) sql)
+        first
+        :result))
   (coerce [_ value target-type]
     (case target-type
-     :attr.type/date-time (LocalDateTime/parse value date-time-formatter)
-     :attr.type/boolean value))
+      :attr.type/date-time (LocalDateTime/parse value date-time-formatter)
+      :attr.type/boolean value))
   (resolve-one-to-one-relationship-alias [db-adapter {:keys [parent self]}]
-                                         (keyword (format "%s__%s" parent self)))
+    (keyword (format "%s__%s" parent self)))
   (select-clause [db-adapter heql-meta-data eql-nodes]
     (vec (map #(eql-node->select-expr db-adapter heql-meta-data %) eql-nodes)))
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]
