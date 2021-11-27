@@ -100,7 +100,9 @@
                (str parent ".")
                keyword)]
     (if function-attribute-ident
-      (keyword (str "%" (name (first key)) "." (name c)))
+      (if (heql/alias-attribute-ident? key)
+       (keyword (str "%" (name (ffirst key)) "." (name c))) 
+       (keyword (str "%" (name (first key)) "." (name c))))
       c)))
 
 (defn- eql-node->select-expr [db-adapter heql-meta-data {:keys [attr-ident alias]

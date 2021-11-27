@@ -93,7 +93,9 @@
       :from   [alias]})))
 
 (defn- function-attribute-json-v [k [op v]]
-  (list (format "'%s', %s(`%s`.`%s`)" k (name op) (namespace v) (name v))))
+  (list (format "'%s', %s(`%s`.`%s`)" k 
+                (name (if (vector? op) (first op) op)) 
+                (namespace v) (name v))))
 
 (defn- json-kv [[k v]]
   (cond

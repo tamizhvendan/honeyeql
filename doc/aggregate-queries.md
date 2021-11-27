@@ -70,6 +70,34 @@ If you want to retain the query shape, returning the keys as vector instead of `
 ```
 > Other naming conventions are not supported currently.
 
+You can also make use of alias to name it whatever you want
+
+```clojure
+; :eql.mode/lenient syntax
+(heql/query-single
+  db-adapter
+  {[] [[[:count :course/rating] :as :course/total-rating]
+       [[:avg :course/rating] :as :course/average-rating]
+       [[:max :course/rating] :as :course/max-rating]
+       [[:min :course/rating] :as :course/min-rating]]})
+; :eql.mode/strict syntax
+(heql/query-single
+  db-adapter
+  `[{([] [[[:count :course/rating] :as :course/total-ratings]
+          [[:avg :course/rating] :as :course/average-rating]
+          [[:max :course/rating] :as :course/max-rating]
+          [[:min :course/rating] :as :course/min-rating]])}])
+```
+
+The output of the above would look like 
+
+```clojure
+{:course/max-rating 5 
+ :course/min-rating 4 
+ :course/total-ratings 4 
+ :course/average-rating 4.75M}
+```
+
 ## Aggregates Over Relationships
 
 We can use the aggregate functions over the `one-to-many` and `many-to-many` relationship fields as well.

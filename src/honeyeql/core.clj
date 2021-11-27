@@ -61,7 +61,9 @@
   (cond
     (and (= :prop type) (keyword? key)) key
     (and (= :prop type) (function-attribute-ident? key)) (second key)
-    (and (= :prop type) (alias-attribute-ident? key)) (first key)
+    (and (= :prop type) (alias-attribute-ident? key)) (if (function-attribute-ident? (first key))
+                                                        (second (first key))
+                                                       (first key))
     (and (= :join type) dispatch-key) key))
 
 (defn ^:no-doc column-alias [attr-naming-convention attr-ident]
@@ -326,7 +328,9 @@
 
 (defn select-clause-alias [{:keys [attr-ident key function-attribute-ident]}]
   (let [attr-ident (cond
-                     function-attribute-ident (keyword (namespace attr-ident) (str (name (first key)) "-of-" (name attr-ident)))
+                     function-attribute-ident (if (alias-attribute-ident? key)
+                                                (nth key 2)
+                                                (keyword (namespace attr-ident) (str (name (first key)) "-of-" (name attr-ident))))
                      (alias-attribute-ident? key) (nth key 2)
                      :else attr-ident)]
     (column-alias :naming-convention/qualified-kebab-case attr-ident)))
@@ -365,7 +369,9 @@
                        (partial resolve-wid-card-attributes db-adapter self-alias)))
        :prop (-> (assoc eql-node :attr-ident attr-ident)
                  (assoc-in [:alias :parent] parent-alias)
-                 (assoc :function-attribute-ident (function-attribute-ident? (:key eql-node))))))))
+                 (assoc :function-attribute-ident (if (alias-attribute-ident? (:key eql-node))
+                                                    (function-attribute-ident? (first (:key eql-node)))
+                                                    (function-attribute-ident? (:key eql-node)))))))))
 
 (defn query [db-adapter eql-query]
   (let [{:keys [heql-meta-data heql-config]} db-adapter
