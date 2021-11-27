@@ -45,13 +45,14 @@
       (and (= :join node-type) (seq node-key) (even? (count node-key))) :ident-join)))
 
 (defn- function-attribute-ident? [x]
-  (vector? x))
+  (and (vector? x)
+       (#{:sum :count :max :min :avg} (first x))))
 
 (defn- eql-node->attr-ident [{:keys [key type dispatch-key]}]
   (cond
-    (and (= :prop type) (or (keyword? key) (function-attribute-ident? key))) (if (function-attribute-ident? key)
-                                                                               (second key)
-                                                                               key)
+    (and (= :prop type) (keyword? key)) key 
+    (and (= :prop type) (function-attribute-ident? key)) (second key)
+    (and (= :prop type) (vector? key)) (first key)
     (and (= :join type) dispatch-key) key))
 
 (defn ^:no-doc column-alias [attr-naming-convention attr-ident]
@@ -266,7 +267,7 @@
 
 (defn- json-key-fn [attribute-return-as aggregate-attr-convention key]
   (let [default-key (keyword key)]
-    
+
     (if (= :naming-convention/qualified-kebab-case attribute-return-as)
       (if (= :aggregate-attr-naming-convention/vector aggregate-attr-convention)
         (if-let [[_ aggr-fun attr-name] (first (re-seq #"(.*)-of-(.*)" (name default-key)))]
@@ -274,12 +275,6 @@
           default-key)
         default-key)
       [default-key (column-alias attribute-return-as default-key)])))
-
-(comment
-  (json-key-fn a c k)
-  (first nil))
-
-
 
 (defn- json-value-fn [db-adapter attribute-return-as json-key json-value]
   (if (= :naming-convention/qualified-kebab-case attribute-return-as)
@@ -311,9 +306,10 @@
 
 
 (defn select-clause-alias [{:keys [attr-ident key function-attribute-ident]}]
-  (let [attr-ident (if function-attribute-ident
-                     (keyword (namespace attr-ident) (str (name (first key)) "-of-" (name attr-ident)))
-                     attr-ident)]
+  (let [attr-ident (cond
+                     function-attribute-ident (keyword (namespace attr-ident) (str (name (first key)) "-of-" (name attr-ident)))
+                     (vector? key) (second key)
+                     :else attr-ident)]
     (column-alias :naming-convention/qualified-kebab-case attr-ident)))
 
 (declare enrich-eql-node)
