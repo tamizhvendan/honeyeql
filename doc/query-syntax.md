@@ -76,6 +76,39 @@ We can have more than one join attributes as well.
    :payment/amount]}]
 ```
 
+Aliases are also supported using the following syntax.
+
+```clojure
+[:customer/first-name :as :customer/fname]
+```
+
+```clojure
+[:customer/customer-id
+ [:customer/first-name :as :customer/fname] 
+ [:customer/last-name :as :customer/lname]]
+```
+
+Aliases works well with the join attributes as well.
+
+```clojure
+[:customer/customer-id
+ [:customer/first-name :as :customer/fname] 
+ [:customer/last-name :as :customer/lname]
+ ; one to one
+ {[:customer/address :as :customer/contact-address]
+  [:address/postal-code
+   :address/phone]}
+ ; one to many 
+ {[:customer/rentals :as :customer/all-rentals]
+  [:rental/rental-id
+   :rental/rental-date]}
+ ; many to many 
+ {[:customer/payments :as :customer/all-payments]
+  [:payment/payment-id
+   :payment/payment-date
+   :payment/amount]}]
+```
+
 ## Lookup using Idents
 
 The next step after defining the vector of attributes that want to query is to specify the lookup using [Idents](https://edn-query-language.org/eql/1.0.0/specification.html#_idents).

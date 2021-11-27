@@ -82,6 +82,30 @@ Some sample queries
   [:payment/rental-id]}]
 ```
 
+```clojure
+; like
+
+; :eql.mode/lenient syntax
+{[[] {:where [:like :actor/first-name "Jo%"]}]
+ [:actor/first-name]}
+
+; :eql.mode/strict syntax
+[{([] {:where [:like :actor/first-name "Jo%"]}) 
+  [:actor/first-name]}]
+```
+
+```clojure
+; ilike (NOTE: works only with Postgres)
+
+; :eql.mode/lenient syntax
+{[[] {:where [:ilike :actor/first-name "Jo%"]}]
+ [:actor/first-name]}
+
+; :eql.mode/strict syntax
+[{([] {:where [:ilike :actor/first-name "Jo%"]}) 
+  [:actor/first-name]}]
+```
+
 Date, Time & TimeStamp values can be used either as string or the using their corresponding type defined [in this mapping](#type-mappings).
 
 ```clojure
@@ -180,7 +204,7 @@ We can also filter the results using logical operators `and`, `or` & `not`.
 ```
 
 ```clojure
-; :eql.mode/strict syntax
+; :eql.mode/lenient syntax
 {[[] {:where [:not 
                 [:or 
                   [:= :language/name "English"] 
