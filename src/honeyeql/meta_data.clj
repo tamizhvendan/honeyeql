@@ -504,7 +504,7 @@
         attr-md        (try
                          (attr-meta-data heql-meta-data attr-ident)
                          (catch Throwable ex
-                           (if (and (= :heql.exception/attr-not-found (:type (ex-data ex))))
+                           (if (= :heql.exception/attr-not-found (:type (ex-data ex)))
                              {:attr/type :attr.type/unknown}
                              (throw ex))))]
     (case (:attr/type attr-md)
