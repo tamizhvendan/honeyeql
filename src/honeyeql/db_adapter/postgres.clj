@@ -10,6 +10,10 @@
            [java.time.temporal ChronoField]
            [java.time.format DateTimeFormatter DateTimeFormatterBuilder]))
 
+(defmethod ^{:private true} fmt/fn-handler "ilike" [_ field value]
+  (str (fmt/to-sql field) " ILIKE "
+       (fmt/to-sql value)))
+
 (defmethod ^{:private true} fmt/format-clause :pg-left-join-lateral [[_ join-groups] _]
   (string/join
    " "
