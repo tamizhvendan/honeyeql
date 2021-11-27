@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.graphqlize</groupId>
   <artifactId>honeyeql</artifactId>
-  <version>0.1.0-alpha38</version>
+  <version>0.1.0-alpha40</version>
 
   <name>Honey EQL</name>
   <description>HoneyEQL enables you to query database using the EQL.</description>
@@ -21,7 +21,7 @@
     <url>https://github.com/graphqlize/honeyeql</url>
     <connection>scm:git:git://github.com/graphqlize/honeyeql.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/graphqlize/honeyeql.git</developerConnection>
-    <tag>0.1.0-alpha36</tag>
+    <tag>0.1.0-alpha40</tag>
   </scm>
 
   <dependencies>
