@@ -87,9 +87,9 @@
   ([hsql alias]
    (let [select-clause (str "COALESCE(JSON_ARRAYAGG(`" (name alias)  "`.`result`), JSON_ARRAY())")]
      {:with   [[alias hsql]]
-      :select [[[:raw (if (= :rs alias)
-                        "`rs`.`result`"
-                        select-clause)] :result]]
+      :select [[[[:raw (if (= :rs alias)
+                         "`rs`.`result`"
+                         select-clause)]] :result]]
       :from   [alias]})))
 
 (defn- function-attribute-json-v [k [op v arg]]
@@ -107,7 +107,7 @@
   (cond
     (keyword? v) (list (format "'%s', `%s`.`%s`" k (namespace v) (name v)))
     (vector? v) (function-attribute-json-v k v)
-    :else (let [[sql & args] (hsql/format v :quoting :mysql)]
+    :else (let [[sql & args] (hsql/format v {:dialect :mysql})]
             (cons (str "'" k "'" ", (" sql ")") args))))
 
 
@@ -129,8 +129,9 @@
       (->> (map convert-string-args sql-args)
            (cons json-obj-str)
            (cons :raw)
+           vec
            vec)
-      [:raw json-obj-str])))
+      [[:raw json-obj-str]])))
 
 
 
@@ -171,7 +172,7 @@
   (->> (filter #(= :one-to-one-join (heql/find-join-type heql-meta-data %)) eql-nodes)
        (map (fn [{:keys [alias]
                   :as   eql-node}]
-              [[:raw "LATERAL"]
+              [[[:raw "LATERAL"]]
                [(heql/eql->hsql db-adapter heql-meta-data eql-node)
                 (keyword (str (:parent alias) "__" (:self alias)))]]))
        (update hsql :from #(apply concat %1 %2))))
@@ -208,7 +209,7 @@
 (defrecord MySqlAdapter [db-spec heql-config heql-meta-data]
   db/DbAdapter
   (to-sql [mysql-adapter hsql]
-    (-> (hsql/format (result-set-hql hsql) :quoting :mysql)
+    (-> (hsql/format (result-set-hql hsql) {:dialect :mysql})
         fix-lateral
         fix-params
         fix-string-builder-args))
