@@ -87,9 +87,9 @@
   ([hsql alias]
    (let [select-clause (str "COALESCE(JSON_ARRAYAGG(`" (name alias)  "`.`result`), JSON_ARRAY())")]
      {:with   [[alias hsql]]
-      :select [[:raw (if (= :rs alias)
-                       "`rs`.`result`"
-                       select-clause) :result]]
+      :select [[[:raw (if (= :rs alias)
+                        "`rs`.`result`"
+                        select-clause)] :result]]
       :from   [alias]})))
 
 (defn- function-attribute-json-v [k [op v arg]]
