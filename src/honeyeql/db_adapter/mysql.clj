@@ -1,7 +1,7 @@
 (ns ^:no-doc honeyeql.db-adapter.mysql
   (:require [honeyeql.meta-data :as heql-md]
             [honeyeql.core :as heql]
-            [honeysql.core :as hsql]
+            [honey.sql :as hsql]
             [honeyeql.db-adapter.core :as db]
             [clojure.string :as string]
             [next.jdbc.sql :as jdbc])
@@ -87,21 +87,21 @@
   ([hsql alias]
    (let [select-clause (str "COALESCE(JSON_ARRAYAGG(`" (name alias)  "`.`result`), JSON_ARRAY())")]
      {:with   [[alias hsql]]
-      :select [[(hsql/raw (if (= :rs alias)
-                            "`rs`.`result`"
-                            select-clause)) :result]]
+      :select [[:raw (if (= :rs alias)
+                       "`rs`.`result`"
+                       select-clause) :result]]
       :from   [alias]})))
 
 (defn- function-attribute-json-v [k [op v arg]]
   (let [op (if (vector? op) (first op) op)]
     (if (= :cast op)
       (list (format "'%s', CAST(`%s`.`%s` AS %s)" k
-                    (namespace v) 
+                    (namespace v)
                     (name v)
                     (name arg)))
       (list (format "'%s', %s(`%s`.`%s`)" k
-                   (name op)
-                   (namespace v) (name v))))))
+                    (name op)
+                    (namespace v) (name v))))))
 
 (defn- json-kv [[k v]]
   (cond
@@ -128,9 +128,11 @@
     (if (seq sql-args)
       (->> (map convert-string-args sql-args)
            (cons json-obj-str)
-           vec
-           hsql/raw)
-      (hsql/raw json-obj-str))))
+           (cons :raw)
+           vec)
+      [:raw json-obj-str])))
+
+
 
 (defn- select-clause-column [{:keys [function-attribute-ident alias key]} attr-md]
   (let [column-name           (heql-md/attr-column-name attr-md)
@@ -169,7 +171,7 @@
   (->> (filter #(= :one-to-one-join (heql/find-join-type heql-meta-data %)) eql-nodes)
        (map (fn [{:keys [alias]
                   :as   eql-node}]
-              [(hsql/raw "LATERAL")
+              [[:raw "LATERAL"]
                [(heql/eql->hsql db-adapter heql-meta-data eql-node)
                 (keyword (str (:parent alias) "__" (:self alias)))]]))
        (update hsql :from #(apply concat %1 %2))))
@@ -222,7 +224,7 @@
   (select-clause [db-adapter heql-meta-data eql-nodes]
     [[(mysql-select-clause db-adapter heql-meta-data eql-nodes) :result]])
   (resolve-one-to-one-relationship-alias [db-adapter {:keys [parent self]}]
-                                         (keyword (format "%s__%s" parent self) "result"))
+    (keyword (format "%s__%s" parent self) "result"))
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]
     (assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql eql-nodes))
   (resolve-one-to-one-relationship [db-adapter heql-meta-data hsql {:keys [children]}]

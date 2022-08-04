@@ -1,8 +1,7 @@
 (ns ^:no-doc honeyeql.db-adapter.postgres
   (:require [honeyeql.meta-data :as heql-md]
             [honeyeql.core :as heql]
-            [honeysql.format :as fmt]
-            [honeysql.core :as hsql]
+            [honey.sql :as hsql]
             [honeyeql.db-adapter.core :as db]
             [next.jdbc.sql :as jdbc]
             [clojure.string :as string])
@@ -10,21 +9,22 @@
            [java.time.temporal ChronoField]
            [java.time.format DateTimeFormatter DateTimeFormatterBuilder]))
 
-(defmethod ^{:private true} fmt/fn-handler "ilike" [_ field value]
-  (str (fmt/to-sql field) " ILIKE "
-       (fmt/to-sql value)))
+(hsql/register-fn! :ilike 
+                   (fn [_ [field value]]
+                     (str (hsql/sql-kw field) " ILIKE "
+                          (hsql/sql-kw value))))
 
-(defmethod ^{:private true} fmt/format-clause :pg-left-join-lateral [[_ join-groups] _]
-  (string/join
-   " "
-   (map (fn [[join-group alias]]
-          (str "LEFT JOIN LATERAL " (fmt/to-sql join-group) " AS \"" (name alias) "\" ON TRUE"))
-        join-groups)))
+(hsql/register-fn! :pg-left-join-lateral 
+                   (fn [_ [_ join-groups]]
+                    (string/join
+                     " "
+                     (map (fn [[join-group alias]]
+                            (str "LEFT JOIN LATERAL " (hsql/sql-kw join-group) " AS \"" (name alias) "\" ON TRUE"))
+                          join-groups))))
 
-(defmethod ^{:private true} fmt/format-clause :pg-coalesce-array [[_ x] _]
-  (str " COALESCE (" (fmt/to-sql x) ",'[]')"))
-
-(fmt/register-clause! :pg-left-join-lateral 135)
+(hsql/register-fn! :pg-coalesce-array 
+                   (fn [_ [x]]
+                     (str " COALESCE (" (first (hsql/format x)) ",'[]')")))
 
 (defmethod heql-md/get-db-config "PostgreSQL" [_]
   {:schema             {:default "public"
@@ -92,7 +92,7 @@
   {:with   [[:rs hql]]
    :from   [[{:select [:*]
               :from   [:rs]} :rs]]
-   :select [(hsql/raw "coalesce (json_agg(\"rs\"), '[]')::character varying as result")]})
+   :select [[:raw "coalesce (json_agg(\"rs\"), '[]')::character varying as result"]]})
 
 (defn- hsql-column-name [{:keys [alias function-attribute-ident key]} attr-md]
   (let [{:keys [parent]} alias
