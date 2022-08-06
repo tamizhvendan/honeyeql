@@ -14,8 +14,6 @@
                         :ignore  #{}}
    :foreign-key-suffix "_id"})
 
-(#{"BIT" "TINYINT"} "BIT")
-
 ;; https://dev.mysql.com/doc/refman/8.0/en/data-types.html
 ;; https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-reference-type-conversions.html
 (defn- mysql-type->col-type [{:keys [type_name column_size]}]
