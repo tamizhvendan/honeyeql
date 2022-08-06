@@ -3,7 +3,7 @@
             [honeyeql.meta-data :as heql-md]
             [clojure.data.json :as json]
             [inflections.core :as inf]
-            [honeysql.helpers :as hsql-helpers]
+            [honey.sql.helpers :as hsql-helpers]
             [honeyeql.db-adapter.core :as db]
             [clojure.string :as str]
             [honeyeql.debug :refer [trace>>]]))
@@ -173,7 +173,7 @@
         attr-ident   (if (qualified-keyword? attr-ident)
                        attr-ident
                        (keyword (name (:attr.ref/type join-attr-md)) (name attr-ident)))]
-    (hsql-helpers/merge-where
+    (hsql-helpers/where
      hsql
      (hsql-predicate db-adapter eql-node [op attr-ident v1 v2]))))
 
@@ -207,10 +207,10 @@
         (nested-entity-predicate db-adapter eql-node clause)))))
 
 (defn- apply-where [hsql db-adapter clause eql-node]
-  (hsql-helpers/merge-where hsql (where-predicate db-adapter clause eql-node)))
+  (hsql-helpers/where hsql (where-predicate db-adapter clause eql-node)))
 
 (defn- apply-group-by [hsql db-adapter clause eql-node]
-  (apply hsql-helpers/group hsql (map #(hsql-column db-adapter % eql-node true) clause)))
+  (apply hsql-helpers/group-by hsql (map #(hsql-column db-adapter % eql-node true) clause)))
 
 (defn- apply-params [db-adapter hsql eql-node]
   (let [{:keys [limit offset order-by where group-by]} (:params eql-node)]

@@ -1,8 +1,7 @@
 (ns ^:no-doc honeyeql.db-adapter.postgres
   (:require [honeyeql.meta-data :as heql-md]
             [honeyeql.core :as heql]
-            [honeysql.format :as fmt]
-            [honeysql.core :as hsql]
+            [honey.sql :as hsql]
             [honeyeql.db-adapter.core :as db]
             [next.jdbc.sql :as jdbc]
             [clojure.string :as string])
@@ -10,21 +9,28 @@
            [java.time.temporal ChronoField]
            [java.time.format DateTimeFormatter DateTimeFormatterBuilder]))
 
-(defmethod ^{:private true} fmt/fn-handler "ilike" [_ field value]
-  (str (fmt/to-sql field) " ILIKE "
-       (fmt/to-sql value)))
+(hsql/register-fn! :ilike
+                   (fn [_ [field value]]
+                     (str (hsql/sql-kw field) " ILIKE "
+                          (hsql/sql-kw value))))
 
-(defmethod ^{:private true} fmt/format-clause :pg-left-join-lateral [[_ join-groups] _]
-  (string/join
-   " "
-   (map (fn [[join-group alias]]
-          (str "LEFT JOIN LATERAL " (fmt/to-sql join-group) " AS \"" (name alias) "\" ON TRUE"))
-        join-groups)))
+(defn- format-left-join-lateral [_ args]
+  [(string/join
+    " "
+    (map (fn [[join-group alias]]
+           (format "LEFT JOIN LATERAL (%s) AS \"%s\" ON TRUE"
+                   (first (hsql/format join-group {:quoted true}))
+                   (name alias)))
+         args))])
 
-(defmethod ^{:private true} fmt/format-clause :pg-coalesce-array [[_ x] _]
-  (str " COALESCE (" (fmt/to-sql x) ",'[]')"))
+(hsql/register-clause! :honeyeql.pg/left-join-lateral
+                       format-left-join-lateral
+                       :right-join)
 
-(fmt/register-clause! :pg-left-join-lateral 135)
+(hsql/register-fn! :honeyeql.pg/coalesce-array
+                   (fn [_ [x]]
+                     (let [[sql & args] (hsql/format x {:quoted true})]
+                       (into [(str " COALESCE ((" sql "),'[]')")] args))))
 
 (defmethod heql-md/get-db-config "PostgreSQL" [_]
   {:schema             {:default "public"
@@ -92,7 +98,7 @@
   {:with   [[:rs hql]]
    :from   [[{:select [:*]
               :from   [:rs]} :rs]]
-   :select [(hsql/raw "coalesce (json_agg(\"rs\"), '[]')::character varying as result")]})
+   :select [[[:raw "coalesce (json_agg(\"rs\"), '[]')::character varying as result"]]]})
 
 (defn- hsql-column-name [{:keys [alias function-attribute-ident key]} attr-md]
   (let [{:keys [parent]} alias
@@ -101,8 +107,8 @@
                keyword)]
     (if function-attribute-ident
       (let [[sqlfn _ arg2] (if (heql/alias-attribute-ident? key)
-                                (first key)
-                                key)]
+                             (first key)
+                             key)]
         (if arg2
           (hsql/call sqlfn c arg2)
           (hsql/call sqlfn c)))
@@ -123,11 +129,12 @@
 (defn- assoc-one-to-one-hsql-queries [db-adapter heql-meta-data hsql eql-nodes]
   (if-let [one-to-one-join-children
            (seq (filter #(= :one-to-one-join (heql/find-join-type heql-meta-data %)) eql-nodes))]
-    (assoc hsql :pg-left-join-lateral (map #(heql/eql->hsql db-adapter heql-meta-data %) one-to-one-join-children))
+    (assoc hsql :honeyeql.pg/left-join-lateral (map #(heql/eql->hsql db-adapter heql-meta-data %) one-to-one-join-children))
     hsql))
 
 (defn- json-agg [select-alias]
-  (keyword (str "%json_agg." (name select-alias) ".*")))
+  #_(keyword (str "%json_agg." (name select-alias) ".*"))
+  [[:json_agg (keyword (str (name select-alias) ".*"))]])
 
 (def ^:private date-time-formatter
   (-> (DateTimeFormatterBuilder.)
@@ -138,7 +145,7 @@
 (defrecord PostgresAdapter [db-spec heql-config heql-meta-data]
   db/DbAdapter
   (to-sql [pg-adapter hsql]
-    (hsql/format (result-set-hql hsql) :quoting :ansi))
+    (hsql/format (result-set-hql hsql) {:quoted true}))
   (query [pg-adapter sql]
     (-> (jdbc/query (:db-spec pg-adapter) sql)
         first
@@ -147,7 +154,7 @@
     (case target-type
       :attr.type/date-time (LocalDateTime/parse value date-time-formatter)
       :attr.type/boolean value))
-  (resolve-one-to-one-relationship-alias [db-adapter {:keys [parent self]}]
+  (resolve-one-to-one-relationship-alias [_ {:keys [parent self]}]
     (keyword (format "%s__%s" parent self)))
   (select-clause [db-adapter heql-meta-data eql-nodes]
     (vec (map #(eql-node->select-expr db-adapter heql-meta-data %) eql-nodes)))
@@ -158,11 +165,11 @@
      (keyword (str (:parent alias) "__" (:self alias)))])
   (resolve-one-to-many-relationship [db-adapter heql-meta-data hsql {:keys [children]}]
     (let [projection-alias (gensym)]
-      {:pg-coalesce-array {:select [(json-agg projection-alias)]
-                           :from   [[(assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children)
-                                     projection-alias]]}}))
+      [[:honeyeql.pg/coalesce-array {:select [(json-agg projection-alias)]
+                                     :from   [[(assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children)
+                                               projection-alias]]}]]))
   (resolve-many-to-many-relationship [db-adapter heql-meta-data hsql {:keys [children]}]
     (let [projection-alias (gensym)]
-      {:pg-coalesce-array {:select [(json-agg projection-alias)]
-                           :from   [[(assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children)
-                                     projection-alias]]}})))
+      [[:honeyeql.pg/coalesce-array {:select [(json-agg projection-alias)]
+                                     :from   [[(assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children)
+                                               projection-alias]]}]])))

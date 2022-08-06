@@ -1,7 +1,7 @@
 {:paths ["src"]
  :deps  {org.clojure/clojure    {:mvn/version "1.10.1"}
-         com.github.seancorfield/next.jdbc {:mvn/version "1.2.674"}
-         inflections            {:mvn/version "0.13.2"}
+         com.github.seancorfield/next.jdbc {:mvn/version "1.2.796"}
+         inflections/inflections            {:mvn/version "0.13.2"}
          edn-query-language/eql {:mvn/version "0.0.9"}
-         honeysql               {:mvn/version "0.9.8"}
+         com.github.seancorfield/honeysql {:mvn/version "2.3.911"}
          org.clojure/data.json  {:mvn/version "1.0.0"}}}

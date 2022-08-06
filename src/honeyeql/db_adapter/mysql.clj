@@ -1,7 +1,7 @@
 (ns ^:no-doc honeyeql.db-adapter.mysql
   (:require [honeyeql.meta-data :as heql-md]
             [honeyeql.core :as heql]
-            [honeysql.core :as hsql]
+            [honey.sql :as hsql]
             [honeyeql.db-adapter.core :as db]
             [clojure.string :as string]
             [next.jdbc.sql :as jdbc])
@@ -87,50 +87,39 @@
   ([hsql alias]
    (let [select-clause (str "COALESCE(JSON_ARRAYAGG(`" (name alias)  "`.`result`), JSON_ARRAY())")]
      {:with   [[alias hsql]]
-      :select [[(hsql/raw (if (= :rs alias)
-                            "`rs`.`result`"
-                            select-clause)) :result]]
+      :select [[[[:raw (if (= :rs alias)
+                         "`rs`.`result`"
+                         select-clause)]] :result]]
       :from   [alias]})))
 
 (defn- function-attribute-json-v [k [op v arg]]
   (let [op (if (vector? op) (first op) op)]
     (if (= :cast op)
       (list (format "'%s', CAST(`%s`.`%s` AS %s)" k
-                    (namespace v) 
+                    (namespace v)
                     (name v)
                     (name arg)))
       (list (format "'%s', %s(`%s`.`%s`)" k
-                   (name op)
-                   (namespace v) (name v))))))
+                    (name op)
+                    (namespace v) (name v))))))
 
 (defn- json-kv [[k v]]
   (cond
     (keyword? v) (list (format "'%s', `%s`.`%s`" k (namespace v) (name v)))
     (vector? v) (function-attribute-json-v k v)
-    :else (let [[sql & args] (hsql/format v :quoting :mysql)]
+    :else (let [[sql & args] (hsql/format v {:dialect :mysql})]
             (cons (str "'" k "'" ", (" sql ")") args))))
 
-
-; HoneySQL raw doesn't treat String as parameter
-; (hsql/format (hsql/raw ["JOBJ(?, ?)" "foo" "bar"])) 
-; returns ["JOBJ(?, ?)foobar"] instead of ["JOBJ(?, ?)" "foo" "bar"]
-; this function is an workardound to convert String to StringBuilder 
-; which results in ["JOBJ(?, ?)??" #object[StringBuilder "foo"] #object[StringBuilder "bar"]]
-(defn- convert-string-args [arg]
-  (if (string? arg)
-    (StringBuilder. arg)
-    arg))
-
-(defn- json-object [obj]
+(defn- format-json-object [_ [obj]]
   (let [json-kvs     (map json-kv obj)
         json-obj-str (format "JSON_OBJECT(%s)" (string/join ", " (map first json-kvs)))
         sql-args     (mapcat rest json-kvs)]
-    (if (seq sql-args)
-      (->> (map convert-string-args sql-args)
-           (cons json-obj-str)
-           vec
-           hsql/raw)
-      (hsql/raw json-obj-str))))
+    (into [json-obj-str] sql-args)))
+
+(hsql/register-fn! :honeyeql.mysql/json-object format-json-object)
+
+(defn- json-object [obj]
+  [[:honeyeql.mysql/json-object obj]])
 
 (defn- select-clause-column [{:keys [function-attribute-ident alias key]} attr-md]
   (let [column-name           (heql-md/attr-column-name attr-md)
@@ -169,7 +158,7 @@
   (->> (filter #(= :one-to-one-join (heql/find-join-type heql-meta-data %)) eql-nodes)
        (map (fn [{:keys [alias]
                   :as   eql-node}]
-              [(hsql/raw "LATERAL")
+              [[[:raw "LATERAL"]]
                [(heql/eql->hsql db-adapter heql-meta-data eql-node)
                 (keyword (str (:parent alias) "__" (:self alias)))]]))
        (update hsql :from #(apply concat %1 %2))))
@@ -206,7 +195,7 @@
 (defrecord MySqlAdapter [db-spec heql-config heql-meta-data]
   db/DbAdapter
   (to-sql [mysql-adapter hsql]
-    (-> (hsql/format (result-set-hql hsql) :quoting :mysql)
+    (-> (hsql/format (result-set-hql hsql) {:dialect :mysql})
         fix-lateral
         fix-params
         fix-string-builder-args))
@@ -220,9 +209,10 @@
       :attr.type/date-time (coerce-datetime value)
       :attr.type/boolean (coerce-boolean value)))
   (select-clause [db-adapter heql-meta-data eql-nodes]
-    [[(mysql-select-clause db-adapter heql-meta-data eql-nodes) :result]])
+    (let [[sql & args] (mysql-select-clause db-adapter heql-meta-data eql-nodes)]
+         (into [[sql :result]] args)))
   (resolve-one-to-one-relationship-alias [db-adapter {:keys [parent self]}]
-                                         (keyword (format "%s__%s" parent self) "result"))
+    (keyword (format "%s__%s" parent self) "result"))
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]
     (assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql eql-nodes))
   (resolve-one-to-one-relationship [db-adapter heql-meta-data hsql {:keys [children]}]
