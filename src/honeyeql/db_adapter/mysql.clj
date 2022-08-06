@@ -110,30 +110,16 @@
     :else (let [[sql & args] (hsql/format v {:dialect :mysql})]
             (cons (str "'" k "'" ", (" sql ")") args))))
 
-
-; HoneySQL raw doesn't treat String as parameter
-; (hsql/format (hsql/raw ["JOBJ(?, ?)" "foo" "bar"])) 
-; returns ["JOBJ(?, ?)foobar"] instead of ["JOBJ(?, ?)" "foo" "bar"]
-; this function is an workardound to convert String to StringBuilder 
-; which results in ["JOBJ(?, ?)??" #object[StringBuilder "foo"] #object[StringBuilder "bar"]]
-(defn- convert-string-args [arg]
-  (if (string? arg)
-    (StringBuilder. arg)
-    arg))
-
-(defn- json-object [obj]
+(defn- format-json-object [_ [obj]]
   (let [json-kvs     (map json-kv obj)
         json-obj-str (format "JSON_OBJECT(%s)" (string/join ", " (map first json-kvs)))
         sql-args     (mapcat rest json-kvs)]
-    (if (seq sql-args)
-      (->> (map convert-string-args sql-args)
-           (cons json-obj-str)
-           (cons :raw)
-           vec
-           vec)
-      [[:raw json-obj-str]])))
+    (into [json-obj-str] sql-args)))
 
+(hsql/register-fn! :honeyeql.mysql/json-object format-json-object)
 
+(defn- json-object [obj]
+  [[:honeyeql.mysql/json-object obj]])
 
 (defn- select-clause-column [{:keys [function-attribute-ident alias key]} attr-md]
   (let [column-name           (heql-md/attr-column-name attr-md)
@@ -223,7 +209,8 @@
       :attr.type/date-time (coerce-datetime value)
       :attr.type/boolean (coerce-boolean value)))
   (select-clause [db-adapter heql-meta-data eql-nodes]
-    [[(mysql-select-clause db-adapter heql-meta-data eql-nodes) :result]])
+    (let [[sql & args] (mysql-select-clause db-adapter heql-meta-data eql-nodes)]
+         (into [[sql :result]] args)))
   (resolve-one-to-one-relationship-alias [db-adapter {:keys [parent self]}]
     (keyword (format "%s__%s" parent self) "result"))
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]

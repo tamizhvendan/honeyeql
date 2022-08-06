@@ -23,8 +23,6 @@
                    (name alias)))
          args))])
 
-#_ (format-left-join-lateral 1 aa)
-
 (hsql/register-clause! :honeyeql.pg/left-join-lateral
                        format-left-join-lateral
                        :right-join)
