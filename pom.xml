@@ -36,7 +36,7 @@
       <version>2021.07.18</version>
     </dependency>
     <dependency>
-      <groupId>honeysql</groupId>
+      <groupId>com.github.seancorfield</groupId>
       <artifactId>honeysql</artifactId>
       <version>2.4.947</version>
     </dependency>
