@@ -46,7 +46,7 @@
   ([db-config {:keys [table_schem table_name]}]
    (if (default-schema? db-config table_schem)
      (keyword table_name)
-     (keyword (str (inf/hyphenate table_schem) "." (inf/hyphenate table_name))))))
+     (keyword (str (inf/underscore table_schem) "." (inf/underscore table_name))))))
 
 (defn- attribute-ident
   ([db-config {:keys [table_schem table_name column_name]}]
