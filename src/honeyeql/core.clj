@@ -118,23 +118,32 @@
        (db/resolve-one-to-one-relationship-alias db-adapter)))
 
 (defn- hsql-column
-  ([db-adapter attr-ident eql-node]
-   (hsql-column db-adapter attr-ident eql-node false))
-  ([db-adapter attr-ident eql-node group-by-column]
-   (let [heql-meta-data (:heql-meta-data db-adapter)
-         attr-md        (heql-md/attr-meta-data heql-meta-data attr-ident)
-         attr-col-name  (:attr.column/name attr-md)
-         attr-type      (:attr.column.ref/type attr-md)
-         {:keys [self]} (:alias eql-node)]
-     (if (and group-by-column (= :attr.column.ref.type/one-to-one attr-type))
+  ([db-adapter attr-ident-or-rel-attr-ident eql-node]
+   (hsql-column db-adapter attr-ident-or-rel-attr-ident eql-node false))
+  ([db-adapter attr-ident-or-rel-attr-ident eql-node group-by-column]
+   (let [heql-meta-data    (:heql-meta-data db-adapter)
+         attr-ident        (if (keyword? attr-ident-or-rel-attr-ident) attr-ident-or-rel-attr-ident (last attr-ident-or-rel-attr-ident))
+         attr-md           (heql-md/attr-meta-data heql-meta-data attr-ident)
+         attr-col-name     (:attr.column/name attr-md)
+         attr-col-ref-type (:attr.column.ref/type attr-md)
+         eql-node          (if (keyword? attr-ident-or-rel-attr-ident)
+                             eql-node
+                             (first (filter #(= (:key %) (first attr-ident-or-rel-attr-ident)) (:children eql-node))))
+         {:keys [self parent]} (:alias eql-node)]
+     (if (and group-by-column (= :attr.column.ref.type/one-to-one attr-col-ref-type))
        (resolve-group-by-column db-adapter eql-node attr-ident)
-       (keyword (str self "." attr-col-name))))))
+       (if (keyword? attr-ident-or-rel-attr-ident)
+         (keyword (str self "." attr-col-name))
+         (keyword (str parent "__" self)
+                  (str (namespace (:attr/ident attr-md)) "/" (name (:attr/ident attr-md)))))))))
 
 (defn- order-by-clause [db-adapter eql-node clause]
   (if (keyword? clause)
     (hsql-column db-adapter clause eql-node)
     (let [[c t]         clause]
-      [(hsql-column db-adapter c eql-node) t])))
+      (if (#{:asc :desc} t)
+        [(hsql-column db-adapter c eql-node) t] 
+        (hsql-column db-adapter clause eql-node)))))
 
 (defn- apply-order-by [hsql heql-meta-data clause eql-node]
   (assoc hsql :order-by (map #(order-by-clause heql-meta-data eql-node %) clause)))
