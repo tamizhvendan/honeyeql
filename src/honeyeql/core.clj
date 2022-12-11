@@ -148,14 +148,19 @@
 (defn- apply-order-by [hsql heql-meta-data clause eql-node]
   (assoc hsql :order-by (map #(order-by-clause heql-meta-data eql-node %) clause)))
 
+(defn- coerce-value [db-adapter eql-node col value]
+  (if (coll? value)
+   (map #(coerce-value db-adapter eql-node col %) value) 
+   (if (and (keyword? value) (some? (namespace value)) (heql-md/attribute? (:heql-meta-data db-adapter) value))
+     (hsql-column db-adapter value eql-node)
+     (heql-md/coerce-attr-value db-adapter col value))))
+
 (defn- hsql-predicate [db-adapter eql-node clause]
   (let [[op col v1 v2] clause
         hsql-col       (hsql-column db-adapter col eql-node)]
-    (case op
-      (:in :not-in) [op hsql-col (map #(heql-md/coerce-attr-value db-adapter col %) v1)]
-      (if v2
-        [op hsql-col (heql-md/coerce-attr-value db-adapter col v1) (heql-md/coerce-attr-value db-adapter col v2)]
-        [op hsql-col (heql-md/coerce-attr-value db-adapter col v1)]))))
+    (if v2
+      [op hsql-col (coerce-value db-adapter eql-node col v1) (coerce-value db-adapter eql-node col v2)]
+      [op hsql-col (coerce-value db-adapter eql-node col v1)])))
 
 (defn- hsql-join-predicate [db-adapter eql-node join-attr-md self-alias]
   (let [heql-meta-data      (:heql-meta-data db-adapter)
@@ -201,8 +206,6 @@
     [:exists (if attr-ident
                (nested-entity-attr-predicate db-adapter self-eql-node clause hsql join-attr-md attr-ident)
                hsql)]))
-
-#_(nested-entity-predicate db n c)
 
 (defn- where-predicate [db-adapter clause eql-node]
   (let [[op col] clause]

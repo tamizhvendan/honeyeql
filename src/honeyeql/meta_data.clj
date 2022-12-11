@@ -447,6 +447,9 @@
     entity-meta-data
     (throw (Exception. (str "entity " entity-ident " not found")))))
 
+(defn attribute? [heql-meta-data attr-ident]
+  (boolean (get-in heql-meta-data [:attributes attr-ident])))
+
 (defn attr-meta-data [heql-meta-data attr-ident]
   (if-let [attr-meta-data (get-in heql-meta-data [:attributes attr-ident])]
     attr-meta-data

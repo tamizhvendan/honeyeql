@@ -106,6 +106,18 @@ Some sample queries
   [:actor/first-name]}]
 ```
 
+```clojure
+; using database's pre-defined functions
+
+; :eql.mode/lenient syntax
+{[[] {:where [:= :actor/actor-id [:abs :actor/actor-id]]}]
+ [:actor/first-name]}
+
+; :eql.mode/strict syntax
+[{([] {:where [:= :actor/actor-id [:abs :actor/actor-id]]}) 
+  [:actor/first-name]}]
+```
+
 Date, Time & TimeStamp values can be used either as string or the using their corresponding type defined [in this mapping](#type-mappings).
 
 ```clojure
