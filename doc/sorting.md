@@ -53,8 +53,38 @@ HoneyEQL supports sorting using the `:order-by` parameter. It takes a vector sim
      [:actor/first-name :actor/last-name]}])
 
 ```
+We can sort based on one-to-one relationship attributes as well
+
+> **NOTE** Supported only in PostgreSQL
+
+```clojure
+; sorting city by country name
+
+; :eql.mode/lenient syntax
+(heql/query pg-adapter {[[] {:order-by [[:city/country :country/country]]}]
+                          [:city/city-id :city/city
+                           {:city/country [:country/country]}]})
+; :eql.mode/strict syntax
+  (heql/query pg-adapter [{[[] {:order-by [[:city/country :country/country]]}]
+                           [:city/city-id :city/city
+                            {:city/country [:country/country]}]}])
+
+; sorting city by country name in desc order
+
+; :eql.mode/lenient syntax
+(heql/query pg-adapter {[[] {:where [:in [:city/country :country/country] ["Algeria" "Afghanistan"]]
+                               :order-by [[[:city/country :country/country] :desc]]}]
+                          [:city/city-id :city/city
+                           {:city/country [:country/country]}]})
+; :eql.mode/strict syntax
+(heql/query pg-adapter [{[[] {:order-by [[[:city/country :country/country] :desc]]}]
+                           [:city/city-id :city/city
+                            {:city/country [:country/country]}]}])
+```
 
 We can sort the relationship query results as well.
+
+> **NOTE:** Currently, sorting the relationship query results is not supported in MySQL
 
 ```clojure
 ; sorting one-to-many relationship query results
@@ -99,7 +129,5 @@ We can sort the relationship query results as well.
       {(:actor/films {:order-by [[:film/title :desc]]}) 
        [:film/title]}]}])
 ```
-
-> **NOTE:** Currently, sorting the relationship query results is not supported in MySQL
 
 
