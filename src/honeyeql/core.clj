@@ -63,7 +63,7 @@
     (and (= :prop type) (function-attribute-ident? key)) (second key)
     (and (= :prop type) (alias-attribute-ident? key)) (if (function-attribute-ident? (first key))
                                                         (second (first key))
-                                                       (first key))
+                                                        (first key))
     (and (= :join type) dispatch-key) key))
 
 (defn ^:no-doc column-alias [attr-naming-convention attr-ident]
