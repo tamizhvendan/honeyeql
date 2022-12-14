@@ -387,13 +387,41 @@
 (defn- entity-ns [entity]
   (->> entity keys first namespace))
 
+(defn- namespacify-attributes [entity-name entity]
+  (update-keys entity #(keyword entity-name (name %))))
+
 (defn insert! [db-adapter entity]
-  (let [entity-name (entity-name entity)]
-    (-> (sql/insert! (:db-spec db-adapter)
-                  (table-name entity)
-                  (unqualify entity)
-                  {:column-fn (db/table-fn db-adapter)
-                   :table-fn (db/table-fn db-adapter)
-                   :builder-fn rs/as-kebab-maps})
-        (update-keys (fn [k]
-                       (keyword entity-name (name k)))))))
+  (namespacify-attributes
+   (entity-name entity)
+   (sql/insert! (:db-spec db-adapter)
+                (table-name entity)
+                (unqualify entity)
+                {:column-fn (db/table-fn db-adapter)
+                 :table-fn (db/table-fn db-adapter)
+                 :builder-fn rs/as-kebab-maps})))
+
+(defn insert-multi! [db-adapter entities]
+  (when (seq entities)
+    (let [entities (map #(into (sorted-map) %) entities)
+          first-entity (first entities)
+          first-entity-name (entity-name first-entity)
+          unqualified-entities (map unqualify entities)]
+      (map
+       #(namespacify-attributes first-entity-name %)
+       (sql/insert-multi! (:db-spec db-adapter)
+                          (table-name first-entity)
+                          (keys (first unqualified-entities))
+                          (map vals unqualified-entities)
+                          {:column-fn (db/table-fn db-adapter)
+                           :table-fn (db/table-fn db-adapter)
+                           :builder-fn rs/as-kebab-maps})))))
+
+(defn update! [db-adapter update-params where-params]
+  (sql/update! (:db-spec db-adapter) (table-name update-params) (unqualify update-params) (unqualify where-params)
+               {:column-fn (db/table-fn db-adapter)
+                :table-fn (db/table-fn db-adapter)}))
+
+(defn delete! [db-adapter where-params]
+  (sql/delete! (:db-spec db-adapter) (table-name where-params) (unqualify where-params)
+               {:column-fn (db/table-fn db-adapter)
+                :table-fn (db/table-fn db-adapter)}))
