@@ -1,13 +1,15 @@
 (ns honeyeql.core
-  (:require [edn-query-language.core :as eql]
-            [honeyeql.meta-data :as heql-md]
-            [honeyeql.dsl :as dsl]
-            [clojure.data.json :as json]
-            [inflections.core :as inf]
+  (:require [clojure.data.json :as json]
+            [clojure.string :as str]
+            [edn-query-language.core :as eql]
+            [next.jdbc.result-set :as rs]
+            [next.jdbc.sql :as sql]
             [honey.sql.helpers :as hsql-helpers]
             [honeyeql.db-adapter.core :as db]
-            [clojure.string :as str]
-            [honeyeql.debug :refer [trace>>]]))
+            [honeyeql.debug :refer [trace>>]]
+            [honeyeql.dsl :as dsl]
+            [honeyeql.meta-data :as heql-md]
+            [inflections.core :as inf]))
 
 (def ^:no-doc default-heql-config {:attr/return-as :naming-convention/qualified-kebab-case
                                    :eql/mode       :eql.mode/lenient})
@@ -42,8 +44,8 @@
     (and (= :prop type) (keyword? key)) key
     (and (= :prop type) (function-attribute-ident? key)) (second key)
     (and (= :prop type) (dsl/alias-attribute-ident? key)) (if (function-attribute-ident? (first key))
-                                                        (second (first key))
-                                                        (first key))
+                                                            (second (first key))
+                                                            (first key))
     (and (= :join type) dispatch-key) key))
 
 (defn- one-to-one-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
@@ -368,3 +370,30 @@
 
 (defn query-single [db-adapter eql-query]
   (first (query db-adapter eql-query)))
+
+(defn- entity-name [entity]
+  (-> entity keys first namespace))
+
+(defn- table-name [entity]
+  (-> (entity-name entity) (str/replace #"-" "_") keyword))
+
+(defn- unqualify [entity]
+  (update-keys entity (fn [k]
+                        (-> (name k) (str/replace #"-" "_") keyword))))
+
+(defn- entity-ident [heql-meta-data entity]
+  (->> entity keys first (heql-md/attr-meta-data heql-meta-data) :attr.entity/ident))
+
+(defn- entity-ns [entity]
+  (->> entity keys first namespace))
+
+(defn insert! [db-adapter entity]
+  (let [entity-name (entity-name entity)]
+    (-> (sql/insert! (:db-spec db-adapter)
+                  (table-name entity)
+                  (unqualify entity)
+                  {:column-fn (db/table-fn db-adapter)
+                   :table-fn (db/table-fn db-adapter)
+                   :builder-fn rs/as-kebab-maps})
+        (update-keys (fn [k]
+                       (keyword entity-name (name k)))))))

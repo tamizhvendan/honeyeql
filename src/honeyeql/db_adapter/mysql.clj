@@ -1,13 +1,14 @@
 (ns ^:no-doc honeyeql.db-adapter.mysql
-  (:require [honeyeql.meta-data :as heql-md]
-            [honeyeql.dsl :as dsl]
+  (:require [clojure.string :as string]
+            [next.jdbc.quoted :as quoted]
             [honey.sql :as hsql]
             [honeyeql.db-adapter.core :as db]
-            [clojure.string :as string]
+            [honeyeql.dsl :as dsl]
+            [honeyeql.meta-data :as heql-md]
             [next.jdbc.sql :as jdbc])
   (:import [java.time LocalDateTime]
-           [java.time.temporal ChronoField]
-           [java.time.format DateTimeFormatterBuilder DateTimeParseException]))
+           [java.time.format DateTimeFormatterBuilder DateTimeParseException]
+           [java.time.temporal ChronoField]))
 
 (defmethod heql-md/get-db-config "MySQL" [_]
   {:schema             {:default "xyz"
@@ -208,7 +209,7 @@
       :attr.type/boolean (coerce-boolean value)))
   (select-clause [db-adapter heql-meta-data eql-nodes]
     (let [[sql & args] (mysql-select-clause db-adapter heql-meta-data eql-nodes)]
-         (into [[sql :result]] args)))
+      (into [[sql :result]] args)))
   (resolve-one-to-one-relationship-alias [db-adapter {:keys [parent self]}]
     (keyword (format "%s__%s" parent self) "result"))
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]
@@ -218,4 +219,11 @@
   (resolve-one-to-many-relationship [db-adapter heql-meta-data hsql {:keys [children]}]
     (assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children))
   (resolve-many-to-many-relationship [db-adapter heql-meta-data hsql {:keys [children]}]
-    (assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children)))
+    (assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children))
+  (table-fn [db-adapter]
+    (fn [table-name]
+      (->> (string/split table-name #"\.")
+           (map #(format "`%s`" %))
+           (string/join "."))))
+  (column-fn [db-adapter]
+    quoted/mysql))

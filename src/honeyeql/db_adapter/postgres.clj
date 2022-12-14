@@ -1,13 +1,14 @@
 (ns ^:no-doc honeyeql.db-adapter.postgres
-  (:require [honeyeql.meta-data :as heql-md]
-            [honeyeql.dsl :as dsl]
+  (:require [clojure.string :as string]
+            [next.jdbc.quoted :as quoted]
             [honey.sql :as hsql]
             [honeyeql.db-adapter.core :as db]
-            [next.jdbc.sql :as jdbc]
-            [clojure.string :as string])
+            [honeyeql.dsl :as dsl]
+            [honeyeql.meta-data :as heql-md]
+            [next.jdbc.sql :as jdbc])
   (:import [java.time LocalDateTime]
-           [java.time.temporal ChronoField]
-           [java.time.format DateTimeFormatter DateTimeFormatterBuilder]))
+           [java.time.format DateTimeFormatter DateTimeFormatterBuilder]
+           [java.time.temporal ChronoField]))
 
 (hsql/register-fn! :ilike
                    (fn [_ [field value]]
@@ -133,7 +134,6 @@
     hsql))
 
 (defn- json-agg [select-alias]
-  #_(keyword (str "%json_agg." (name select-alias) ".*"))
   [[:json_agg (keyword (str (name select-alias) ".*"))]])
 
 (def ^:private date-time-formatter
@@ -172,4 +172,11 @@
     (let [projection-alias (gensym)]
       [[:honeyeql.pg/coalesce-array {:select [(json-agg projection-alias)]
                                      :from   [[(assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql children)
-                                               projection-alias]]}]])))
+                                               projection-alias]]}]]))
+  (column-fn [db-adapter]
+    quoted/ansi)
+  (table-fn [db-adapter]
+            (fn [table-name]
+              (->> (string/split table-name #"\.")
+                   (map #(format "\"%s\"" %))
+                   (string/join ".")))))

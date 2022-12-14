@@ -9,4 +9,6 @@
   (resolve-one-to-one-relationship-alias [db-adapter alias])
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes])
   (resolve-one-to-many-relationship [db-adapter heql-meta-data hsql eql-node])
-  (resolve-many-to-many-relationship [db-adapter heql-meta-data hsql eql-node]))
+  (resolve-many-to-many-relationship [db-adapter heql-meta-data hsql eql-node])
+  (table-fn [db-adapter])
+  (column-fn [db-adapter]))
