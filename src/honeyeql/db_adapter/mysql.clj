@@ -1,6 +1,6 @@
 (ns ^:no-doc honeyeql.db-adapter.mysql
   (:require [honeyeql.meta-data :as heql-md]
-            [honeyeql.core :as heql]
+            [honeyeql.dsl :as dsl]
             [honey.sql :as hsql]
             [honeyeql.db-adapter.core :as db]
             [clojure.string :as string]
@@ -124,7 +124,7 @@
         {:keys [_ parent]} alias
         c (keyword (name parent) (name column-name))]
     (if function-attribute-ident
-      (let [[sqlfn _ arg2] (if (heql/alias-attribute-ident? key)
+      (let [[sqlfn _ arg2] (if (dsl/alias-attribute-ident? key)
                              (first key)
                              key)]
         (if arg2
@@ -137,27 +137,27 @@
    (reduce (fn [obj {:keys [attr-ident alias]
                      :as   eql-node}]
              (let [{:keys [self parent]} alias
-                   attr-md               (heql-md/attr-meta-data heql-meta-data (if (heql/alias-attribute-ident? attr-ident)
+                   attr-md               (heql-md/attr-meta-data heql-meta-data (if (dsl/alias-attribute-ident? attr-ident)
                                                                                   (first attr-ident)
                                                                                   attr-ident))
                    attr-column-ref-type  (heql-md/attr-column-ref-type attr-md)]
                (assoc
                 obj
-                (heql/select-clause-alias eql-node)
+                (dsl/select-clause-alias eql-node)
                 (case attr-column-ref-type
                   :attr.column.ref.type/one-to-one (keyword (str parent "__" self) "result")
                   (:attr.column.ref.type/one-to-many
                    :attr.column.ref.type/many-to-many) (result-set-hql
-                                                        (heql/eql->hsql db-adapter heql-meta-data eql-node)
+                                                        (dsl/eql->hsql db-adapter heql-meta-data eql-node)
                                                         (keyword (str parent "__" self)))
                   (select-clause-column eql-node attr-md))))) {} eql-nodes)))
 
 (defn- assoc-one-to-one-hsql-queries [db-adapter heql-meta-data hsql eql-nodes]
-  (->> (filter #(= :one-to-one-join (heql/find-join-type heql-meta-data %)) eql-nodes)
+  (->> (filter #(= :one-to-one-join (dsl/find-join-type heql-meta-data %)) eql-nodes)
        (map (fn [{:keys [alias]
                   :as   eql-node}]
               [[[:raw "LATERAL"]]
-               [(heql/eql->hsql db-adapter heql-meta-data eql-node)
+               [(dsl/eql->hsql db-adapter heql-meta-data eql-node)
                 (keyword (str (:parent alias) "__" (:self alias)))]]))
        (update hsql :from #(apply concat %1 %2))))
 

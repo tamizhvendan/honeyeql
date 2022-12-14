@@ -1,6 +1,7 @@
 (ns honeyeql.core
   (:require [edn-query-language.core :as eql]
             [honeyeql.meta-data :as heql-md]
+            [honeyeql.dsl :as dsl]
             [clojure.data.json :as json]
             [inflections.core :as inf]
             [honey.sql.helpers :as hsql-helpers]
@@ -36,41 +37,14 @@
   (and (vector? x)
        (#{:sum :count :max :min :avg :cast} (first x))))
 
-(defn alias-attribute-ident? [x]
-  (and (vector? x)
-       (= (count x) 3)
-       (= :as (second x))))
-
-(defn ^:no-doc find-join-type [heql-meta-data eql-node]
-  (let [{node-type :type
-         node-key  :key} eql-node]
-    (cond
-      (= :root node-type) :root
-      (and (= :join node-type) (vector? node-key) (empty? node-key)) :non-ident-join
-      (and (= :join node-type) (keyword? node-key)) (-> (heql-md/attr-column-ref-type heql-meta-data node-key)
-                                                        name
-                                                        (str "-join")
-                                                        keyword)
-      (and (= :join node-type) (alias-attribute-ident? node-key)) (-> (heql-md/attr-column-ref-type heql-meta-data (first node-key))
-                                                                      name
-                                                                      (str "-join")
-                                                                      keyword)
-      (and (= :join node-type) (seq node-key) (even? (count node-key))) :ident-join)))
-
 (defn- eql-node->attr-ident [{:keys [key type dispatch-key]}]
   (cond
     (and (= :prop type) (keyword? key)) key
     (and (= :prop type) (function-attribute-ident? key)) (second key)
-    (and (= :prop type) (alias-attribute-ident? key)) (if (function-attribute-ident? (first key))
+    (and (= :prop type) (dsl/alias-attribute-ident? key)) (if (function-attribute-ident? (first key))
                                                         (second (first key))
                                                         (first key))
     (and (= :join type) dispatch-key) key))
-
-(defn ^:no-doc column-alias [attr-naming-convention attr-ident]
-  (case attr-naming-convention
-    :naming-convention/qualified-kebab-case (str (namespace attr-ident) "/" (name attr-ident))
-    :naming-convention/unqualified-kebab-case (name attr-ident)
-    :naming-convention/unqualified-camel-case (inf/camel-case (name attr-ident) :lower)))
 
 (defn- one-to-one-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
   [:=
@@ -93,10 +67,8 @@
       (keyword (str assoc-table-alias "." (heql-md/attr-column-name heql-meta-data right-ident)))
       (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data right)))]]))
 
-(defmulti ^:no-doc eql->hsql (fn [db-adapter heql-meta-data eql-node] (find-join-type heql-meta-data eql-node)))
-
-(defmethod ^{:private true} eql->hsql :root [db-adapter heql-meta-data eql-node]
-  (eql->hsql db-adapter heql-meta-data (first (:children eql-node))))
+(defmethod ^{:private true} dsl/eql->hsql :root [db-adapter heql-meta-data eql-node]
+  (dsl/eql->hsql db-adapter heql-meta-data (first (:children eql-node))))
 
 (defn- eql-ident->hsql-predicate [db-adapter [attr-ident value] alias]
   (let [heql-meta-data (:heql-meta-data db-adapter)
@@ -142,7 +114,7 @@
     (hsql-column db-adapter clause eql-node)
     (let [[c t]         clause]
       (if (#{:asc :desc} t)
-        [(hsql-column db-adapter c eql-node) t] 
+        [(hsql-column db-adapter c eql-node) t]
         (hsql-column db-adapter clause eql-node)))))
 
 (defn- apply-order-by [hsql heql-meta-data clause eql-node]
@@ -150,10 +122,10 @@
 
 (defn- coerce-value [db-adapter eql-node col value]
   (if (coll? value)
-   (map #(coerce-value db-adapter eql-node col %) value) 
-   (if (and (keyword? value) (some? (namespace value)) (heql-md/attribute? (:heql-meta-data db-adapter) value))
-     (hsql-column db-adapter value eql-node)
-     (heql-md/coerce-attr-value db-adapter col value))))
+    (map #(coerce-value db-adapter eql-node col %) value)
+    (if (and (keyword? value) (some? (namespace value)) (heql-md/attribute? (:heql-meta-data db-adapter) value))
+      (hsql-column db-adapter value eql-node)
+      (heql-md/coerce-attr-value db-adapter col value))))
 
 (defn- hsql-predicate [db-adapter eql-node clause]
   (let [[op col v1 v2] clause
@@ -234,7 +206,7 @@
       group-by (apply-group-by db-adapter group-by eql-node)
       :else identity)))
 
-(defmethod ^{:private true} eql->hsql :ident-join [db-adapter heql-meta-data eql-node]
+(defmethod ^{:private true} dsl/eql->hsql :ident-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
         hsql                         {:from   [[(heql-md/entity-relation-ident heql-meta-data (first key))
                                                 (keyword (:self alias))]]
@@ -243,9 +215,7 @@
         hsql                         (apply-params db-adapter hsql eql-node)]
     (db/resolve-children-one-to-one-relationships db-adapter heql-meta-data hsql children)))
 
-#_n
-
-(defmethod ^{:private true} eql->hsql :non-ident-join [db-adapter heql-meta-data eql-node]
+(defmethod ^{:private true} dsl/eql->hsql :non-ident-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [children alias]} eql-node
         first-child-ident        (eql-node->attr-ident (first children))
         hsql                     {:from   [[(heql-md/entity-relation-ident heql-meta-data first-child-ident)
@@ -254,9 +224,9 @@
         hsql                     (apply-params db-adapter hsql eql-node)]
     (db/resolve-children-one-to-one-relationships db-adapter heql-meta-data hsql children)))
 
-(defmethod ^{:private true} eql->hsql :one-to-one-join [db-adapter heql-meta-data eql-node]
+(defmethod ^{:private true} dsl/eql->hsql :one-to-one-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
-        key                          (if (alias-attribute-ident? key)
+        key                          (if (dsl/alias-attribute-ident? key)
                                        (first key)
                                        key)
         join-attr-md                 (heql-md/attr-meta-data heql-meta-data key)
@@ -267,9 +237,9 @@
         hsql                         (apply-params db-adapter hsql eql-node)]
     (db/resolve-one-to-one-relationship db-adapter heql-meta-data hsql eql-node)))
 
-(defmethod ^{:private true} eql->hsql :one-to-many-join [db-adapter heql-meta-data eql-node]
+(defmethod ^{:private true} dsl/eql->hsql :one-to-many-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
-        key                          (if (alias-attribute-ident? key)
+        key                          (if (dsl/alias-attribute-ident? key)
                                        (first key)
                                        key)
         join-attr-md                 (heql-md/attr-meta-data heql-meta-data key)
@@ -280,9 +250,9 @@
         hsql                         (apply-params db-adapter hsql eql-node)]
     (db/resolve-one-to-many-relationship db-adapter heql-meta-data hsql eql-node)))
 
-(defmethod ^{:private true} eql->hsql :many-to-many-join [db-adapter heql-meta-data eql-node]
+(defmethod ^{:private true} dsl/eql->hsql :many-to-many-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
-        key                          (if (alias-attribute-ident? key)
+        key                          (if (dsl/alias-attribute-ident? key)
                                        (first key)
                                        key)
         join-attr-md                 (heql-md/attr-meta-data heql-meta-data key)
@@ -307,7 +277,7 @@
           [(keyword aggr-fun) (keyword (namespace default-key) attr-name)]
           default-key)
         default-key)
-      [default-key (column-alias attribute-return-as default-key)])))
+      [default-key (dsl/column-alias attribute-return-as default-key)])))
 
 (defn- json-value-fn [db-adapter attribute-return-as json-key json-value]
   (if (= :naming-convention/qualified-kebab-case attribute-return-as)
@@ -338,19 +308,10 @@
                      :attr-ident   %}))))
 
 
-(defn select-clause-alias [{:keys [attr-ident key function-attribute-ident]}]
-  (let [attr-ident (cond
-                     function-attribute-ident (if (alias-attribute-ident? key)
-                                                (nth key 2)
-                                                (keyword (namespace attr-ident) (str (name (first key)) "-of-" (name attr-ident))))
-                     (alias-attribute-ident? key) (nth key 2)
-                     :else attr-ident)]
-    (column-alias :naming-convention/qualified-kebab-case attr-ident)))
-
 (declare enrich-eql-node)
 
-(defn resolve-wid-card-attributes [{:keys [heql-config heql-meta-data]
-                                    :as   db-adapter} self-alias eql-nodes]
+(defn- resolve-wid-card-attributes [{:keys [heql-config heql-meta-data]
+                                     :as   db-adapter} self-alias eql-nodes]
   (let [eql-nodes             (map #(enrich-eql-node db-adapter % self-alias) eql-nodes)]
     (if (= :eql.mode/lenient (:eql/mode heql-config))
       (let [[props joins]         ((juxt filter remove) #(= :prop (:type %)) eql-nodes)
@@ -381,7 +342,7 @@
                        (partial resolve-wid-card-attributes db-adapter self-alias)))
        :prop (-> (assoc eql-node :attr-ident attr-ident)
                  (assoc-in [:alias :parent] parent-alias)
-                 (assoc :function-attribute-ident (if (alias-attribute-ident? (:key eql-node))
+                 (assoc :function-attribute-ident (if (dsl/alias-attribute-ident? (:key eql-node))
                                                     (function-attribute-ident? (first (:key eql-node)))
                                                     (function-attribute-ident? (:key eql-node)))))))))
 
@@ -396,7 +357,7 @@
                               (trace>> :raw-eql-ast)
                               (enrich-eql-node db-adapter)
                               (trace>> :eql-ast)
-                              (eql->hsql db-adapter heql-meta-data)
+                              (dsl/eql->hsql db-adapter heql-meta-data)
                               (trace>> :hsql)
                               (db/to-sql db-adapter)
                               (trace>> :sql)

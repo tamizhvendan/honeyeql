@@ -1,6 +1,6 @@
 (ns ^:no-doc honeyeql.db-adapter.postgres
   (:require [honeyeql.meta-data :as heql-md]
-            [honeyeql.core :as heql]
+            [honeyeql.dsl :as dsl]
             [honey.sql :as hsql]
             [honeyeql.db-adapter.core :as db]
             [next.jdbc.sql :as jdbc]
@@ -106,7 +106,7 @@
                (str parent ".")
                keyword)]
     (if function-attribute-ident
-      (let [[sqlfn _ arg2] (if (heql/alias-attribute-ident? key)
+      (let [[sqlfn _ arg2] (if (dsl/alias-attribute-ident? key)
                              (first key)
                              key)]
         (if arg2
@@ -117,19 +117,19 @@
 (defn- eql-node->select-expr [db-adapter heql-meta-data {:keys [attr-ident alias]
                                                          :as   eql-node}]
   (let [{:keys [parent self]} alias
-        attr-md               (heql-md/attr-meta-data heql-meta-data (if (heql/alias-attribute-ident? attr-ident)
+        attr-md               (heql-md/attr-meta-data heql-meta-data (if (dsl/alias-attribute-ident? attr-ident)
                                                                        (first attr-ident)
                                                                        attr-ident))
         select-attr-expr      (case (:attr.column.ref/type attr-md)
                                 :attr.column.ref.type/one-to-one (keyword (str parent "__" self))
-                                (:attr.column.ref.type/one-to-many :attr.column.ref.type/many-to-many) (heql/eql->hsql db-adapter heql-meta-data eql-node)
+                                (:attr.column.ref.type/one-to-many :attr.column.ref.type/many-to-many) (dsl/eql->hsql db-adapter heql-meta-data eql-node)
                                 (hsql-column-name eql-node attr-md))]
-    [select-attr-expr (heql/select-clause-alias eql-node)]))
+    [select-attr-expr (dsl/select-clause-alias eql-node)]))
 
 (defn- assoc-one-to-one-hsql-queries [db-adapter heql-meta-data hsql eql-nodes]
   (if-let [one-to-one-join-children
-           (seq (filter #(= :one-to-one-join (heql/find-join-type heql-meta-data %)) eql-nodes))]
-    (assoc hsql :honeyeql.pg/left-join-lateral (map #(heql/eql->hsql db-adapter heql-meta-data %) one-to-one-join-children))
+           (seq (filter #(= :one-to-one-join (dsl/find-join-type heql-meta-data %)) eql-nodes))]
+    (assoc hsql :honeyeql.pg/left-join-lateral (map #(dsl/eql->hsql db-adapter heql-meta-data %) one-to-one-join-children))
     hsql))
 
 (defn- json-agg [select-alias]
