@@ -1,5 +1,6 @@
 (ns ^:no-doc honeyeql.meta-data
   (:require [next.jdbc :as jdbc]
+            [next.jdbc.types :as jdbc-types]
             [next.jdbc.result-set :as rs]
             [inflections.core :as inf]
             [clojure.set :as set]
@@ -502,7 +503,7 @@
     (when x
       (parse-fn x))))
 
-(defn coerce-attr-value [db-adapter attr-ident value]
+(defn coerce-attr-value [db-adapter mode attr-ident value]
   (let [heql-meta-data (:heql-meta-data db-adapter)
         attr-md        (try
                          (attr-meta-data heql-meta-data attr-ident)
@@ -521,6 +522,9 @@
       :attr.type/ref (if (and (= :attr.ref.cardinality/many (:attr.ref/cardinality attr-md)) (nil? value))
                        []
                        value)
+      :attr.type/unknown (coerce (constantly true) identity (case mode 
+                                                              :from-db value
+                                                              :to-db (jdbc-types/as-other value)))
       value)))
 
 (defn db-product-name [heql-meta-data]

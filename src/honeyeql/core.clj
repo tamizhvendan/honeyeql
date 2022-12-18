@@ -75,7 +75,7 @@
 (defn- eql-ident->hsql-predicate [db-adapter [attr-ident value] alias]
   (let [heql-meta-data (:heql-meta-data db-adapter)
         attr-col-name  (heql-md/attr-column-name heql-meta-data attr-ident)
-        attr-value     (heql-md/coerce-attr-value db-adapter attr-ident value)]
+        attr-value     (heql-md/coerce-attr-value db-adapter :from-db attr-ident value)]
     [:= (keyword (str (:self alias) "." attr-col-name)) attr-value]))
 
 (defn- eql-ident-key->hsql-predicate [db-adapter eql-ident-key alias]
@@ -127,7 +127,7 @@
     (map #(coerce-value db-adapter eql-node col %) value)
     (if (and (keyword? value) (some? (namespace value)) (heql-md/attribute? (:heql-meta-data db-adapter) value))
       (hsql-column db-adapter value eql-node)
-      (heql-md/coerce-attr-value db-adapter col value))))
+      (heql-md/coerce-attr-value db-adapter :from-db col value))))
 
 (defn- hsql-predicate [db-adapter eql-node clause]
   (let [[op col v1 v2] clause
@@ -283,8 +283,8 @@
 
 (defn- json-value-fn [db-adapter attribute-return-as json-key json-value]
   (if (= :naming-convention/qualified-kebab-case attribute-return-as)
-    (heql-md/coerce-attr-value db-adapter json-key json-value)
-    (heql-md/coerce-attr-value db-adapter (first json-key) json-value)))
+    (heql-md/coerce-attr-value db-adapter :from-db json-key json-value)
+    (heql-md/coerce-attr-value db-adapter :from-db (first json-key) json-value)))
 
 (defn- transform-keys [attribute-return-as return-value]
   (if (= :naming-convention/qualified-kebab-case attribute-return-as)
@@ -377,15 +377,12 @@
 (defn- table-name [entity]
   (-> (entity-name entity) (str/replace #"-" "_") keyword))
 
-(defn- unqualify [entity]
-  (update-keys entity (fn [k]
-                        (-> (name k) (str/replace #"-" "_") keyword))))
-
-(defn- entity-ident [heql-meta-data entity]
-  (->> entity keys first (heql-md/attr-meta-data heql-meta-data) :attr.entity/ident))
-
-(defn- entity-ns [entity]
-  (->> entity keys first namespace))
+(defn- sqlize-entity [db-adapter entity]
+  (into {}
+        (map (fn [[k v]]
+               [(-> (name k) (str/replace #"-" "_") keyword)
+                (heql-md/coerce-attr-value db-adapter :to-db k v)])
+             entity)))
 
 (defn- namespacify-attributes [entity-name entity]
   (update-keys entity #(keyword entity-name (name %))))
@@ -395,7 +392,7 @@
    (entity-name entity)
    (sql/insert! (:db-spec db-adapter)
                 (table-name entity)
-                (unqualify entity)
+                (sqlize-entity db-adapter entity)
                 {:column-fn (db/table-fn db-adapter)
                  :table-fn (db/table-fn db-adapter)
                  :builder-fn rs/as-kebab-maps})))
@@ -405,23 +402,25 @@
     (let [entities (map #(into (sorted-map) %) entities)
           first-entity (first entities)
           first-entity-name (entity-name first-entity)
-          unqualified-entities (map unqualify entities)]
+          sqlized-entities (map (partial sqlize-entity db-adapter) entities)]
       (map
        #(namespacify-attributes first-entity-name %)
        (sql/insert-multi! (:db-spec db-adapter)
                           (table-name first-entity)
-                          (keys (first unqualified-entities))
-                          (map vals unqualified-entities)
+                          (keys (first sqlized-entities))
+                          (map vals sqlized-entities)
                           {:column-fn (db/table-fn db-adapter)
                            :table-fn (db/table-fn db-adapter)
                            :builder-fn rs/as-kebab-maps})))))
 
 (defn update! [db-adapter update-params where-params]
-  (sql/update! (:db-spec db-adapter) (table-name update-params) (unqualify update-params) (unqualify where-params)
+  (sql/update! (:db-spec db-adapter) (table-name update-params)
+               (sqlize-entity db-adapter update-params) (sqlize-entity db-adapter where-params)
                {:column-fn (db/table-fn db-adapter)
                 :table-fn (db/table-fn db-adapter)}))
 
 (defn delete! [db-adapter where-params]
-  (sql/delete! (:db-spec db-adapter) (table-name where-params) (unqualify where-params)
+  (sql/delete! (:db-spec db-adapter) (table-name where-params)
+               (sqlize-entity db-adapter where-params)
                {:column-fn (db/table-fn db-adapter)
                 :table-fn (db/table-fn db-adapter)}))
