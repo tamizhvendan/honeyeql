@@ -27,6 +27,11 @@
   <dependencies>
     <dependency>
       <groupId>org.clojure</groupId>
+      <artifactId>clojure</artifactId>
+      <version>1.11.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
       <artifactId>data.json</artifactId>
       <version>2.4.0</version>
     </dependency>
