@@ -2,9 +2,7 @@
 
 HoneyEQL is a Clojure library enables you to query the database declaratively using the [EDN Query Language](https://edn-query-language.org)(EQL). It aims to simplify the effort required to work with the relational databases in Clojure.
 
-HoneyEQL powers [GraphQLize](https://www.graphqlize.org). 
-
-[![Clojars Project](https://img.shields.io/clojars/v/org.graphqlize/honeyeql.svg)](https://clojars.org/org.graphqlize/honeyeql) <a href="https://discord.gg/akkdPqf"><img src="https://img.shields.io/badge/chat-discord-brightgreen.svg?logo=discord&style=flat"></a>
+[![Clojars Project](https://img.shields.io/clojars/v/com.github.tamizhvendan/honeyeql.svg)](https://clojars.org/com.github.tamizhvendan/honeyeql)
 
 > CAUTION: HoneyEQL is at its early stages now. **It is not production-ready yet!**. It currently supports Postgres (9.4 & above) and MySQL (8.0 & above) only.
 
@@ -67,7 +65,7 @@ HoneyEQL transforms the EQL into single efficient SQL and query the database usi
 
 ## Documentation
 
-[![cljdoc badge](https://cljdoc.org/badge/org.graphqlize/honeyeql)](https://cljdoc.org/d/org.graphqlize/honeyeql/CURRENT)
+[![cljdoc badge](https://cljdoc.org/badge/com.github.tamizhvendan/honeyeql)](https://cljdoc.org/d/com.github.tamizhvendan/honeyeql/CURRENT)
 
 ## Acknowledgements
 
