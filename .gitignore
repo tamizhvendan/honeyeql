@@ -11,7 +11,8 @@ pom.xml.asc
 .lein-failures
 .nrepl-port
 .cpcache/
-.clj-kondo/.cache
+.clj-kondo
+!.clj-kondo/config.edn
 .settings
 .classpath
 .project
