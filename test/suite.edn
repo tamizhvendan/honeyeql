@@ -1,0 +1,691 @@
+{:sakila     {:ds-opts    [{:adapter           "postgresql"
+                            :database-name     "sakila"
+                            :server-name       "localhost"
+                            :port-number       5433
+                            :maximum-pool-size 1
+                            :db-product-name   "PostgreSQL"
+                            :username          "postgres"
+                            :password          "postgres"}
+                           {:server-name       "localhost"
+                            :maximum-pool-size 1
+                            :db-product-name   "MySQL"
+                            :jdbc-url          "jdbc:mysql://localhost:3307/sakila"
+                            :driver-class-name "com.mysql.cj.jdbc.MysqlDataSource"
+                            :username          "root"
+                            :password          "mysql123"}]
+              :assertions [{:name "query by primary key"
+                            :eql  {:query-single [{[:actor/actor-id 1] [:actor/first-name
+                                                                        :actor/last-name]}]
+                                   :expected     #:actor{:first-name "PENELOPE"
+                                                         :last-name  "GUINESS"}}}
+                           {:name "query by multiple primary keys"
+                            :eql  {:query-single [{[:film-actor/actor-id 1 :film-actor/film-id 1] [:film-actor/last-update]}]
+                                   :expected     ["PostgreSQL" #:film-actor{:last-update #local-date-time "2006-02-15T05:05:03"}
+                                                  "MySQL" #:film-actor{:last-update #mysql-timestamp "2006-02-14 23:35:03.000000"}]}}
+                       ; TODO: add schema based query by primary key
+                           {:name "query one-to-one relationship"
+                            :eql  {:query-single [{[:city/city-id 3] [:city/city
+                                                                      {:city/country [:country/country]}]}]
+                                   :expected     #:city{:city    "Abu Dhabi"
+                                                        :country #:country{:country "United Arab Emirates"}}}}
+                           {:name "query multiple one-to-one relationships"
+                            :eql  {:query-single [{[:film-actor/actor-id 1 :film-actor/film-id 1] [{:film-actor/film [:film/title]}
+                                                                                                   {:film-actor/actor [:actor/first-name]}]}]
+                                   :expected     #:film-actor{:film  #:film{:title "ACADEMY DINOSAUR"}
+                                                              :actor #:actor{:first-name "PENELOPE"}}}}
+                           {:name "query nested one-to-one relationship"
+                            :eql  {:query-single [{[:address/address-id 1] [:address/address
+                                                                            {:address/city [:city/city
+                                                                                            {:city/country [:country/country]}]}]}]
+                                   :expected     #:address{:address "47 MySakila Drive"
+                                                           :city    #:city{:city    "Lethbridge"
+                                                                           :country #:country{:country "Canada"}}}}}
+                           {:name "query one-to-many relationship"
+                            :eql  {:query-single [{[:country/country-id 2] [:country/country {:country/cities [:city/city]}]}]
+                                   :expected     #:country{:country "Algeria"
+                                                           :cities  [#:city{:city "Batna"} #:city{:city "Bchar"} #:city{:city "Skikda"}]}}}
+                           {:name "query one-to-many inside one-to-one"
+                            :eql  {:query-single [{[:city/city-id 59] [:city/city {:city/country [:country/country {:country/cities [:city/city]}]}]}]
+                                   :expected     #:city{:city    "Batna"
+                                                        :country #:country{:country "Algeria"
+                                                                           :cities  [#:city{:city "Batna"} #:city{:city "Bchar"} #:city{:city "Skikda"}]}}}}
+                           {:name "query one-to-one inside one-to-many"
+                            :eql  {:query-single [{[:rental/rental-id 291] [{:rental/payments [:payment/payment-id :payment/amount {:payment/customer [:customer/first-name]}]}]}]
+                                   :expected     #:rental{:payments [#:payment{:payment-id 15457
+                                                                               :amount     5.99M
+                                                                               :customer   #:customer{:first-name "CLIFTON"}}
+                                                                     #:payment{:payment-id 15458
+                                                                               :amount     0.99M
+                                                                               :customer   #:customer{:first-name "CLIFTON"}}]}}}
+                           {:name "query nested one-to-many"
+                            :eql  {:query-single [{[:customer/customer-id 318] [:customer/first-name {:customer/rentals [{:rental/payments [:payment/amount]}]}]}]
+                                   :expected     #:customer{:first-name "BRIAN"
+                                                            :rentals    [#:rental{:payments [#:payment{:amount 9.99M}]}
+                                                                         #:rental{:payments [#:payment{:amount 2.99M}]}
+                                                                         #:rental{:payments [#:payment{:amount 2.99M}]}
+                                                                         #:rental{:payments [#:payment{:amount 0.99M}]}
+                                                                         #:rental{:payments [#:payment{:amount 7.99M}]}
+                                                                         #:rental{:payments [#:payment{:amount 4.99M}]}
+                                                                         #:rental{:payments [#:payment{:amount 2.99M}]}
+                                                                         #:rental{:payments [#:payment{:amount 8.99M}]}
+                                                                         #:rental{:payments [#:payment{:amount 0.99M}]}
+                                                                         #:rental{:payments [#:payment{:amount 0.99M}]}
+                                                                         #:rental{:payments [#:payment{:amount 5.99M}]}
+                                                                         #:rental{:payments [#:payment{:amount 2.99M}]}]}}}
+                           {:name "query many-to-many relationship"
+                            :eql  {:query-single [{[:actor/actor-id 148] [:actor/first-name {:actor/films [:film/title]}]}]
+                                   :expected     #:actor{:first-name "EMILY"
+                                                         :films      [#:film{:title "ANONYMOUS HUMAN"}
+                                                                      #:film{:title "BASIC EASY"}
+                                                                      #:film{:title "CHAMBER ITALIAN"}
+                                                                      #:film{:title "CHRISTMAS MOONSHINE"}
+                                                                      #:film{:title "DESTINY SATURDAY"}
+                                                                      #:film{:title "FUGITIVE MAGUIRE"}
+                                                                      #:film{:title "GONE TROUBLE"}
+                                                                      #:film{:title "HOLLOW JEOPARDY"}
+                                                                      #:film{:title "INVASION CYCLONE"}
+                                                                      #:film{:title "OCTOBER SUBMARINE"}
+                                                                      #:film{:title "REBEL AIRPORT"}
+                                                                      #:film{:title "SCARFACE BANG"}
+                                                                      #:film{:title "SEA VIRGIN"}
+                                                                      #:film{:title "SHREK LICENSE"}]}}}
+                           {:name "nested many-to-many joins"
+                            :eql  {:query-single [{[:film/film-id 308] [:film/title {:film/actors [:actor/first-name {:actor/films [:film/title]}]}]}]
+                                   :expected     #:film{:title  "FERRIS MOTHER"
+                                                        :actors [#:actor{:first-name "SISSY"
+                                                                         :films      [#:film{:title "BORN SPINAL"}
+                                                                                      #:film{:title "CHITTY LOCK"}
+                                                                                      #:film{:title "CLYDE THEORY"}
+                                                                                      #:film{:title "COAST RAINBOW"}
+                                                                                      #:film{:title "CRAZY HOME"}
+                                                                                      #:film{:title "FACTORY DRAGON"}
+                                                                                      #:film{:title "FERRIS MOTHER"}
+                                                                                      #:film{:title "GONE TROUBLE"}
+                                                                                      #:film{:title "GREEK EVERYONE"}
+                                                                                      #:film{:title "HOOSIERS BIRDCAGE"}
+                                                                                      #:film{:title "MOB DUFFEL"}
+                                                                                      #:film{:title "OPEN AFRICAN"}
+                                                                                      #:film{:title "PRIX UNDEFEATED"}
+                                                                                      #:film{:title "ROCKY WAR"}
+                                                                                      #:film{:title "SHRUNK DIVINE"}
+                                                                                      #:film{:title "SKY MIRACLE"}
+                                                                                      #:film{:title "TELEMARK HEARTBREAKERS"}
+                                                                                      #:film{:title "WISDOM WORKER"}]}]}}}
+                           {:name "one-to-many inside many-to-many"
+                            :eql  {:query-single [{[:film/film-id 308] [:film/title {:film/actors [:actor/first-name {:actor/film-actors [:film-actor/film-id]}]}]}]
+                                   :expected     #:film{:title  "FERRIS MOTHER"
+                                                        :actors [#:actor{:first-name  "SISSY"
+                                                                         :film-actors [#:film-actor{:film-id 88}
+                                                                                       #:film-actor{:film-id 146}
+                                                                                       #:film-actor{:film-id 163}
+                                                                                       #:film-actor{:film-id 164}
+                                                                                       #:film-actor{:film-id 188}
+                                                                                       #:film-actor{:film-id 299}
+                                                                                       #:film-actor{:film-id 308}
+                                                                                       #:film-actor{:film-id 368}
+                                                                                       #:film-actor{:film-id 380}
+                                                                                       #:film-actor{:film-id 431}
+                                                                                       #:film-actor{:film-id 585}
+                                                                                       #:film-actor{:film-id 637}
+                                                                                       #:film-actor{:film-id 700}
+                                                                                       #:film-actor{:film-id 739}
+                                                                                       #:film-actor{:film-id 793}
+                                                                                       #:film-actor{:film-id 802}
+                                                                                       #:film-actor{:film-id 880}
+                                                                                       #:film-actor{:film-id 978}]}]}}}
+                           {:name "collection query"
+                            :eql  {:query    [{[] [:language/name]}]
+                                   :expected (#:language{:name "English"}
+                                              #:language{:name "Italian"}
+                                              #:language{:name "Japanese"}
+                                              #:language{:name "Mandarin"}
+                                              #:language{:name "French"}
+                                              #:language{:name "German"})}}
+                           {:name "supporing one-to-many relationship with multiple foreign-keys to same table - Case #1"
+                            :eql {:query-single {[:language/language-id 2]
+                                                 [:language/name
+                                                  {:language/films [:film/title]}]}
+                                  :expected #:language{:name "Italian", :films [#:film{:title "BROOKLYN DESERT"} #:film{:title "CURTAIN VIDEOTAPE"}]}}}
+                           {:name "supporing one-to-many relationship with multiple foreign-keys to same table - Case #2"
+                            :eql  {:query-single [{[:language/language-id 1] [:language/name {:language/original-language-films [:film/title]}]}]
+                                   :expected     ["PostgreSQL" #:language{:name                    "English"
+                                                                          :original-language-films [#:film{:title "BROOKLYN DESERT"}
+                                                                                                    #:film{:title "CURTAIN VIDEOTAPE"}]}
+                                                  "MySQL" #:language{:name                    "English"
+                                                                     :original-language-films [#:film{:title "BROOKLYN DESERT"}
+                                                                                               #:film{:title "CURTAIN VIDEOTAPE"}]}]}}
+                           {:name "limit & offset on collection query"
+                            :eql  {:query    [{([] {:limit  2
+                                                    :offset 2}) [:actor/actor-id :actor/first-name]}]
+                                   :expected (#:actor{:actor-id   3
+                                                      :first-name "ED"}
+                                              #:actor{:actor-id   4
+                                                      :first-name "JENNIFER"})}}
+                           {:name "limit & offset on query by primary key"
+                            :eql  {:query    [{([:actor/actor-id 1] {:limit  1
+                                                                     :offset 1}) [:actor/actor-id :actor/first-name]}]
+                                   :expected ()}}
+                           {:name "limit & offset on many-to-many relationships"
+                            :eql  {:query    [{[:actor/actor-id 148] [:actor/first-name
+                                                                      {(:actor/films {:limit  1
+                                                                                      :offset 2}) [:film/title]}]}]
+                                   :expected (#:actor{:first-name "EMILY"
+                                                      :films      [#:film{:title "CHAMBER ITALIAN"}]})}}
+                           {:name "limit & offset on one-to-many relationships"
+                            :eql  {:query-single [{[:country/country-id 2] [:country/country
+                                                                            {(:country/cities {:limit  2
+                                                                                               :offset 1}) [:city/city]}]}]
+                                   :expected     #:country{:country "Algeria"
+                                                           :cities  [#:city{:city "Bchar"}
+                                                                     #:city{:city "Skikda"}]}}}
+                           {:name "order by one column"
+                            :eql  {:query    [{([]
+                                                {:order-by [:language/name]}) [:language/name]}]
+                                   :expected (#:language{:name "English"}
+                                              #:language{:name "French"}
+                                              #:language{:name "German"}
+                                              #:language{:name "Italian"}
+                                              #:language{:name "Japanese"}
+                                              #:language{:name "Mandarin"})}}
+                           {:name "order by one column desc"
+                            :eql  {:query    [{([]
+                                                {:order-by [[:language/name :desc]]}) [:language/name]}]
+                                   :expected (#:language{:name "Mandarin"}
+                                              #:language{:name "Japanese"}
+                                              #:language{:name "Italian"}
+                                              #:language{:name "German"}
+                                              #:language{:name "French"}
+                                              #:language{:name "English"})}}
+                           {:name "order by one column asc & another column desc"
+                            :eql  {:query    [{([]
+                                                {:order-by [:actor/first-name [:actor/last-name :desc]]
+                                                 :limit    2}) [:actor/first-name :actor/last-name]}]
+                                   :expected (#:actor{:last-name  "HOPPER"
+                                                      :first-name "ADAM"}
+                                              #:actor{:last-name  "GRANT"
+                                                      :first-name "ADAM"})}}
+                           {:name "order by nested one-to-one releationship"
+                            :eql {:query [{[[] {:where [:in [:city/country :country/country] ["Algeria" "Afghanistan"]]
+                                                :order-by [[:city/country :country/country]]}]
+                                           [:city/city-id :city/city
+                                            {:city/country [:country/country]}]}]
+                                  :ignore   #{"MySQL"}
+                                  :expected (#:city{:city-id 251, :city "Kabul", :country #:country{:country "Afghanistan"}}
+                                             #:city{:city-id 59, :city "Batna", :country #:country{:country "Algeria"}}
+                                             #:city{:city-id 63, :city "Bchar", :country #:country{:country "Algeria"}}
+                                             #:city{:city-id 483, :city "Skikda", :country #:country{:country "Algeria"}})}}
+                           {:name "order by nested one-to-one releationship desc"
+                            :eql {:query [{[[] {:where [:in [:city/country :country/country] ["Algeria" "Afghanistan"]]
+                                                :order-by [[[:city/country :country/country] :desc]]}]
+                                           [:city/city-id :city/city
+                                            {:city/country [:country/country]}]}]
+                                  :ignore   #{"MySQL"}
+                                  :expected (#:city{:city-id 59, :city "Batna", :country #:country{:country "Algeria"}}
+                                             #:city{:city-id 63, :city "Bchar", :country #:country{:country "Algeria"}}
+                                             #:city{:city-id 483, :city "Skikda", :country #:country{:country "Algeria"}}
+                                             #:city{:city-id 251, :city "Kabul", :country #:country{:country "Afghanistan"}})}}
+                           {:name "order by on one-to-many releationships"
+                            :eql  {:query    [{[:country/country-id 2] [:country/country
+                                                                        {(:country/cities {:order-by [[:city/city :desc]]}) [:city/city]}]}]
+                                   :ignore   #{"MySQL"}
+                                   :expected (#:country{:country "Algeria"
+                                                        :cities  [#:city{:city "Skikda"}
+                                                                  #:city{:city "Bchar"}
+                                                                  #:city{:city "Batna"}]})}}
+                           {:name "order by on many-to-many reletionships"
+                            :eql  {:query    [{[:actor/actor-id 148] [:actor/first-name
+                                                                      {(:actor/films {:order-by [[:film/title :desc]]
+                                                                                      :limit    2}) [:film/title]}]}]
+                                   :ignore   #{"MySQL"}
+                                   :expected (#:actor{:first-name "EMILY"
+                                                      :films      [#:film{:title "SHREK LICENSE"} #:film{:title "SEA VIRGIN"}]})}}
+                           {:name "where filter with `=` on integer"
+                            :eql  {:query    [{([] {:where [:= :city/city-id 3]}) [:city/city]}]
+                                   :expected (#:city{:city "Abu Dhabi"})}}
+                           {:name "where filter with `=` on database function"
+                            :eql {:query-single [{[[] {:where [:= :actor/actor-id [:abs :actor/actor-id]]
+                                                       :limit 1}]
+                                                  [:actor/first-name]}]
+                                  :expected #:actor{:first-name "PENELOPE"}}}
+                           {:name "where filter with `<>` on string"
+                            :eql  {:query    [{([] {:where [:<> :language/name "English"]}) [:language/name]}]
+                                   :expected (#:language{:name "Italian"}
+                                              #:language{:name "Japanese"}
+                                              #:language{:name "Mandarin"}
+                                              #:language{:name "French"}
+                                              #:language{:name "German"})}}
+                           {:name "where filter with `>` on decimal"
+                            :eql  {:query    [{([] {:where [:> :payment/amount 11.99M]}) [:payment/rental-id]}]
+                                   :expected ()}}
+                           {:name "where filter with `>= on decimal"
+                            :eql  {:query    [{([] {:where [:>= :payment/amount 11.99M]}) [:payment/rental-id]}]
+                                   :expected (#:payment{:rental-id 8831} #:payment{:rental-id 14763}
+                                                                         #:payment{:rental-id 16040} #:payment{:rental-id 106}
+                                                                         #:payment{:rental-id 15415} #:payment{:rental-id 11479}
+                                                                         #:payment{:rental-id 2166} #:payment{:rental-id 14759}
+                                                                         #:payment{:rental-id 4383} #:payment{:rental-id 3973})}}
+                           {:name "where filter with `between` two timestamps"
+                            :eql  {:query    [{([] {:where [:between :payment/payment-date "2005-08-23T21:00:00" "2005-08-23T21:03:00"]}) [:payment/rental-id]}]
+                                   :expected (#:payment{:rental-id 16007} #:payment{:rental-id 16005} #:payment{:rental-id 16006})}}
+                           {:name "where filter with bool false in MySQL"
+                            :eql  {:query    [{([] {:where [:= :customer/active false]
+                                                    :limit 2}) [:customer/first-name]}]
+                                   :ignore   #{"PostgreSQL"}
+                                   :expected (#:customer{:first-name "SANDRA"}
+                                              #:customer{:first-name "JUDITH"})}}
+                           {:name "where filter with bool false in Postgres"
+                            :eql  {:query    [{([] {:where [:= :customer/activebool false]}) [:customer/first-name]}]
+                                   :ignore   #{"MySQL"}
+                                   :expected ()}}
+                           {:name "where filter in one-to-many relationship"
+                            :eql  {:query    [{[:country/country-id 2] [:country/country
+                                                                        {(:country/cities {:where [:= :city/city "Batna"]
+                                                                                           :limit 1}) [:city/city-id
+                                                                                                       :city/city]}]}]
+                                   :expected (#:country{:country "Algeria"
+                                                        :cities  [#:city{:city-id 59
+                                                                         :city    "Batna"}]})}}
+                           {:name "where filter in many-to-many relationship"
+                            :eql  {:query    [{[:actor/actor-id 148] [:actor/first-name
+                                                                      {(:actor/films {:where [:= :film/title "SEA VIRGIN"]}) [:film/title]}]}]
+                                   :expected (#:actor{:first-name "EMILY"
+                                                      :films      [#:film{:title "SEA VIRGIN"}]})}}
+                           {:name "postgres - where filter in one-to-many relationship using not-in & timestamp coercion"
+                            :eql  {:query    [{[:customer/customer-id 1] [:customer/first-name
+                                                                          {(:customer/rentals {:where [:not-in :rental/last-update ["2006-02-15T21:30:53" "2006-02-23T04:12:08"]]}) [:rental/last-update]}]}]
+                                   :ignore       #{"MySQL"}
+                                   :expected (#:customer{:first-name "MARY"
+                                                         :rentals    []})}}
+                           {:name "mysql - where filter in one-to-many relationship using not-in & timestamp coercion"
+                            :eql  {:query    [{[:customer/customer-id 1] [:customer/first-name
+                                                                          {(:customer/rentals {:where [:not-in :rental/last-update ["2006-02-15T16:00:53" "2006-02-22T22:42:08"]]}) [:rental/last-update]}]}]
+                                   :ignore   #{"PostgreSQL"}
+                                   :expected (#:customer{:first-name "MARY"
+                                                         :rentals    []})}}
+                           {:name "where filter with like"
+                            :eql  {:query    [{[:country/country-id 2] [:country/country
+                                                                        {(:country/cities {:where [:like :city/city "B%"]}) [:city/city-id
+                                                                                                                             :city/city]}]}]
+                                   :expected (#:country{:cities  [#:city{:city-id 59
+                                                                         :city    "Batna"}
+                                                                  #:city{:city-id 63
+                                                                         :city    "Bchar"}]
+                                                        :country "Algeria"})}}
+                           {:name "where filter with not-like"
+                            :eql  {:query    [{[:country/country-id 2] [:country/country
+                                                                        {(:country/cities {:where [:not-like :city/city "B%"]}) [:city/city-id
+                                                                                                                                 :city/city]}]}]
+                                   :expected (#:country{:cities  [#:city{:city-id 483
+                                                                         :city    "Skikda"}]
+                                                        :country "Algeria"})}}
+                           {:name "replace nil with empty vector if one-to-many yield no results"
+                            :eql  {:query    [{[:country/country-id 2] [:country/country
+                                                                        {(:country/cities {:where [:= :city/city "Bata"]
+                                                                                           :limit 1}) [:city/city-id
+                                                                                                       :city/city]}]}]
+                                   :expected (#:country{:cities  []
+                                                        :country "Algeria"})}}
+                           {:name "where predicate with and"
+                            :eql  {:query    [{([] {:where [:and [:= :payment/customer-id 1] [:> :payment/amount 5.99M]]}) [:payment/payment-id :payment/amount]}]
+                                   :expected (#:payment{:payment-id 5
+                                                        :amount     9.99M}
+                                              #:payment{:payment-id 14
+                                                        :amount     7.99M})}}
+                           {:name "where predicate with or"
+                            :eql  {:query    [{([] {:where (:or [:= :language/name "English"] [:= :language/name "French"])}) [:language/language-id :language/name]}]
+                                   :expected (#:language{:language-id 1
+                                                         :name        "English"}
+                                              #:language{:language-id 5
+                                                         :name        "French"})}}
+                           {:name "where predicate with not"
+                            :eql  {:query    [{([] {:where (:not (:or
+                                                                  [:= :language/name "English"]
+                                                                  [:= :language/name "French"]))}) [:language/language-id :language/name]}]
+                                   :expected (#:language{:language-id 2
+                                                         :name        "Italian"}
+                                              #:language{:language-id 3
+                                                         :name        "Japanese"}
+                                              #:language{:language-id 4
+                                                         :name        "Mandarin"}
+                                              #:language{:language-id 6
+                                                         :name        "German"})}}
+                           {:name "nested one-to-one object predicate"
+                            :eql  {:query    [{([] {:where [:= [:city/country :country/country] "Algeria"]}) [:city/city-id :city/city]}]
+                                   :expected (#:city{:city-id 59
+                                                     :city    "Batna"}
+                                              #:city{:city-id 63
+                                                     :city    "Bchar"}
+                                              #:city{:city-id 483
+                                                     :city    "Skikda"})}}
+                           {:name "nested one-to-many objects predicate"
+                            :eql  {:query    [{([] {:where [:like [:country/cities :city/city] "Ab%"]}) [:country/country-id
+                                                                                                         :country/country]}]
+                                   :expected (#:country{:country-id 82
+                                                        :country    "Saudi Arabia"}
+                                              #:country{:country-id 101
+                                                        :country    "United Arab Emirates"})}}
+                           {:name "ilike"
+                            :eql  {:query-single    [{[[] {:where [:ilike :actor/first-name "nick"]}]
+                                                      [:actor/first-name
+                                                       :actor/last-name]}]
+                                   :ignore       #{"MySQL"}
+                                   :expected #:actor{:first-name "NICK", :last-name "WAHLBERG"}}}
+                           {:name "query plain column alias"
+                            :eql {:query-single [{[:actor/actor-id 1]
+                                                  [[:actor/first-name :as :actor/fname]]}]
+                                  :expected #:actor{:fname "PENELOPE"}}}
+                           {:name "query one-to-one join column alias"
+                            :eql {:query-single [{[:city/city-id 3]
+                                                  [[:city/city :as :city/name]
+                                                   {[:city/country :as :city/nation]
+                                                    [[:country/country :as :nation/name]]}]}]
+                                  :expected #:city{:name "Abu Dhabi", :nation #:nation{:name "United Arab Emirates"}}}}
+                           {:name "query one-to-many join column alias"
+                            :eql  {:query-single [{[:country/country-id 2] [:country/country {[:country/cities :as :country/greater-cities] [:city/city]}]}]
+                                   :expected     #:country{:country "Algeria"
+                                                           :greater-cities  [#:city{:city "Batna"} #:city{:city "Bchar"} #:city{:city "Skikda"}]}}}
+                           {:name "query many-to-many join column alias"
+                            :eql  {:query-single [{[:actor/actor-id 148] [:actor/first-name {[:actor/films :as :actor/movies] [:film/title]}]}]
+                                   :expected     #:actor{:first-name "EMILY"
+                                                         :movies      [#:film{:title "ANONYMOUS HUMAN"}
+                                                                       #:film{:title "BASIC EASY"}
+                                                                       #:film{:title "CHAMBER ITALIAN"}
+                                                                       #:film{:title "CHRISTMAS MOONSHINE"}
+                                                                       #:film{:title "DESTINY SATURDAY"}
+                                                                       #:film{:title "FUGITIVE MAGUIRE"}
+                                                                       #:film{:title "GONE TROUBLE"}
+                                                                       #:film{:title "HOLLOW JEOPARDY"}
+                                                                       #:film{:title "INVASION CYCLONE"}
+                                                                       #:film{:title "OCTOBER SUBMARINE"}
+                                                                       #:film{:title "REBEL AIRPORT"}
+                                                                       #:film{:title "SCARFACE BANG"}
+                                                                       #:film{:title "SEA VIRGIN"}
+                                                                       #:film{:title "SHREK LICENSE"}]}}}
+                           {:name "alias on aggregate function attribute"
+                            :eql {:query-single [{[] [[[:count :actor/actor-id] :as :actor/count]]}]
+                                  :expected #:actor{:count 200}}}
+                           {:name "mysql-cast"
+                            :eql {:query-single [{[:actor/actor-id 1]
+                                                  [[:cast :actor/actor-id :char]]}]
+                                  :ignore   #{"PostgreSQL"}
+                                  :expected #:actor{:cast-of-actor-id "1"}}}
+                           {:name "mysql-cast with alias"
+                            :eql {:query-single [{[:actor/actor-id 1]
+                                                  [[[:cast :actor/actor-id :char] :as :actor/id-as-string]]}]
+                                  :ignore   #{"PostgreSQL"}
+                                  :expected #:actor{:id-as-string "1"}}}
+                           {:name "postgres-cast"
+                            :eql {:query-single [{[:actor/actor-id 1]
+                                                  [[:cast :actor/actor-id :text]]}]
+                                  :ignore   #{"MySQL"}
+                                  :expected #:actor{:cast-of-actor-id "1"}}}
+                           {:name "postgres-cast with alias"
+                            :eql {:query-single [{[:actor/actor-id 1]
+                                                  [[[:cast :actor/actor-id :text] :as :actor/id-as-string]]}]
+                                  :ignore   #{"MySQL"}
+                                  :expected #:actor{:id-as-string "1"}}}]}
+
+ :honeyeql {:ds-opts      [{:adapter           "postgresql"
+                            :database-name     "honeyeql"
+                            :server-name       "localhost"
+                            :port-number       5434
+                            :maximum-pool-size 1
+                            :db-product-name   "PostgreSQL"
+                            :username          "postgres"
+                            :password          "postgres"}
+                           {:server-name       "localhost"
+                            :maximum-pool-size 1
+                            :db-product-name   "MySQL"
+                            :jdbc-url          "jdbc:mysql://localhost:3308/honeyeql"
+                            :driver-class-name "com.mysql.cj.jdbc.MysqlDataSource"
+                            :username          "root"
+                            :password          "mysql123"}]
+              :assertions [{:name "query nested self-join (one-to-one) relationship"
+                            :eql  {:query-single [{[:employee/id 7] [:employee/first-name
+                                                                     {:employee/employee-reports-to [:employee/first-name
+                                                                                                     {:employee/employee-reports-to [:employee/first-name]}]}]}]
+                                   :expected     #:employee{:first-name          "Robert"
+                                                            :employee-reports-to #:employee{:first-name          "Michael"
+                                                                                            :employee-reports-to #:employee{:first-name "Andrew"}}}}}
+                           {:name "uuid scalar type"
+                            :eql  {:query-single [{[:customer/id "847f09a7-39d1-4021-b43d-18ceb7ada8f6"] [:customer/first-name :customer/id]}]
+                                   :ignore       #{"MySQL"}
+                                   :expected     #:customer{:first-name "John"
+                                                            :id         #uuid "847f09a7-39d1-4021-b43d-18ceb7ada8f6"}}}
+                           {:name "postgres datetime scalar value"
+                            :eql  {:query-single [{[:scalar/id 1] [:scalar/timestamp-c :scalar/timestamp-with-fraction :scalar/timestamp-without-timezone-c]}]
+                                   :ignore       #{"MySQL"}
+                                   :expected     #:scalar{:timestamp-c                  #local-date-time "2004-10-19T10:23:54"
+                                                          :timestamp-with-fraction      #local-date-time "2004-10-19T10:23:54.222"
+                                                          :timestamp-without-timezone-c #local-date-time "2004-10-19T10:23:54"}}}
+                           {:name "postgres datetime with timezone scalar value"
+                            :eql  {:query-single [{[:scalar/id 1] [:scalar/timestamptz-c :scalar/timestamptz-with-fraction :scalar/timestamp-with-timezone-c]}]
+                                   :ignore       #{"MySQL"}
+                                   :expected     #:scalar{:timestamptz-c             #offset-date-time "2017-08-19T17:52:11+05:30"
+                                                          :timestamptz-with-fraction #offset-date-time "2017-08-19T17:52:11.222+05:30"
+                                                          :timestamp-with-timezone-c #offset-date-time "2017-08-19T17:52:11+05:30"}}}
+                           {:name "mysql datetime scalar value"
+                            :eql  {:query-single [{[:scalar/id 1] [:scalar/datetime-c :scalar/datetime-with-fraction]}]
+                                   :ignore       #{"PostgreSQL"}
+                                   :expected     #:scalar{:datetime-c             #local-date-time "2004-10-19T10:23:54"
+                                                          :datetime-with-fraction #local-date-time "2004-10-19T10:23:54.456"}}}
+                           {:name "mysql datetime scalar value (timestamp)"
+                            :eql  {:query-single [{[:scalar/id 1] [:scalar/timestamp-c :scalar/timestamp-with-fraction]}]
+                                   :ignore       #{"PostgreSQL"}
+                                   :expected     #:scalar{:timestamp-c             #local-date-time "2020-01-01T05:40:10"
+                                                          :timestamp-with-fraction #local-date-time "2020-01-01T05:40:10.456"}}}
+                           {:name "postgres,mysql decimal scalar value"
+                            :eql  {:query-single [{[:scalar/id 1] [:scalar/decimal-c :scalar/numeric-c]}]
+                                   :expected     #:scalar{:decimal-c 5234.5678M
+                                                          :numeric-c 5234.678908M}}}
+                           {:name "postgres long column types"
+                            :eql  {:query-single [{[:scalar/id 1] [:scalar/bigint-c :scalar/bigserial-c :scalar/int8-c :scalar/serial8-c]}]
+                                   :ignore       #{"MySQL"}
+                                   :expected     #:scalar{:bigint-c    9223372036854775807
+                                                          :bigserial-c 7223372036854775807
+                                                          :int8-c      8223372036854775807
+                                                          :serial8-c   6223372036854775807}}}
+                           {:name "mysql long column types"
+                            :eql  {:query-single [{[:scalar/id 1] [:scalar/int-unsigned :scalar/bigint-c]}]
+                                   :ignore       #{"PostgreSQL"}
+                                   :expected     #:scalar{:int-unsigned 854775807
+                                                          :bigint-c     9223372036854775807}}}
+                           {:name "mysql bigint column types"
+                            :eql  {:query-single [{[:scalar/id 1] [:scalar/bigint-unsigned]}]
+                                   :ignore       #{"PostgreSQL"}
+                                   :expected     #:scalar{:bigint-unsigned 9223372036854775807}}}
+                           {:name "postgres,mysql date scalar value"
+                            :eql  {:query-single [{[:scalar/id 1] [:scalar/date-c]}]
+                                   :expected     #:scalar{:date-c #local-date "1988-11-05"}}}
+                           {:name "postgres,mysql time scalar value"
+                            :eql  {:query-single [{[:scalar/id 1] [:scalar/time-c]}]
+                                   :expected     #:scalar{:time-c #local-time "13:05:54"}}}
+                           {:name "postgres time with timezone scalar value"
+                            :eql  {:query-single [{[:scalar/id 1] [:scalar/time-with-time-zone]}]
+                                   :ignore       #{"MySQL"}
+                                   :expected     #:scalar{:time-with-time-zone #offset-time "13:05:54+05:30"}}}
+                           {:name "mysql boolean column types"
+                            :eql  {:query-single [{[:scalar/id 1] [:scalar/truthy :scalar/falsey
+                                                                   :scalar/bit-truthy :scalar/bit-falsey
+                                                                   :scalar/non-zero-truthy]}]
+                                   :ignore       #{"PostgreSQL"}
+                                   :expected     #:scalar{:falsey          false
+                                                          :truthy          true
+                                                          :bit-falsey      false
+                                                          :bit-truthy      true
+                                                          :non-zero-truthy true}}}
+                           {:name "where filter with `<` on timestamp"
+                            :eql  {:query    [{([] {:where [:< :scalar/time-c "13:05:54"]}) [:scalar/time-c]}]
+                                   :expected ()}}
+                           {:name "where filter with `<=` on timestamp"
+                            :eql  {:query    [{([] {:where [:<= :scalar/time-c "13:05:54"]}) [:scalar/time-c]}]
+                                   :expected (#:scalar{:time-c #local-time "13:05:54"})}}
+                           {:name "where filter with `is null`"
+                            :eql  {:query    [{([] {:where [:= :employee/employee-reports-to-id nil]}) [:employee/first-name :employee/last-name]}]
+                                   :expected (#:employee{:first-name "Andrew"
+                                                         :last-name  "Adams"})}}
+                           {:name "where filter with `is not null`"
+                            :eql  {:query    [{([] {:where [:<> :employee/employee-reports-to-id nil]
+                                                    :limit 1}) [:employee/first-name :employee/last-name]}]
+                                   :expected (#:employee{:last-name  "Edwards"
+                                                         :first-name "Nancy"})}}
+                           {:name "where filter with `in` on uuid column"
+                            :eql  {:query    [{([] {:where [:in :customer/id ["847f09a7-39d1-4021-b43d-18ceb7ada8f6" "e5156dce-58ff-44f5-8533-932a7250bd29"]]}) [:customer/first-name]}]
+                                   :ignore   #{"MySQL"}
+                                   :expected (#:customer{:first-name "John"} #:customer{:first-name "Rahul"})}}
+                           {:name "where filter with `not-in` on uuid column"
+                            :eql  {:query    [{([] {:where [:not-in :customer/id ["847f09a7-39d1-4021-b43d-18ceb7ada8f6" "e5156dce-58ff-44f5-8533-932a7250bd29"]]}) [:customer/first-name]}]
+                                   :ignore   #{"MySQL"}
+                                   :expected ()}}
+                           {:name "ignore null in where"
+                            :eql  {:query    [{([] {:limit 1
+                                                    :where nil}) [:employee/first-name]}]
+                                   :expected (#:employee {:first-name "Andrew"})}}
+                           {:name "nested object predicate many-to-many relationship"
+                            :eql  {:query    [{([] {:where [:= [:author/courses :course/rating] 5]}) [:author/first-name
+                                                                                                      :author/last-name]}]
+                                   :expected (#:author{:first-name "John"
+                                                       :last-name  "Doe"}
+                                              #:author{:first-name "Rahul"
+                                                       :last-name  "Sharma"})}}
+                           {:name "nested object predicate many-to-many satisfy all"
+                            :eql  {:query    [{([] {:where [:and [:not [:<> [:author/courses :course/rating] 5]]
+                                                            [:exists :author/courses]]}) [:author/first-name :author/last-name]}]
+                                   :expected (#:author{:first-name "Rahul"
+                                                       :last-name  "Sharma"})}}
+                           {:name "filter by nested object(s) existence"
+                            :eql  {:query    [{([] {:where [:not [:exists :author/courses]]}) [:author/first-name
+                                                                                               :author/last-name]}]
+                                   :expected (#:author{:first-name "Prakash"
+                                                       :last-name  "Rao"})}}
+                           {:name "using * to select all attributes"
+                            :eql  {:query    [{([]) [:author/*
+                                                     {:author/courses [:course/*]}]}]
+                                   :expected (#:author{:first-name "John"
+                                                       :id         1
+                                                       :last-name  "Doe"
+                                                       :courses    [#:course{:title  "Flutter Fundamentals"
+                                                                             :rating 4
+                                                                             :id     1}
+                                                                    #:course{:title  "Beginning React Native"
+                                                                             :rating 5
+                                                                             :id     2}]}
+                                              #:author{:first-name "Rahul"
+                                                       :id         2
+                                                       :last-name  "Sharma"
+                                                       :courses    [#:course{:title  "Android Basics"
+                                                                             :rating 5
+                                                                             :id     3}
+                                                                    #:course{:title  "Getting Started With Kotlin"
+                                                                             :rating 5
+                                                                             :id     4}]}
+                                              #:author{:first-name "Prakash"
+                                                       :id         3
+                                                       :last-name  "Rao"
+                                                       :courses    []})}}
+                           {:name "simpler eql syntax"
+                            :eql  {:query    {[] [:author/first-name]}
+                                   :expected (#:author{:first-name "John"}
+                                              #:author{:first-name "Rahul"}
+                                              #:author{:first-name "Prakash"})}}
+                           {:name "one-to-one relationship without the id suffix"
+                            :eql  {:query    [{[] [:country/name {:country/continent-by-continent-identifier [:continent/name]}]}]
+                                   :expected (#:country{:name                              "India"
+                                                        :continent-by-continent-identifier #:continent{:name "Asia"}})}}
+                           {:name "one-to-many relationship without the id suffix"
+                            :eql  {:query    [{[] [:continent/name {:continent/continent-identifier-countries [:country/name]}]}]
+                                   :expected (#:continent{:name                           "Asia"
+                                                          :continent-identifier-countries [#:country{:name "India"}]})}}
+                           {:name "query using eql.mode/lenient mode"
+                            :eql  {:query    [{[[] {:where [:= [:author/courses :course/rating] 5]}] [{[:author/courses {:where [:= :course/rating 5]}] [:course/title :course/rating]}
+                                                                                                      :author/first-name]}]
+                                   :expected (#:author{:courses    [#:course{:title  "Beginning React Native"
+                                                                             :rating 5}]
+                                                       :first-name "John"}
+                                              #:author{:courses    [#:course{:title  "Android Basics"
+                                                                             :rating 5}
+                                                                    #:course{:title  "Getting Started With Kotlin"
+                                                                             :rating 5}]
+                                                       :first-name "Rahul"})}}
+                           {:name "aggregate functions"
+                            :eql  {:query    [{[] [[:count :course/rating]
+                                                   [:avg :course/rating]
+                                                   [:max :course/rating]
+                                                   [:min :course/rating]
+                                                   [:sum :course/rating]]}]
+                                   :expected (#:course{:count-of-rating 4
+                                                       :avg-of-rating   4.7500000000000000M
+                                                       :max-of-rating   5
+                                                       :min-of-rating   4
+                                                       :sum-of-rating   19})}}
+                           {:name "aggregate functions in relationship"
+                            :eql  {:query    [{[:author/id 1] [:author/id
+                                                               :author/first-name
+                                                               {:author/courses [[:count :course/rating]
+                                                                                 [:avg :course/rating]
+                                                                                 [:max :course/rating]
+                                                                                 [:min :course/rating]
+                                                                                 [:sum :course/rating]]}]}]
+                                   :expected (#:author{:id         1
+                                                       :first-name "John"
+                                                       :courses    [#:course{:count-of-rating 2
+                                                                             :avg-of-rating   4.5000000000000000M
+                                                                             :max-of-rating   5
+                                                                             :min-of-rating   4
+                                                                             :sum-of-rating   9}]})}}
+                           {:name "aggregate functions with group by"
+                            :eql  {:query    [{([] {:group-by [:course/rating]}) [:course/rating
+                                                                                  [:count :course/rating]]}]
+                                   :expected ["MySQL" (#:course{:rating         4
+                                                                :count-of-rating 1}
+                                                       #:course{:rating          5
+                                                                :count-of-rating 3})
+                                              "PostgreSQL" (#:course{:rating          5
+                                                                     :count-of-rating 3}
+                                                            #:course{:rating          4
+                                                                     :count-of-rating 1})]}}
+                           {:name "aggregate function with group by on join attributes"
+                            :eql  {:query    [{[] [:author/first-name
+                                                   :author/last-name
+                                                   {(:author/courses {:group-by [:course/rating]}) [:course/rating
+                                                                                                    [:count :course/rating]]}]}]
+                                   :expected (#:author{:courses    [#:course{:rating          4
+                                                                             :count-of-rating 1}
+                                                                    #:course{:rating          5
+                                                                             :count-of-rating 1}]
+                                                       :last-name  "Doe"
+                                                       :first-name "John"}
+                                              #:author{:courses    [#:course{:rating          5
+                                                                             :count-of-rating 2}]
+                                                       :last-name  "Sharma"
+                                                       :first-name "Rahul"}
+                                              #:author{:courses    []
+                                                       :last-name  "Rao"
+                                                       :first-name "Prakash"})}}
+                           {:name "group-by with one-to-one relationship"
+                            :eql {:query [{([] {:group-by #{:employee/employee-reports-to}}) [[:count :employee/first-name]
+                                                                                              {:employee/employee-reports-to [:employee/id]}]}]
+                                  :expected ["PostgreSQL" (#:employee{:count-of-first-name 2
+                                                                      :employee-reports-to #:employee{:id 1}}
+                                                           #:employee{:count-of-first-name 3
+                                                                      :employee-reports-to #:employee{:id 2}}
+                                                           #:employee{:count-of-first-name 2
+                                                                      :employee-reports-to #:employee{:id 6}}
+                                                           #:employee{:count-of-first-name 1
+                                                                      :employee-reports-to nil})
+                                             "MySQL" (#:employee{:count-of-first-name 2
+                                                                 :employee-reports-to #:employee{:id 1}}
+                                                      #:employee{:count-of-first-name 3
+                                                                 :employee-reports-to #:employee{:id 2}}
+                                                      #:employee{:count-of-first-name 2
+                                                                 :employee-reports-to #:employee{:id 6}})]}}
+                           {:name "one-to-one mapping child-to-parent-query"
+                            :eql  {:query    [{[:site-meta-datum/id 1]
+                                               [:site-meta-datum/*
+                                                {:site-meta-datum/site [:site/*]}]}]
+                                   :expected (#:site-meta-datum{:id 1, :description "test dec", :site #:site{:name "test", :id 1}})}}
+                           {:name "one-to-one mapping parent-to-child-query"
+                            :eql  {:query    [{[:site/id 1]
+                                               [:site/*
+                                                {:site/site-meta-datum [:site-meta-datum/*]}]}]
+                                   :expected (#:site{:name "test", :id 1, :site-meta-datum #:site-meta-datum{:id 1, :description "test dec"}})}}]}}
