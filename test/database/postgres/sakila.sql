@@ -246,7 +246,7 @@ ALTER TABLE public.customer_customer_id_seq OWNER TO postgres;
 
 SET default_tablespace = '';
 
-SET default_table_access_method = heap;
+
 
 --
 -- Name: customer; Type: TABLE; Schema: public; Owner: postgres

@@ -67,6 +67,14 @@ HoneyEQL transforms the EQL into single efficient SQL and query the database usi
 
 [![cljdoc badge](https://cljdoc.org/badge/com.github.tamizhvendan/honeyeql)](https://cljdoc.org/d/com.github.tamizhvendan/honeyeql/CURRENT)
 
+## Running Tests
+
+```bash
+> ./test/database/start.sh # starts four docker containers
+> clj -X:test # run after all the docker container started running
+> ./test/database/stop.sh # stops all the four running docker containers
+```
+
 ## Acknowledgements
 
 [Walkable](https://walkable.gitlab.io/) is the inspiration behind HoneyEQL.

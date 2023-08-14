@@ -164,7 +164,7 @@ CREATE TABLE `customer` (
 
 LOCK TABLES `customer` WRITE;
 /*!40000 ALTER TABLE `customer` DISABLE KEYS */;
-INSERT INTO `customer` VALUES (_binary '„	§9\Ñ@!´=Î·­¨\ö','John','Doe'),(_binary '\åm\ÎXÿD\õ…3“*rP½)','Rahul','Sharma');
+INSERT INTO `customer` VALUES (_binary 'ï¿½	ï¿½9\ï¿½@!ï¿½=Î·ï¿½ï¿½\ï¿½','John','Doe'),(_binary '\ï¿½m\ï¿½Xï¿½D\ï¿½ï¿½3ï¿½*rPï¿½)','Rahul','Sharma');
 /*!40000 ALTER TABLE `customer` ENABLE KEYS */;
 UNLOCK TABLES;
 

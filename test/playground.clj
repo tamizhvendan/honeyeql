@@ -1,13 +1,9 @@
 (ns playground
   (:require [honeyeql.core :as heql]
-            [honeyeql.db :as heql-db]
-            [honey.sql :as hsql]
-            [next.jdbc :as jdbc]
-            [next.jdbc.sql :as sql]
-            [honey.sql.helpers :as hsql-helpers]
-            [next.jdbc.types :as jdbc-types]))
+            [honeyeql.db :as heql-db]))
 
 (def logs (atom {}))
+
 (defn- logger [x]
   (swap! logs merge x))
 

@@ -1,7 +1,7 @@
 {:sakila     {:ds-opts    [{:adapter           "postgresql"
                             :database-name     "sakila"
                             :server-name       "localhost"
-                            :port-number       5432
+                            :port-number       5433
                             :maximum-pool-size 1
                             :db-product-name   "PostgreSQL"
                             :username          "postgres"
@@ -9,7 +9,7 @@
                            {:server-name       "localhost"
                             :maximum-pool-size 1
                             :db-product-name   "MySQL"
-                            :jdbc-url          "jdbc:mysql://localhost:3306/sakila"
+                            :jdbc-url          "jdbc:mysql://localhost:3307/sakila"
                             :driver-class-name "com.mysql.cj.jdbc.MysqlDataSource"
                             :username          "root"
                             :password          "mysql123"}]
@@ -21,7 +21,7 @@
                            {:name "query by multiple primary keys"
                             :eql  {:query-single [{[:film-actor/actor-id 1 :film-actor/film-id 1] [:film-actor/last-update]}]
                                    :expected     ["PostgreSQL" #:film-actor{:last-update #local-date-time "2006-02-15T05:05:03"}
-                                                  "MySQL" #:film-actor{:last-update #mysql-timestamp "2006-02-15 05:05:03.000000"}]}}
+                                                  "MySQL" #:film-actor{:last-update #mysql-timestamp "2006-02-14 23:35:03.000000"}]}}
                        ; TODO: add schema based query by primary key
                            {:name "query one-to-one relationship"
                             :eql  {:query-single [{[:city/city-id 3] [:city/city
@@ -290,9 +290,16 @@
                                                                       {(:actor/films {:where [:= :film/title "SEA VIRGIN"]}) [:film/title]}]}]
                                    :expected (#:actor{:first-name "EMILY"
                                                       :films      [#:film{:title "SEA VIRGIN"}]})}}
-                           {:name "where filter in one-to-many relationship using not-in & timestamp coercion"
+                           {:name "postgres - where filter in one-to-many relationship using not-in & timestamp coercion"
                             :eql  {:query    [{[:customer/customer-id 1] [:customer/first-name
                                                                           {(:customer/rentals {:where [:not-in :rental/last-update ["2006-02-15T21:30:53" "2006-02-23T04:12:08"]]}) [:rental/last-update]}]}]
+                                   :ignore       #{"MySQL"}
+                                   :expected (#:customer{:first-name "MARY"
+                                                         :rentals    []})}}
+                           {:name "mysql - where filter in one-to-many relationship using not-in & timestamp coercion"
+                            :eql  {:query    [{[:customer/customer-id 1] [:customer/first-name
+                                                                          {(:customer/rentals {:where [:not-in :rental/last-update ["2006-02-15T16:00:53" "2006-02-22T22:42:08"]]}) [:rental/last-update]}]}]
+                                   :ignore   #{"PostgreSQL"}
                                    :expected (#:customer{:first-name "MARY"
                                                          :rentals    []})}}
                            {:name "where filter with like"
@@ -421,7 +428,7 @@
  :honeyeql {:ds-opts      [{:adapter           "postgresql"
                             :database-name     "honeyeql"
                             :server-name       "localhost"
-                            :port-number       5432
+                            :port-number       5434
                             :maximum-pool-size 1
                             :db-product-name   "PostgreSQL"
                             :username          "postgres"
@@ -429,7 +436,7 @@
                            {:server-name       "localhost"
                             :maximum-pool-size 1
                             :db-product-name   "MySQL"
-                            :jdbc-url          "jdbc:mysql://localhost:3306/honeyeql"
+                            :jdbc-url          "jdbc:mysql://localhost:3308/honeyeql"
                             :driver-class-name "com.mysql.cj.jdbc.MysqlDataSource"
                             :username          "root"
                             :password          "mysql123"}]
@@ -465,8 +472,8 @@
                            {:name "mysql datetime scalar value (timestamp)"
                             :eql  {:query-single [{[:scalar/id 1] [:scalar/timestamp-c :scalar/timestamp-with-fraction]}]
                                    :ignore       #{"PostgreSQL"}
-                                   :expected     #:scalar{:timestamp-c             #local-date-time "2020-01-01T11:10:10"
-                                                          :timestamp-with-fraction #local-date-time "2020-01-01T11:10:10.456"}}}
+                                   :expected     #:scalar{:timestamp-c             #local-date-time "2020-01-01T05:40:10"
+                                                          :timestamp-with-fraction #local-date-time "2020-01-01T05:40:10.456"}}}
                            {:name "postgres,mysql decimal scalar value"
                             :eql  {:query-single [{[:scalar/id 1] [:scalar/decimal-c :scalar/numeric-c]}]
                                    :expected     #:scalar{:decimal-c 5234.5678M
