@@ -1,0 +1,6 @@
+{:paths ["src"]
+ :deps {org.clojure/clojure    {:mvn/version "1.11.1"}
+        com.mysql/mysql-connector-j {:mvn/version "8.1.0"}
+        org.postgresql/postgresql   {:mvn/version "42.6.0"}
+        djblue/portal {:mvn/version "0.45.1"}
+        com.github.tamizhvendan/honeyeql {:mvn/version "0.1.0-alpha52"}}}
