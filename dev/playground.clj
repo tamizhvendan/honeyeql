@@ -33,7 +33,4 @@
   (def mysql-adapter (heql-db/initialize {:dbtype   "mysql"
                                           :dbname   "honeyeql"
                                           :user     "root"
-                                          :password "mysql123"}))
-  
-
-  )
+                                          :password "mysql123"})))
