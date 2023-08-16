@@ -21,5 +21,4 @@
   
   
   (heql/query pg-adapter {[:country/id 1] [:country/name]})
-  (hm/insert! pg-adapter #:country{:id 2 :name "Nepal" :continent_identifier 1})
-  )
+  (hm/insert! pg-adapter #:country{:id 3 :name "Sri Lanka" :continent_identifier 1}))
