@@ -94,13 +94,23 @@
 (defn- function-attribute-json-v [k [op v arg]]
   (let [op (if (vector? op) (first op) op)]
     (if (= :cast op)
-      (list (format "'%s', CAST(`%s`.`%s` AS %s)" k
+      (list (format "'%s', CAST(`%s`.`%s` AS %s)" 
+                    k
                     (namespace v)
                     (name v)
                     (name arg)))
-      (list (format "'%s', %s(`%s`.`%s`)" k
+      (list (format "'%s', %s(%s`%s`.`%s`)" 
+                    k
                     (name op)
-                    (namespace v) (name v))))))
+                    (if (vector? v)
+                      (str (name (first v)) " ")
+                      "")
+                    (if (vector? v)
+                      (namespace (second v))
+                      (namespace v)) 
+                    (if (vector? v)
+                      (name (second v))
+                      (name v)))))))
 
 (defn- json-kv [[k v]]
   (cond
@@ -125,12 +135,14 @@
         {:keys [_ parent]} alias
         c (keyword (name parent) (name column-name))]
     (if function-attribute-ident
-      (let [[sqlfn _ arg2] (if (dsl/alias-attribute-ident? key)
+      (let [[sqlfn arg1 arg2] (if (dsl/alias-attribute-ident? key)
                              (first key)
                              key)]
         (if arg2
-          [sqlfn c arg2]
-          [sqlfn c]))
+          (hsql/call sqlfn c arg2)
+          (if (vector? arg1)
+            (hsql/call sqlfn (hsql/call (first arg1) c))
+            (hsql/call sqlfn c))))
       c)))
 
 (defn- mysql-select-clause [db-adapter heql-meta-data eql-nodes]

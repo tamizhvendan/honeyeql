@@ -273,11 +273,12 @@
 
 (defn- json-key-fn [attribute-return-as aggregate-attr-convention key]
   (let [default-key (keyword key)]
-
     (if (= :naming-convention/qualified-kebab-case attribute-return-as)
       (if (= :aggregate-attr-naming-convention/vector aggregate-attr-convention)
         (if-let [[_ aggr-fun attr-name] (first (re-seq #"(.*)-of-(.*)" (name default-key)))]
-          [(keyword aggr-fun) (keyword (namespace default-key) attr-name)]
+          (if-let [[_ inner-aggr-fun outer-aggr-fun] (first (re-seq #"(.*)-(.*)" aggr-fun))]
+           [(keyword outer-aggr-fun) [(keyword inner-aggr-fun)(keyword (namespace default-key) attr-name)]] 
+           [(keyword aggr-fun) (keyword (namespace default-key) attr-name)])
           default-key)
         default-key)
       [default-key (dsl/column-alias attribute-return-as default-key)])))

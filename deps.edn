@@ -5,7 +5,9 @@
          edn-query-language/eql {:mvn/version "2021.07.18"}
          com.github.seancorfield/honeysql {:mvn/version "2.4.1045"}
          org.clojure/data.json  {:mvn/version "2.4.0"}}
- :aliases {:test {:extra-paths ["test"]
+ :aliases {:dev {:extra-deps {com.mysql/mysql-connector-j {:mvn/version "8.1.0"}
+                              org.postgresql/postgresql   {:mvn/version "42.6.0"}}}
+           :test {:extra-paths ["test"]
                   :main-opts ["-m" "cognitect.test-runner"]
                   :exec-fn cognitect.test-runner.api/test
                   :extra-deps {hikari-cp/hikari-cp {:mvn/version "3.0.1"}

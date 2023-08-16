@@ -101,18 +101,20 @@
               :from   [:rs]} :rs]]
    :select [[[:raw "coalesce (json_agg(\"rs\"), '[]')::character varying as result"]]]})
 
-(defn- hsql-column-name [{:keys [alias function-attribute-ident key]} attr-md]
+(defn- hsql-column-name [{:keys [alias function-attribute-ident key] :as n} attr-md]
   (let [{:keys [parent]} alias
         c (->> (heql-md/attr-column-name attr-md)
                (str parent ".")
                keyword)]
     (if function-attribute-ident
-      (let [[sqlfn _ arg2] (if (dsl/alias-attribute-ident? key)
+      (let [[sqlfn arg1 arg2] (if (dsl/alias-attribute-ident? key)
                              (first key)
                              key)]
         (if arg2
           (hsql/call sqlfn c arg2)
-          (hsql/call sqlfn c)))
+          (if (vector? arg1)
+            (hsql/call sqlfn (hsql/call (first arg1) c))
+            (hsql/call sqlfn c))))
       c)))
 
 (defn- eql-node->select-expr [db-adapter heql-meta-data {:keys [attr-ident alias]

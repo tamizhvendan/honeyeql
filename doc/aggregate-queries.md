@@ -7,6 +7,8 @@ HoneyEQL supports the standard aggregate functions `count`, `max`, `min`, `sum` 
 [:count :course/id] 
 ; SELECT avg(rating) FROM course;
 [:avg :course/rating] 
+; SELECT count(distinct rating) FROM course;
+[:count [:distinct :course/rating]]
 ```
 
 > Support for `count(*)` will be added in a later release. 
@@ -19,6 +21,7 @@ We'll use this sample database schema to walk us through the syntax
 (heql/query-single
   db-adapter
   {[] [[:count :course/rating]
+       [:count [:distinct :course/rating]] 
        [:avg :course/rating]
        [:max :course/rating]
        [:min :course/rating]
@@ -27,6 +30,7 @@ We'll use this sample database schema to walk us through the syntax
 (heql/query-single
   db-adapter
   `[{([] [[:count :course/rating]
+          [:count [:distinct :course/rating]]
           [:avg :course/rating]
           [:max :course/rating]
           [:min :course/rating]
@@ -38,6 +42,7 @@ The output of the queries would look like below for the respective `:attr/return
 ```clojure
 ; :naming-convention/qualified-kebab-case
 {:course/count-of-rating 4
+ :course/distinct-count-of-rating 2
  :course/avg-of-rating   4.75M
  :course/max-of-rating   5
  :course/min-of-rating   4
@@ -45,6 +50,7 @@ The output of the queries would look like below for the respective `:attr/return
 
 ; :naming-convention/unqualified-kebab-case
 {:count-of-rating 4
+ :distinct-count-of-rating 2
  :avg-of-rating   4.75M
  :max-of-rating   5
  :min-of-rating   4
@@ -52,6 +58,7 @@ The output of the queries would look like below for the respective `:attr/return
 
 ; :naming-convention/unqualified-camel-case
 {:countOfRating 4
+ :distinctCountOfRating 2
  :avgOfRating   4.75M
  :maxOfRating   5
  :minOfRating   4
@@ -63,6 +70,7 @@ If you want to retain the query shape, returning the keys as vector instead of `
 ```clojure
 ; :naming-convention/qualified-kebab-case
 {[:count :course/rating] 4
+ [:count [:distinct :course/rating]] 2 
  [:avg :course/rating]   4.75M
  [:max :course/rating]   5
  [:min :course/rating]   4

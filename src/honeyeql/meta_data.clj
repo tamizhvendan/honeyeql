@@ -452,9 +452,10 @@
   (boolean (get-in heql-meta-data [:attributes attr-ident])))
 
 (defn attr-meta-data [heql-meta-data attr-ident]
-  (if-let [attr-meta-data (get-in heql-meta-data [:attributes attr-ident])]
-    attr-meta-data
-    (throw (ex-info (str "attribute " attr-ident " not found") {:type :heql.exception/attr-not-found}))))
+  (let [attr-ident (if (vector? attr-ident) (second attr-ident) attr-ident)]
+    (if-let [attr-meta-data (get-in heql-meta-data [:attributes attr-ident])]
+     attr-meta-data
+     (throw (ex-info (str "attribute " attr-ident " not found") {:type :heql.exception/attr-not-found})))))
 
 (defn entity-relation-ident [heql-meta-data attr-ident]
   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]

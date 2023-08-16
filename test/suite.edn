@@ -618,6 +618,9 @@
                                                        :max-of-rating   5
                                                        :min-of-rating   4
                                                        :sum-of-rating   19})}}
+                           {:name "distinct count"
+                            :eql {:query-single [{[] [[:count [:distinct :course/rating]]]}]
+                                  :expected #:course{:distinct-count-of-rating 2}}}
                            {:name "aggregate functions in relationship"
                             :eql  {:query    [{[:author/id 1] [:author/id
                                                                :author/first-name

@@ -33,7 +33,9 @@
   (let [attr-ident (cond
                      function-attribute-ident (if (alias-attribute-ident? key)
                                                 (nth key 2)
-                                                (keyword (namespace attr-ident) (str (name (first key)) "-of-" (name attr-ident))))
+                                                (if (vector? attr-ident)
+                                                  (keyword (namespace (second attr-ident)) (str (name (first attr-ident)) "-" (name (first key)) "-of-" (name (second attr-ident))))
+                                                  (keyword (namespace attr-ident) (str (name (first key)) "-of-" (name attr-ident)))))
                      (alias-attribute-ident? key) (nth key 2)
                      :else attr-ident)]
     (column-alias :naming-convention/qualified-kebab-case attr-ident)))
