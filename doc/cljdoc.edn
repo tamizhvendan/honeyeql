@@ -10,4 +10,5 @@
                    ["Cast Operation" {:file "doc/cast-operation.md"}]
                    ["Configuration" {:file "doc/configuration.md"}]
                    ["Coercion" {:file "doc/coercion.md"}]
+                   ["JSON object" {:file "doc/json-object.md"}]
                    ["Debugging & Troubleshooting" {:file "doc/debugging.md"}]]}
