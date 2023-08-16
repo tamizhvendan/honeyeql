@@ -91,7 +91,7 @@ We can sort based on one-to-one relationship attributes as well.
 
 We can sort the relationship query results as well.
 
-> **NOTE:** Currently, sorting the relationship query results is not supported in MySQL
+> **NOTE:** Currently, sorting the relationship query results is not supported in MySQL as its `JSON_ARRAYAGG` function doesn't support it.
 
 ```clojure
 ; sorting one-to-many relationship query results
