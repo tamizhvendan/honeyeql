@@ -51,7 +51,7 @@ HoneyEQL identifies the relationships between database tables using their foreig
 
 ### One to Many
 
-![](https://www.graphqlize.org/img/address_city_country_er_diagram.png)
+![](./img/address_city_country_er_diagram.png)
 
 For the database table relationships like above, HoneyEQL infers two `one-to-many` relationships.
 
@@ -103,7 +103,7 @@ If the column name (`original_language_id`) after the removal of the foreign key
 
 ### One to One (Reverse side of One to Many)
 
-![](https://www.graphqlize.org/img/address_city_country_er_diagram.png)
+![](./img/address_city_country_er_diagram.png)
 
 For the database table relationships like above, HoneyEQL infers two `one-to-one` relationships.
 
@@ -136,7 +136,7 @@ By default, HoneyEQL assumes `_id` as the suffix for foreign keys in both Postgr
 
 HoneyEQL infers one to one relationship if the primary key and a foreign key of a table are same. 
 
-![](https://www.graphqlize.org/img/one-to-one-relationship.png)
+![](./img/one-to-one-relationship.png)
 
 For the above DB schema, HoneyEQL infers two `one-to-one` relationships.
 
@@ -163,7 +163,7 @@ A table is considered as an associative table if it satisfies the following two 
 
 For the database table relationships like below,
 
-![](https://www.graphqlize.org/img/film_actor_er_diagram.png)
+![](./img/film_actor_er_diagram.png)
 
 The `film_actor` table is an associative table as
 

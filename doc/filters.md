@@ -237,7 +237,7 @@ With HoneyEQL, we can filter the results based on the attributes of a relationsh
 
 For example, to get all the cities of a county using the country' name,
 
-![](https://www.graphqlize.org/img/address_city_country_er_diagram.png)
+![](./img/address_city_country_er_diagram.png)
 
 we can use the following query.
 
@@ -271,7 +271,7 @@ For the above schema, we can get a list of countries which has at-least one city
 
 For many-to-many relationships also, the query looks similar.
 
-![](https://www.graphqlize.org/img/film_actor_er_diagram.png)
+![](./img/film_actor_er_diagram.png)
 
 
 For the above schema, to get the actors who are part of at-lease one film which has the word `LIFE` in its title.
@@ -292,7 +292,7 @@ If we want to retrieve only certain entities only if **all** of its related enti
 
 Let's assume that we have a schema like below 
 
-![](https://www.graphqlize.org/img/author_course_er_diagram.png)
+![](./img/author_course_er_diagram.png)
 
 To filter authors who has **at-least** one course with the rating `5`, we can achieve it using the following query.
 

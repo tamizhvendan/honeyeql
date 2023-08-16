@@ -12,7 +12,7 @@ When a query involves more than one table, the declarative nature of SQL depreci
 
 Let's assume that we have the following schema.
 
-![](https://www.graphqlize.org/img/film_actor_er_diagram.png)
+![](./doc/img/film_actor_er_diagram.png)
 
 To get all the films of an actor with the id `148` along with his/her first name & last name, we have to query it as 
 

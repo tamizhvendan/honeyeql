@@ -11,10 +11,10 @@ HoneyEQL supports the standard aggregate functions `count`, `max`, `min`, `sum` 
 [:count [:distinct :course/rating]]
 ```
 
-> Support for `count(*)` will be added in a later release. 
+> NOTE: `[:count :*]` is not supported. 
 
 We'll use this sample database schema to walk us through the syntax
-![](https://www.graphqlize.org/img/author_course_er_diagram.png)
+![](./img/author_course_er_diagram.png)
 
 ```clojure
 ; :eql.mode/lenient syntax
