@@ -1,6 +1,7 @@
 (ns playground
   (:require [honeyeql.core :as heql]
-            [honeyeql.db :as heql-db]))
+            [honeyeql.db :as heql-db]
+            [next.jdbc :as jdbc]))
 
 (def logs (atom {}))
 
@@ -14,11 +15,7 @@
 
 (comment 
   (def pg-adapter (heql-db/initialize {:dbtype   "postgres"
-                                       :dbname   "sakila"
+                                       :dbname   "temp"
                                        :user     "postgres"
                                        :password "postgres"}))
-  (heql/query-single pg-adapter
-                     {[:language/language-id 2]
-                      [:language/name
-                       {:language/films [:film/title]}]})
   )

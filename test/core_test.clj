@@ -6,7 +6,7 @@
             [suite-reader :refer [read-string-opts]]
             [hikari-cp.core :as hikari]))
 
-(deftest honeyeql-core-test-suite
+(deftest honeyeql-query-test-suite
   (doseq [[_ {:keys [ds-opts assertions]}]
           (edn/read-string read-string-opts (slurp "./test/suite.edn"))]
     (doseq [{:keys [database-name adapter jdbc-url db-product-name]
