@@ -4,7 +4,7 @@ HoneyEQL is a Clojure library enables you to query the database declaratively us
 
 [![Clojars Project](https://img.shields.io/clojars/v/com.github.tamizhvendan/honeyeql.svg)](https://clojars.org/com.github.tamizhvendan/honeyeql)
 
-> CAUTION: HoneyEQL is at its early stages now. **It is not production-ready yet!**. It currently supports Postgres (9.4 & above) and MySQL (8.0 & above) only.
+> It currently supports Postgres (9.4 & above) and MySQL (8.0 & above) only.
 
 ## Rationale
 
