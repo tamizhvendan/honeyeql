@@ -5,6 +5,7 @@
             [inflections.core :as inf]
             [clojure.set :as set]
             [clojure.string :as string]
+            [clojure.data.json :as json]
             [honeyeql.db-adapter.core :as db]
             [honeyeql.debug :refer [trace>>]])
   (:import [java.time OffsetDateTime LocalDateTime LocalDate LocalTime OffsetTime]))
@@ -454,8 +455,8 @@
 (defn attr-meta-data [heql-meta-data attr-ident]
   (let [attr-ident (if (vector? attr-ident) (second attr-ident) attr-ident)]
     (if-let [attr-meta-data (get-in heql-meta-data [:attributes attr-ident])]
-     attr-meta-data
-     (throw (ex-info (str "attribute " attr-ident " not found") {:type :heql.exception/attr-not-found})))))
+      attr-meta-data
+      (throw (ex-info (str "attribute " attr-ident " not found") {:type :heql.exception/attr-not-found})))))
 
 (defn entity-relation-ident [heql-meta-data attr-ident]
   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
@@ -523,9 +524,19 @@
       :attr.type/ref (if (and (= :attr.ref.cardinality/many (:attr.ref/cardinality attr-md)) (nil? value))
                        []
                        value)
-      :attr.type/unknown (coerce (constantly true) identity (case mode 
+      :attr.type/json (coerce (constantly true) identity (case mode
+                                                           :from-db (if-not (map? value)
+                                                                      value
+                                                                      (update-keys value #(inf/hyphenate %)))
+                                                           :to-db (if-not (map? value)
+                                                                    (jdbc-types/as-other value)
+                                                                    (-> (update-keys value #(inf/camel-case % :lower))
+                                                                        json/write-str
+                                                                        jdbc-types/as-other))))
+      :attr.type/unknown (coerce (constantly true) identity (case mode
                                                               :from-db value
                                                               :to-db (jdbc-types/as-other value)))
+      
       value)))
 
 (defn db-product-name [heql-meta-data]
