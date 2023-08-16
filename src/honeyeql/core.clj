@@ -37,7 +37,8 @@
 
 (defn- function-attribute-ident? [x]
   (and (vector? x)
-       (#{:sum :count :max :min :avg :cast} (first x))))
+       (keyword? (first x))
+       (not (qualified-keyword? (first x)))))
 
 (defn- eql-node->attr-ident [{:keys [key type dispatch-key]}]
   (cond

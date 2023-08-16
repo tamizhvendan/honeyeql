@@ -688,4 +688,7 @@
                             :eql  {:query    [{[:site/id 1]
                                                [:site/*
                                                 {:site/site-meta-datum [:site-meta-datum/*]}]}]
-                                   :expected (#:site{:name "test", :id 1, :site-meta-datum #:site-meta-datum{:id 1, :description "test dec"}})}}]}}
+                                   :expected (#:site{:name "test", :id 1, :site-meta-datum #:site-meta-datum{:id 1, :description "test dec"}})}}
+                           {:name "custom single arity function"
+                            :eql {:query-single [{[:site/id 1] [[[:upper :site/name] :as :site/name]]}]
+                                  :expected #:site{:name "TEST"}}}]}}

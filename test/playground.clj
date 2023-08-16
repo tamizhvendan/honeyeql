@@ -15,7 +15,11 @@
 
 (comment 
   (def pg-adapter (heql-db/initialize {:dbtype   "postgres"
-                                       :dbname   "temp"
+                                       :dbname   "honeyeql"
                                        :user     "postgres"
                                        :password "postgres"}))
+  
+  (heql/query pg-adapter {[] [[[:trim :customer/first-name] :as :customer/first-name]]})
+  
+  (heql/query-single pg-adapter {[] [[[:count :course/rating] :as :course/total-ratings]]})
   )
