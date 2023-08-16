@@ -1,10 +1,10 @@
 ## HoneyEQL
 
-HoneyEQL is a Clojure library enables you to query the database declaratively using the [EDN Query Language](https://edn-query-language.org)(EQL). It aims to simplify the effort required to work with the relational databases in Clojure.
+HoneyEQL is a Clojure library enables you to query the database declaratively using the [EDN Query Language](https://edn-query-language.org)(EQL). It aims to simplify the effort required to work with the relational databases in Clojure. It also provides database modification operations support using Clojure maps with namespace qualified keys.   
 
 [![Clojars Project](https://img.shields.io/clojars/v/com.github.tamizhvendan/honeyeql.svg)](https://clojars.org/com.github.tamizhvendan/honeyeql)
 
-> It currently supports Postgres (9.4 & above) and MySQL (8.0 & above) only.
+> Supports Postgres (9.4 & above) and MySQL (8.0 & above)
 
 ## Rationale
 
@@ -33,7 +33,7 @@ The query result would look like
  ...]
 ```
 
-Then we need to group by `first_name` & `last_name` to get the exact result result that we want!
+Then we need to do the **group by** operation on the `first_name` & `last_name` attributes at the application layer to get the exact result result that we want!
 
 How about making these steps truly declarative? 
 

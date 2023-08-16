@@ -11,7 +11,9 @@ HoneyEQL supports the standard aggregate functions `count`, `max`, `min`, `sum` 
 [:count [:distinct :course/rating]]
 ```
 
-> NOTE: `[:count :*]` is not supported. 
+> NOTE: 
+> * `[:count :*]` is not supported. 
+> * This function syntax is not officially supported in [EDN Query Language Specification](https://edn-query-language.org/eql/1.0.0/specification.html).
 
 We'll use this sample database schema to walk us through the syntax
 ![](./img/author_course_er_diagram.png)
