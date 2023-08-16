@@ -2,7 +2,7 @@
 
 Let's get started by adding HoneyEQL to your project.
 
-[![Clojars Project](https://clojars.org/org.graphqlize/honeyeql/latest-version.svg)](https://clojars.org/org.graphqlize/honeyeql)
+[![Clojars Project](https://clojars.org/com.github.tamizhvendan/honeyeql/latest-version.svg)](https://clojars.org/com.github.tamizhvendan/honeyeql)
 
 In addition, you will need to add dependencies for the JDBC drivers you wish to use for whatever databases you are using and preferably a connection pooling library like [HikariCP](https://github.com/tomekw/hikari-cp) or [c3p0](https://github.com/bostonaholic/clojure.jdbc-c3p0).
 
@@ -11,7 +11,7 @@ This documentation uses [deps](https://clojure.org/guides/deps_and_cli) and assu
 ```clojure
 ;; deps.edn
 {:paths ["src"]
- :deps  {org.graphqlize/honeyeql     {:mvn/version "0.1.0-alpha31"}
+ :deps  {com.github.tamizhvendan/honeyeql     {:mvn/version "1.0.0"}
          hikari-cp                   {:mvn/version "2.10.0"}
          org.postgresql/postgresql   {:mvn/version "42.2.8"}
          mysql/mysql-connector-java  {:mvn/version "8.0.19"}}}
