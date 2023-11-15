@@ -6,7 +6,8 @@
             [honeyeql.dsl :as dsl]
             [honeyeql.meta-data :as heql-md]
             [next.jdbc.sql :as jdbc])
-  (:import [java.time LocalDateTime]
+  (:import [java.sql Connection DatabaseMetaData]
+           [java.time LocalDateTime]
            [java.time.format DateTimeFormatter DateTimeFormatterBuilder]
            [java.time.temporal ChronoField]))
 
@@ -67,28 +68,28 @@
 (defmethod heql-md/derive-attr-type "PostgreSQL" [_ column-meta-data]
   (pg-type->col-type (:type_name column-meta-data)))
 
-(defn- entities-meta-data [db-spec jdbc-meta-data]
+(defn- entities-meta-data [db-spec ^DatabaseMetaData jdbc-meta-data]
   (->> (into-array String ["TABLE" "VIEW" "MATERIALIZED VIEW"])
        (.getTables jdbc-meta-data nil "%" nil)
        (heql-md/datafied-result-set db-spec)
        vec))
 
-(defn- attributes-meta-data [db-spec jdbc-meta-data]
+(defn- attributes-meta-data [db-spec ^DatabaseMetaData jdbc-meta-data]
   (->> (.getColumns jdbc-meta-data nil "%" "%" nil)
        (heql-md/datafied-result-set db-spec)
        vec))
 
-(defn- primary-keys-meta-data [db-spec jdbc-meta-data]
+(defn- primary-keys-meta-data [db-spec ^DatabaseMetaData jdbc-meta-data]
   (->> (.getPrimaryKeys jdbc-meta-data nil "" nil)
        (heql-md/datafied-result-set db-spec)
        vec))
 
-(defn- foreign-keys-meta-data [db-spec jdbc-meta-data]
+(defn- foreign-keys-meta-data [db-spec ^DatabaseMetaData jdbc-meta-data]
   (->> (.getImportedKeys jdbc-meta-data nil "" nil)
        (heql-md/datafied-result-set db-spec)
        vec))
 
-(defmethod heql-md/get-db-meta-data "PostgreSQL" [_ db-spec db-conn]
+(defmethod heql-md/get-db-meta-data "PostgreSQL" [_ db-spec ^Connection db-conn]
   (let [jdbc-meta-data  (.getMetaData db-conn)]
     {:entities     (entities-meta-data db-spec jdbc-meta-data)
      :attributes   (attributes-meta-data db-spec jdbc-meta-data)
