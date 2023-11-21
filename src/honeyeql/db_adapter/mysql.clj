@@ -6,7 +6,8 @@
             [honeyeql.dsl :as dsl]
             [honeyeql.meta-data :as heql-md]
             [next.jdbc.sql :as jdbc])
-  (:import [java.time LocalDateTime]
+  (:import [java.sql Connection DatabaseMetaData]
+           [java.time LocalDateTime]
            [java.time.format DateTimeFormatterBuilder DateTimeParseException]
            [java.time.temporal ChronoField]))
 
@@ -40,28 +41,28 @@
 (defmethod heql-md/derive-attr-type "MySQL" [_ column-meta-data]
   (mysql-type->col-type column-meta-data))
 
-(defn- entities-meta-data [db-spec jdbc-meta-data catalog]
+(defn- entities-meta-data [db-spec ^DatabaseMetaData jdbc-meta-data catalog]
   (->> (into-array String ["TABLE" "VIEW"])
        (.getTables jdbc-meta-data catalog "%" nil)
        (heql-md/datafied-result-set db-spec)
        vec))
 
-(defn- attributes-meta-data [db-spec jdbc-meta-data catalog]
+(defn- attributes-meta-data [db-spec ^DatabaseMetaData jdbc-meta-data catalog]
   (->> (.getColumns jdbc-meta-data catalog "%" "%" nil)
        (heql-md/datafied-result-set db-spec)
        vec))
 
-(defn- primary-keys-meta-data [db-spec jdbc-meta-data catalog table-name]
+(defn- primary-keys-meta-data [db-spec ^DatabaseMetaData jdbc-meta-data catalog table-name]
   (->> (.getPrimaryKeys jdbc-meta-data catalog "" table-name)
        (heql-md/datafied-result-set db-spec)
        vec))
 
-(defn- foreign-keys-meta-data [db-spec jdbc-meta-data catalog table-name]
+(defn- foreign-keys-meta-data [db-spec ^DatabaseMetaData jdbc-meta-data catalog table-name]
   (->> (.getImportedKeys jdbc-meta-data catalog "" table-name)
        (heql-md/datafied-result-set db-spec)
        vec))
 
-(defn- get-pks-and-fks [db-spec jdbc-meta-data catalog table-names]
+(defn- get-pks-and-fks [db-spec ^DatabaseMetaData jdbc-meta-data catalog table-names]
   (reduce (fn [s table-name]
             (update (update s
                             :primary-keys (comp vec concat) (primary-keys-meta-data db-spec jdbc-meta-data catalog table-name))
@@ -69,7 +70,7 @@
           {:primary-keys []
            :foreign-keys []} table-names))
 
-(defmethod heql-md/get-db-meta-data "MySQL" [_ db-spec db-conn]
+(defmethod heql-md/get-db-meta-data "MySQL" [_ db-spec ^Connection db-conn]
   (let [jdbc-meta-data                      (.getMetaData db-conn)
         catalog                             (.getCatalog db-conn)
         entities-meta-data                  (entities-meta-data db-spec jdbc-meta-data catalog)
@@ -94,12 +95,12 @@
 (defn- function-attribute-json-v [k [op v arg]]
   (let [op (if (vector? op) (first op) op)]
     (if (= :cast op)
-      (list (format "'%s', CAST(`%s`.`%s` AS %s)" 
+      (list (format "'%s', CAST(`%s`.`%s` AS %s)"
                     k
                     (namespace v)
                     (name v)
                     (name arg)))
-      (list (format "'%s', %s(%s`%s`.`%s`)" 
+      (list (format "'%s', %s(%s`%s`.`%s`)"
                     k
                     (name op)
                     (if (vector? v)
@@ -107,7 +108,7 @@
                       "")
                     (if (vector? v)
                       (namespace (second v))
-                      (namespace v)) 
+                      (namespace v))
                     (if (vector? v)
                       (name (second v))
                       (name v)))))))
