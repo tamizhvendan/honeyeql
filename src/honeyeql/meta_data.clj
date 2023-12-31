@@ -83,7 +83,6 @@
                                       "MATERIALIZED VIEW" :materialized-view)
       :entity.relation/schema       table_schem
       :entity.relation/name         table_name
-      :entity/opt-attrs             #{}
       :entity/req-attrs             #{}
       :entity.relation/foreign-keys #{}
       :entity/attrs                 #{}
@@ -116,7 +115,7 @@
   (let [attr-ident                (attribute-ident db-config column-meta-data)
         entity-ident              (entity-ident db-config column-meta-data)
         is-nullable               (coerce-boolean is_nullable)
-        entity-req-attr-qualifier (if is-nullable :entity/opt-attrs :entity/req-attrs)
+        entity-req-attr-qualifier (when-not is-nullable :entity/req-attrs)
         attr-type                 (derive-attr-type db-config column-meta-data)
         entity-attr-qualifier     (if-not (= :attr.type/ref attr-type) :entity/attrs :entity/rel-attrs)]
     (-> (assoc-in heql-meta-data [:attributes attr-ident]
@@ -184,20 +183,18 @@
                                          right-entity-ident right-attr-ident
                                          one-to-one-attr-ident]}]
   (let [one-to-many-attr-ident (one-to-many-attr-ident left-entity-ident right-entity-ident one-to-one-attr-ident)]
-    (update-in (assoc-in heql-meta-data
-                         [:attributes one-to-many-attr-ident]
-                         {:attr/ident            one-to-many-attr-ident
-                          :attr.ident/camel-case (attribute-ident-in-camel-case one-to-many-attr-ident)
-                          :attr/type             :attr.type/ref
-                          :attr/nullable         false
-                          :attr.ref/cardinality  :attr.ref.cardinality/many
-                          :attr.ref/type         left-entity-ident
-                          :attr.entity/ident     right-entity-ident
-                          :attr.column.ref/type  :attr.column.ref.type/one-to-many
-                          :attr.column.ref/left  right-attr-ident
-                          :attr.column.ref/right left-attr-ident})
-               [:entities right-entity-ident :entity/req-attrs]
-               conj one-to-many-attr-ident)))
+    (assoc-in heql-meta-data
+              [:attributes one-to-many-attr-ident]
+              {:attr/ident            one-to-many-attr-ident
+               :attr.ident/camel-case (attribute-ident-in-camel-case one-to-many-attr-ident)
+               :attr/type             :attr.type/ref
+               :attr/nullable         false
+               :attr.ref/cardinality  :attr.ref.cardinality/many
+               :attr.ref/type         left-entity-ident
+               :attr.entity/ident     right-entity-ident
+               :attr.column.ref/type  :attr.column.ref.type/one-to-many
+               :attr.column.ref/left  right-attr-ident
+               :attr.column.ref/right left-attr-ident})))
 
 (defn- one-to-one-attr-name-result [db-config {:keys [pktable_schem pktable_name fkcolumn_name]}]
   (let [n (foreign-key-column->attr-name db-config fkcolumn_name)]
@@ -242,8 +239,6 @@
                                                                    :table_name          fktable_name
                                                                    :column_name         one-to-one-attr-name
                                                                    :relationship-column true})})
-        (update-in [:entities left-entity-ident (if is-nullable :entity/opt-attrs :entity/req-attrs)]
-                   conj one-to-one-attr-ident)
         (update-in [:entities left-entity-ident :entity.relation/foreign-keys]
                    conj {:entity.relation.foreign-key/name      fk_name
                          :entity.relation.foreign-key/self-attr left-attr-ident
@@ -277,8 +272,6 @@
                                                                    :table_name          fktable_name
                                                                    :column_name         pktable_name
                                                                    :relationship-column true})})
-        (update-in [:entities left-entity-ident :entity/req-attrs]
-                   conj child-attr-ident)
         (update-in [:entities left-entity-ident :entity.relation/foreign-keys]
                    conj {:entity.relation.foreign-key/name      fk_name
                          :entity.relation.foreign-key/self-attr left-attr-ident
@@ -298,8 +291,6 @@
                                                                    :table_name          pktable_name
                                                                    :column_name         fktable_name
                                                                    :relationship-column true})})
-        (update-in [:entities right-entity-ident :entity/opt-attrs]
-                   conj parent-attr-ident)
         (update-in [:entities right-entity-ident :entity.relation/foreign-keys]
                    conj {:entity.relation.foreign-key/name      fk_name
                          :entity.relation.foreign-key/self-attr right-attr-ident
@@ -366,11 +357,7 @@
                    :attr.column.ref.associative/ident       entity-ident
                    :attr.column.ref.associative/left-ident  self-attr
                    :attr.column.ref.associative/right-ident r-self-attr
-                   :attr.column.ref/right                   r-ref-attr})
-        (update-in [:entities left-entity-ident :entity/req-attrs]
-                   conj many-to-many-rev-attr-ident)
-        (update-in [:entities right-entity-ident :entity/req-attrs]
-                   conj many-to-many-attr-ident))))
+                   :attr.column.ref/right                   r-ref-attr}))))
 
 (defn- add-many-to-many-rels-meta-data [heql-meta-data]
   (reduce (fn [h-md [entity-ident entity-meta-data]]
@@ -516,5 +503,5 @@
       :attr.type/unknown (coerce (constantly true) identity (case mode
                                                               :from-db value
                                                               :to-db (jdbc-types/as-other value)))
-      
+
       value)))
