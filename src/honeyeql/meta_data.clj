@@ -115,8 +115,7 @@
   (let [attr-ident                (attribute-ident db-config column-meta-data)
         entity-ident              (entity-ident db-config column-meta-data)
         is-nullable               (coerce-boolean is_nullable)
-        attr-type                 (derive-attr-type db-config column-meta-data)
-        entity-attr-qualifier     (if-not (= :attr.type/ref attr-type) :entity/attrs :entity/rel-attrs)]
+        attr-type                 (derive-attr-type db-config column-meta-data)]
     (-> (assoc-in heql-meta-data [:attributes attr-ident]
                   {:attr/ident                     attr-ident
                    :attr.ident/camel-case          (attribute-ident-in-camel-case attr-ident)
@@ -136,7 +135,7 @@
         (#(if-not is-nullable
             (update-in % [:entities entity-ident :entity/req-attrs] conj attr-ident)
             %))
-        (update-in [:entities entity-ident entity-attr-qualifier] conj attr-ident))))
+        (update-in [:entities entity-ident :entity/attrs] conj attr-ident))))
 
 (defn- add-attributes-meta-data [db-meta-data {:keys [db-config]
                                                :as   heql-meta-data}]
@@ -184,18 +183,19 @@
                                          right-entity-ident right-attr-ident
                                          one-to-one-attr-ident]}]
   (let [one-to-many-attr-ident (one-to-many-attr-ident left-entity-ident right-entity-ident one-to-one-attr-ident)]
-    (assoc-in heql-meta-data
-              [:attributes one-to-many-attr-ident]
-              {:attr/ident            one-to-many-attr-ident
-               :attr.ident/camel-case (attribute-ident-in-camel-case one-to-many-attr-ident)
-               :attr/type             :attr.type/ref
-               :attr/nullable         false
-               :attr.ref/cardinality  :attr.ref.cardinality/many
-               :attr.ref/type         left-entity-ident
-               :attr.entity/ident     right-entity-ident
-               :attr.column.ref/type  :attr.column.ref.type/one-to-many
-               :attr.column.ref/left  right-attr-ident
-               :attr.column.ref/right left-attr-ident})))
+    (-> (assoc-in heql-meta-data
+               [:attributes one-to-many-attr-ident]
+               {:attr/ident            one-to-many-attr-ident
+                :attr.ident/camel-case (attribute-ident-in-camel-case one-to-many-attr-ident)
+                :attr/type             :attr.type/ref
+                :attr/nullable         false
+                :attr.ref/cardinality  :attr.ref.cardinality/many
+                :attr.ref/type         left-entity-ident
+                :attr.entity/ident     right-entity-ident
+                :attr.column.ref/type  :attr.column.ref.type/one-to-many
+                :attr.column.ref/left  right-attr-ident
+                :attr.column.ref/right left-attr-ident})
+        (update-in [:entities right-entity-ident :entity/rel-attrs] conj one-to-many-attr-ident))))
 
 (defn- one-to-one-attr-name-result [db-config {:keys [pktable_schem pktable_name fkcolumn_name]}]
   (let [n (foreign-key-column->attr-name db-config fkcolumn_name)]
@@ -244,6 +244,7 @@
                    conj {:entity.relation.foreign-key/name      fk_name
                          :entity.relation.foreign-key/self-attr left-attr-ident
                          :entity.relation.foreign-key/ref-attr  right-attr-ident})
+        (update-in [:entities left-entity-ident :entity/rel-attrs] conj one-to-one-attr-ident)
         (add-one-to-many-metadata {:left-entity-ident     left-entity-ident
                                    :left-attr-ident       left-attr-ident
                                    :right-entity-ident    right-entity-ident
@@ -277,6 +278,7 @@
                    conj {:entity.relation.foreign-key/name      fk_name
                          :entity.relation.foreign-key/self-attr left-attr-ident
                          :entity.relation.foreign-key/ref-attr  right-attr-ident})
+        (update-in [:entities left-entity-ident :entity/rel-attrs] conj child-attr-ident)
         (assoc-in [:attributes parent-attr-ident]
                   {:attr/ident            parent-attr-ident
                    :attr.ident/camel-case (attribute-ident-in-camel-case parent-attr-ident)
@@ -295,7 +297,8 @@
         (update-in [:entities right-entity-ident :entity.relation/foreign-keys]
                    conj {:entity.relation.foreign-key/name      fk_name
                          :entity.relation.foreign-key/self-attr right-attr-ident
-                         :entity.relation.foreign-key/ref-attr  left-attr-ident}))))
+                         :entity.relation.foreign-key/ref-attr  left-attr-ident})
+        (update-in [:entities right-entity-ident :entity/rel-attrs] conj parent-attr-ident))))
 
 (defn- add-fk-rel-meta-data [db-config heql-meta-data fk-md]
   (if (one-to-one-relationship? db-config heql-meta-data fk-md)
@@ -345,6 +348,7 @@
                    :attr.column.ref.associative/left-ident  r-self-attr
                    :attr.column.ref.associative/right-ident self-attr
                    :attr.column.ref/right                   ref-attr})
+        (update-in [:entities right-entity-ident :entity/rel-attrs] conj many-to-many-attr-ident)
         (assoc-in [:attributes many-to-many-rev-attr-ident]
                   {:attr/ident                              many-to-many-rev-attr-ident
                    :attr.ident/camel-case                   (attribute-ident-in-camel-case many-to-many-rev-attr-ident)
@@ -358,7 +362,8 @@
                    :attr.column.ref.associative/ident       entity-ident
                    :attr.column.ref.associative/left-ident  self-attr
                    :attr.column.ref.associative/right-ident r-self-attr
-                   :attr.column.ref/right                   r-ref-attr}))))
+                   :attr.column.ref/right                   r-ref-attr})
+        (update-in [:entities left-entity-ident :entity/rel-attrs] conj many-to-many-rev-attr-ident))))
 
 (defn- add-many-to-many-rels-meta-data [heql-meta-data]
   (reduce (fn [h-md [entity-ident entity-meta-data]]
