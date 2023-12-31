@@ -115,7 +115,6 @@
   (let [attr-ident                (attribute-ident db-config column-meta-data)
         entity-ident              (entity-ident db-config column-meta-data)
         is-nullable               (coerce-boolean is_nullable)
-        entity-req-attr-qualifier (when-not is-nullable :entity/req-attrs)
         attr-type                 (derive-attr-type db-config column-meta-data)
         entity-attr-qualifier     (if-not (= :attr.type/ref attr-type) :entity/attrs :entity/rel-attrs)]
     (-> (assoc-in heql-meta-data [:attributes attr-ident]
@@ -134,7 +133,9 @@
                    :attr.column/ident              (column-ident db-config column-meta-data)
                    :attr.column/ordinal-position   ordinal_position
                    :attr.entity/ident              entity-ident})
-        (update-in [:entities entity-ident entity-req-attr-qualifier] conj attr-ident)
+        (#(if-not is-nullable
+            (update-in % [:entities entity-ident :entity/req-attrs] conj attr-ident)
+            %))
         (update-in [:entities entity-ident entity-attr-qualifier] conj attr-ident))))
 
 (defn- add-attributes-meta-data [db-meta-data {:keys [db-config]
