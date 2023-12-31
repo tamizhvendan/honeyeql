@@ -406,12 +406,6 @@
 
 ;; Query Functions
 
-(defn namespace-idents [heql-meta-data]
-  (map key (:namespaces heql-meta-data)))
-
-(defn entities [heql-meta-data]
-  (vals (:entities heql-meta-data)))
-
 (defn entity-meta-data [heql-meta-data entity-ident]
   (if-let [entity-meta-data (get-in heql-meta-data [:entities entity-ident])]
     entity-meta-data
@@ -434,10 +428,6 @@
   (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
     (when (= :attr.type/ref (:attr/type attr-md))
       (:entity.relation/ident (entity-meta-data heql-meta-data (:attr.ref/type attr-md))))))
-
-(defn attr-column-ident [heql-meta-data attr-ident]
-  (let [attr-md (attr-meta-data heql-meta-data attr-ident)]
-    (get-in heql-meta-data [:attributes (:attr/ident attr-md) :attr.column/ident])))
 
 (defn attr-column-name
   ([attr-meta-data]
