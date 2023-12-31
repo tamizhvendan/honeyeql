@@ -199,26 +199,6 @@
                [:entities right-entity-ident :entity/req-attrs]
                conj one-to-many-attr-ident)))
 
-(defn- add-one-to-one-metadata [heql-meta-data
-                                {:keys [left-entity-ident left-attr-ident
-                                        right-entity-ident right-attr-ident
-                                        one-to-one-attr-ident]}]
-  (let [one-to-many-attr-ident (one-to-many-attr-ident left-entity-ident right-entity-ident one-to-one-attr-ident)]
-    (update-in (assoc-in heql-meta-data
-                         [:attributes one-to-many-attr-ident]
-                         {:attr/ident            one-to-many-attr-ident
-                          :attr.ident/camel-case (attribute-ident-in-camel-case one-to-many-attr-ident)
-                          :attr/type             :attr.type/ref
-                          :attr/nullable         false
-                          :attr.ref/cardinality  :attr.ref.cardinality/many
-                          :attr.ref/type         left-entity-ident
-                          :attr.entity/ident     right-entity-ident
-                          :attr.column.ref/type  :attr.column.ref.type/one-to-many
-                          :attr.column.ref/left  right-attr-ident
-                          :attr.column.ref/right left-attr-ident})
-               [:entities right-entity-ident :entity/req-attrs]
-               conj one-to-many-attr-ident)))
-
 (defn- one-to-one-attr-name-result [db-config {:keys [pktable_schem pktable_name fkcolumn_name]}]
   (let [n (foreign-key-column->attr-name db-config fkcolumn_name)]
     (if (= fkcolumn_name n)
@@ -538,10 +518,3 @@
                                                               :to-db (jdbc-types/as-other value)))
       
       value)))
-
-(defn db-product-name [heql-meta-data]
-  (get-in heql-meta-data [:db-config :db-product-name]))
-
-(defn attr-idents [entity-meta-data]
-  (let [{:entity/keys [req-attrs opt-attrs]} entity-meta-data]
-    (concat req-attrs opt-attrs)))
