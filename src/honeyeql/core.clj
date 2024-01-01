@@ -47,10 +47,21 @@
                                                             (first key))
     (and (= :join type) dispatch-key) key))
 
-(defn- one-to-one-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
-  [:=
-   (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data left)))
-   (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data right)))])
+(defn- composite-ref-keys? [{:attr.column.ref/keys [left right]}]
+  (and (coll? left) (coll? right) (= (count left) (count right))))
+
+(defn- one-to-one-join-predicate [heql-meta-data {:attr.column.ref/keys [left right] :as ref-keys} alias]
+  (if (composite-ref-keys? ref-keys)
+    (->> (map (fn [[left right]]
+            (one-to-one-join-predicate heql-meta-data
+                                       #:attr.column.ref{:left left :right right}
+                                       alias))
+          (partition 2 (interleave left right)))
+         (concat [:and])
+         vec)
+    [:=
+     (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data left)))
+     (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data right)))]))
 
 (defn- one-to-many-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
   [:=
