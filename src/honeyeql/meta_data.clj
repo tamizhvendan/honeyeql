@@ -173,11 +173,6 @@
        (keyword (str e-ns "." (name right-entity-ident)) attr-name)
        (keyword (name right-entity-ident) attr-name)))))
 
-#_(one-to-many-attr-ident :film :language :film/language)
-#_(one-to-many-attr-ident :film :language :film/original-language)
-#_(one-to-many-attr-ident :a/film :a/language :aFilm/language)
-#_(one-to-many-attr-ident :a/film :a/language :aFilm/original-language)
-
 (defn- add-one-to-many-metadata [heql-meta-data
                                  {:keys [left-entity-ident left-attr-ident
                                          right-entity-ident right-attr-ident
@@ -197,12 +192,16 @@
                    :attr.column.ref/right left-attr-ident})
         (update-in [:entities right-entity-ident :entity/rel-attrs] conj one-to-many-attr-ident))))
 
-(defn- one-to-one-attr-name-result [db-config {:keys [pktable_schem pktable_name fkcolumn_name]}]
-  (let [n (foreign-key-column->attr-name db-config fkcolumn_name)]
+(defn- one-to-one-attr-name-result [db-config fk-md]
+  (let [{:keys [pktable_schem pktable_name fkcolumn_name]} (first fk-md)
+        n (foreign-key-column->attr-name db-config fkcolumn_name)
+        is-composite-fk  (>= (count fk-md) 2)]
     (if (= fkcolumn_name n)
       [n (-> (entity-ident db-config pktable_schem pktable_name)
              name
-             (str "_by_" fkcolumn_name))]
+             (#(if is-composite-fk 
+                 %
+                 (str % "_by_" fkcolumn_name))))]
       [n])))
 
 (defn- fk-attr-idents [db-config fk-md keys]
@@ -216,18 +215,25 @@
         e-primary-keys (get-in heql-meta-data [:entities e-ident :entity.relation/primary-key :entity.relation.primary-key/attrs])]
     (= e-primary-keys (set attr-idents))))
 
-(defn- add-fk-one-to-many-rel-metadata [db-config heql-meta-data
-                                        {:keys [fktable_schem fktable_name fkcolumn_name fk_name
-                                                pktable_schem pktable_name pkcolumn_name]
-                                         :as   fk-md}]
-  (let [[one-to-one-attr-name modified-one-to-one-attr-name]  (one-to-one-attr-name-result db-config fk-md)
+
+; (one-to-one-attr-name-result (first args) (first (last args)))
+
+(defn- add-fk-one-to-many-rel-metadata [db-config heql-meta-data fk-md]
+  (let [is-composite-fk  (>= (count fk-md) 2)
+        {:keys [fktable_schem fktable_name fkcolumn_name fk_name
+                pktable_schem pktable_name pkcolumn_name]} (first fk-md)
+        [one-to-one-attr-name modified-one-to-one-attr-name]  (one-to-one-attr-name-result db-config fk-md)
         one-to-one-attr-ident (attribute-ident db-config fktable_schem fktable_name (if modified-one-to-one-attr-name
                                                                                       modified-one-to-one-attr-name
                                                                                       one-to-one-attr-name))
         ident-for-one-to-many-ident (attribute-ident db-config fktable_schem fktable_name one-to-one-attr-name)
-        left-attr-ident       (attribute-ident db-config fktable_schem fktable_name fkcolumn_name)
+        left-attr-ident       (if is-composite-fk
+                                (fk-attr-idents db-config fk-md [:fktable_schem :fktable_name :fkcolumn_name])
+                                (attribute-ident db-config fktable_schem fktable_name fkcolumn_name))
         left-entity-ident     (entity-ident db-config fktable_schem fktable_name)
-        right-attr-ident      (attribute-ident db-config pktable_schem pktable_name pkcolumn_name)
+        right-attr-ident      (if is-composite-fk
+                                (fk-attr-idents db-config fk-md [:pktable_schem :pktable_name :pkcolumn_name])
+                                (attribute-ident db-config pktable_schem pktable_name pkcolumn_name))
         right-entity-ident    (entity-ident db-config pktable_schem pktable_name)
         is-nullable           (get-in heql-meta-data [:attributes left-attr-ident :attr/nullable])]
     (-> (assoc-in heql-meta-data [:attributes one-to-one-attr-ident]
@@ -314,7 +320,7 @@
 (defn- add-fk-rel-meta-data [db-config heql-meta-data fk-md]
   (if (one-to-one-relationship? db-config heql-meta-data fk-md)
     (add-fk-one-to-one-rel-metadata db-config heql-meta-data fk-md)
-    (add-fk-one-to-many-rel-metadata db-config heql-meta-data (first fk-md))))
+    (add-fk-one-to-many-rel-metadata db-config heql-meta-data fk-md)))
 
 (defn- add-relationships-meta-data [db-meta-data {:keys [db-config]
                                                   :as   heql-meta-data}]
@@ -324,8 +330,6 @@
        (reduce
         #(merge-with merge %1 (add-fk-rel-meta-data db-config %1 %2))
         heql-meta-data)))
-
-; (vals (group-by :fk_name (:foreign-keys dbm)))
 
 (defn- associative-entity? [{:entity.relation/keys [primary-key foreign-keys]}]
   (let [pk-attrs (:entity.relation.primary-key/attrs primary-key)
