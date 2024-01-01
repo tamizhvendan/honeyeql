@@ -878,3 +878,38 @@ ALTER TABLE ONLY public.site_meta_datum
 -- PostgreSQL database dump complete
 --
 
+CREATE TABLE public.account (
+   acc_num INTEGER,
+   acc_type INTEGER,
+   acc_descr VARCHAR(20),
+   PRIMARY KEY (acc_num, acc_type));
+
+COPY public.account (acc_num, acc_type, acc_descr) FROM stdin;
+1	1	SA #1
+2	1	SA #2
+\.
+
+CREATE TABLE public.account_referrer (
+   acc_num INTEGER,
+   acc_type INTEGER,
+   referred_by VARCHAR(20),
+   PRIMARY KEY (acc_num, acc_type),
+   FOREIGN KEY (acc_num, acc_type) REFERENCES public.account
+);
+
+INSERT INTO "public"."account_referrer"("acc_num","acc_type","referred_by")
+VALUES
+(1,1,E'foo');
+
+CREATE TABLE public.sub_account (
+   sub_acc INTEGER PRIMARY KEY,
+   ref_num INTEGER NOT NULL,
+   ref_type INTEGER NOT NULL,
+   sub_descr VARCHAR(20),
+   FOREIGN KEY (ref_num, ref_type) REFERENCES public.account);
+
+INSERT INTO "public"."sub_account"("sub_acc","ref_num","ref_type","sub_descr")
+VALUES
+(1,1,1,E'SA #1 Sub Acc'),
+(3,1,1,E'SA #1 Sub Acc#2'),
+(2,2,1,E'SA #2 Sub Acc');
