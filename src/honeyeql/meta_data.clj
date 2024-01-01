@@ -163,10 +163,10 @@
 
 (defn- one-to-many-attr-ident
   ([left-entity-ident right-entity-ident]
-   (one-to-many-attr-ident left-entity-ident right-entity-ident nil))
-  ([left-entity-ident right-entity-ident one-to-one-attr-ident]
+   (one-to-many-attr-ident left-entity-ident right-entity-ident nil false))
+  ([left-entity-ident right-entity-ident one-to-one-attr-ident is-composite-fk]
    (let [attr-name (cond
-                     (nil? one-to-one-attr-ident) (inf/plural (name left-entity-ident))
+                     (or is-composite-fk (nil? one-to-one-attr-ident)) (inf/plural (name left-entity-ident))
                      (= one-to-one-attr-ident (keyword (name left-entity-ident) (name right-entity-ident))) (inf/plural (name left-entity-ident))
                      :else (str (name one-to-one-attr-ident) "-" (inf/plural (name left-entity-ident))))]
      (if-let [e-ns (namespace right-entity-ident)]
@@ -176,8 +176,9 @@
 (defn- add-one-to-many-metadata [heql-meta-data
                                  {:keys [left-entity-ident left-attr-ident
                                          right-entity-ident right-attr-ident
-                                         one-to-one-attr-ident]}]
-  (let [one-to-many-attr-ident (one-to-many-attr-ident left-entity-ident right-entity-ident one-to-one-attr-ident)]
+                                         one-to-one-attr-ident]}
+                                 is-composite-fk]
+  (let [one-to-many-attr-ident (one-to-many-attr-ident left-entity-ident right-entity-ident one-to-one-attr-ident is-composite-fk)]
     (-> (assoc-in heql-meta-data
                   [:attributes one-to-many-attr-ident]
                   {:attr/ident            one-to-many-attr-ident
@@ -214,9 +215,6 @@
         e-ident (entity-ident db-config fktable_schem fktable_name)
         e-primary-keys (get-in heql-meta-data [:entities e-ident :entity.relation/primary-key :entity.relation.primary-key/attrs])]
     (= e-primary-keys (set attr-idents))))
-
-
-; (one-to-one-attr-name-result (first args) (first (last args)))
 
 (defn- add-fk-one-to-many-rel-metadata [db-config heql-meta-data fk-md]
   (let [is-composite-fk  (>= (count fk-md) 2)
@@ -260,7 +258,8 @@
                                    :left-attr-ident       left-attr-ident
                                    :right-entity-ident    right-entity-ident
                                    :right-attr-ident      right-attr-ident
-                                   :one-to-one-attr-ident ident-for-one-to-many-ident}))))
+                                   :one-to-one-attr-ident ident-for-one-to-many-ident}
+                                  is-composite-fk))))
 
 (defn- add-fk-one-to-one-rel-metadata [db-config heql-meta-data fk-md]
   (let [{:keys [fktable_schem fktable_name fkcolumn_name fk_name
