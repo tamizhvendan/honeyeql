@@ -47,15 +47,24 @@
                                                             (first key))
     (and (= :join type) dispatch-key) key))
 
-(defn- one-to-one-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
-  [:=
-   (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data left)))
-   (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data right)))])
+(defn- composite-ref-keys? [{:attr.column.ref/keys [left right]}]
+  (and (coll? left) (coll? right) (= (count left) (count right))))
 
-(defn- one-to-many-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]} alias]
-  [:=
-   (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data left)))
-   (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data right)))])
+(defn- composite-pred-join [heql-meta-data {:attr.column.ref/keys [left right]} alias pred-fn]
+  (->> (map (fn [[left right]]
+              (pred-fn heql-meta-data
+                       #:attr.column.ref{:left left :right right}
+                       alias))
+            (partition 2 (interleave left right)))
+       (concat [:and])
+       vec))
+
+(defn- one-to-*-join-predicate [heql-meta-data {:attr.column.ref/keys [left right] :as ref-keys} alias]
+  (if (composite-ref-keys? ref-keys)
+    (composite-pred-join heql-meta-data ref-keys alias one-to-*-join-predicate)
+    [:=
+     (keyword (str (:parent alias) "." (heql-md/attr-column-name heql-meta-data left)))
+     (keyword (str (:self alias) "." (heql-md/attr-column-name heql-meta-data right)))]))
 
 (defn- many-to-many-join-predicate [heql-meta-data {:attr.column.ref/keys [left right]
                                                     :as                   join-attr-md} alias assoc-table-alias]
@@ -144,9 +153,9 @@
         from-clause         [from-relation-ident (keyword self-alias)]]
     (case ref-type
       :attr.column.ref.type/one-to-one [[from-clause]
-                                        (one-to-one-join-predicate heql-meta-data join-attr-md alias)]
+                                        (one-to-*-join-predicate heql-meta-data join-attr-md alias)]
       :attr.column.ref.type/one-to-many [[from-clause]
-                                         (one-to-many-join-predicate heql-meta-data join-attr-md alias)]
+                                         (one-to-*-join-predicate heql-meta-data join-attr-md alias)]
       :attr.column.ref.type/many-to-many (let [assoc-table-alias       (str (gensym))
                                                assoc-table-from-clause [(->> (:attr.column.ref.associative/ident join-attr-md)
                                                                              (heql-md/entity-meta-data heql-meta-data)
@@ -233,7 +242,7 @@
         join-attr-md                 (heql-md/attr-meta-data heql-meta-data key)
         hsql                         {:from   [[(heql-md/ref-entity-relation-ident heql-meta-data key)
                                                 (keyword (:self alias))]]
-                                      :where  (one-to-one-join-predicate heql-meta-data join-attr-md alias)
+                                      :where  (one-to-*-join-predicate heql-meta-data join-attr-md alias)
                                       :select (db/select-clause db-adapter heql-meta-data children)}
         hsql                         (apply-params db-adapter hsql eql-node)]
     (db/resolve-one-to-one-relationship db-adapter heql-meta-data hsql eql-node)))
@@ -246,7 +255,7 @@
         join-attr-md                 (heql-md/attr-meta-data heql-meta-data key)
         hsql                         {:from   [[(heql-md/ref-entity-relation-ident heql-meta-data key)
                                                 (keyword (:self alias))]]
-                                      :where  (one-to-many-join-predicate heql-meta-data join-attr-md alias)
+                                      :where  (one-to-*-join-predicate heql-meta-data join-attr-md alias)
                                       :select (db/select-clause db-adapter heql-meta-data children)}
         hsql                         (apply-params db-adapter hsql eql-node)]
     (db/resolve-one-to-many-relationship db-adapter heql-meta-data hsql eql-node)))
@@ -275,8 +284,8 @@
       (if (= :aggregate-attr-naming-convention/vector aggregate-attr-convention)
         (if-let [[_ aggr-fun attr-name] (first (re-seq #"(.*)-of-(.*)" (name default-key)))]
           (if-let [[_ inner-aggr-fun outer-aggr-fun] (first (re-seq #"(.*)-(.*)" aggr-fun))]
-           [(keyword outer-aggr-fun) [(keyword inner-aggr-fun)(keyword (namespace default-key) attr-name)]] 
-           [(keyword aggr-fun) (keyword (namespace default-key) attr-name)])
+            [(keyword outer-aggr-fun) [(keyword inner-aggr-fun) (keyword (namespace default-key) attr-name)]]
+            [(keyword aggr-fun) (keyword (namespace default-key) attr-name)])
           default-key)
         default-key)
       [default-key (dsl/column-alias attribute-return-as default-key)])))

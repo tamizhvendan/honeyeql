@@ -145,7 +145,7 @@
                             :eql {:query-single {[:language/language-id 2]
                                                  [:language/name
                                                   {:language/films [:film/title]}]}
-                                  :expected #:language{:name "Italian", :films [#:film{:title "BROOKLYN DESERT"} #:film{:title "CURTAIN VIDEOTAPE"}]}}}
+                                  :expected #:language{:name "Italian" :films [#:film{:title "BROOKLYN DESERT"} #:film{:title "CURTAIN VIDEOTAPE"}]}}}
                            {:name "supporing one-to-many relationship with multiple foreign-keys to same table - Case #2"
                             :eql  {:query-single [{[:language/language-id 1] [:language/name {:language/original-language-films [:film/title]}]}]
                                    :expected     ["PostgreSQL" #:language{:name                    "English"
@@ -694,4 +694,30 @@
                                    :expected (#:site{:name "test", :id 1, :site-meta-datum #:site-meta-datum{:id 1, :description "test dec"}})}}
                            {:name "custom single arity function"
                             :eql {:query-single [{[:site/id 1] [[[:upper :site/name] :as :site/name]]}]
-                                  :expected #:site{:name "TEST"}}}]}}
+                                  :expected #:site{:name "TEST"}}}
+                           {:name "composite key in one-to-one relationship"
+                            :eql {:query-single {[:account/acc-num 1]
+                                                 [:account/acc-num
+                                                  :account/acc-descr
+                                                  {:account/account-referrer
+                                                   [:account-referrer/referred-by]}]}
+                                  :expected #:account{:acc-num 1 :acc-descr "SA #1" :account-referrer #:account-referrer{:referred-by "foo"}}}}
+                           {:name "composite key in one-to-one relationship reverse"
+                            :eql {:query-single {[:account-referrer/acc-num 1
+                                                  :account-referrer/acc-type 1]
+                                                 [:account-referrer/referred-by
+                                                  {:account-referrer/account
+                                                   [:account/acc-descr]}]}
+                                  :expected #:account-referrer{:referred-by "foo", :account #:account{:acc-descr "SA #1"}}}}
+                           {:name "composite key in one-to-many relationship"
+                            :eql {:query-single {[:account/acc-num 1]
+                                                 [:account/acc-descr
+                                                  {:account/sub-accounts
+                                                   [:sub-account/sub-descr]}]}
+                                  :expected #:account{:acc-descr "SA #1" :sub-accounts [#:sub-account{:sub-descr "SA #1 Sub Acc"} #:sub-account{:sub-descr "SA #1 Sub Acc#2"}]}}}
+                           {:name "composite key in one-to-many relationship reverse"
+                            :eql {:query-single {[:sub-account/sub-acc 2]
+                                                 [:sub-account/sub-descr
+                                                  {:sub-account/account
+                                                   [:account/acc-descr]}]}
+                                  :expected #:sub-account{:sub-descr "SA #2 Sub Acc", :account #:account{:acc-descr "SA #2"}}}}]}}
