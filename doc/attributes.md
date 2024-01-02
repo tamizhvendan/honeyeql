@@ -191,6 +191,50 @@ For the relationships between `film` & `film_actor` and `film_actor` & `actor` t
 :actor/film-actors
 ```
 
+### Composite Primary and Foreign Keys
+
+HoneyEQL supports composite primary and foriegn keys as well.
+
+For the database table relationships like below,
+
+```sql
+CREATE TABLE account (
+   acc_num INT,
+   acc_type INT,
+   acc_descr CHAR(20),
+   PRIMARY KEY (acc_num, acc_type));
+
+CREATE TABLE sub_account (
+   sub_acc INT PRIMARY KEY,
+   ref_num INT NOT NULL,
+   ref_type INT NOT NULL,
+   sub_descr CHAR(20),
+   FOREIGN KEY (ref_num, ref_type) REFERENCES account (acc_num, acc_type));
+   
+CREATE TABLE account_referrer (
+   acc_num INTEGER,
+   acc_type INTEGER,
+   referred_by VARCHAR(20),
+   PRIMARY KEY (acc_num, acc_type),
+   FOREIGN KEY (acc_num, acc_type) REFERENCES account (acc_num, acc_type)
+);
+```
+![](./img/composite-key.png)
+
+HoneyEQL infers "one-to-one" relationship between `account` and `account_referrer` and "one-to-many" relationship between `account` and `sub_account`. We can access them via following attributes
+
+```clojure
+; one to one
+:account/account-referrer
+:account-referrer/account
+
+; one to many
+:account/sub-accounts
+
+; reverse of one to many
+:sub-account/account
+```
+
 ### Foreign Key Without the Id Suffix
 
 If the foreign key in question doesn't have the id suffix `_id`, then the HoneyEQL follows a slightly different approach to name the attributes.
