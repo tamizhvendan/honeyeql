@@ -701,26 +701,22 @@
                                                   :account/acc-descr
                                                   {:account/account-referrer
                                                    [:account-referrer/referred-by]}]}
-                                  :ignore       #{"MySQL"}
                                   :expected #:account{:acc-num 1 :acc-descr "SA #1" :account-referrer #:account-referrer{:referred-by "foo"}}}}
                            {:name "composite key in one-to-one relationship reverse"
                             :eql {:query-single {[:sub-account/sub-acc 1]
                                                  [:sub-account/sub-descr
                                                   {:sub-account/account
                                                    [:account/acc-descr]}]}
-                                  :ignore       #{"MySQL"}
                                   :expected #:sub-account{:sub-descr "SA #1 Sub Acc", :account #:account{:acc-descr "SA #1"}}}}
                            {:name "composite key in one-to-many relationship"
                             :eql {:query-single {[:account/acc-num 1]
                                                  [:account/acc-descr
                                                   {:account/sub-accounts
                                                    [:sub-account/sub-descr]}]}
-                                  :ignore       #{"MySQL"}
                                   :expected #:account{:acc-descr "SA #1" :sub-accounts [#:sub-account{:sub-descr "SA #1 Sub Acc"} #:sub-account{:sub-descr "SA #1 Sub Acc#2"}]}}}
                            {:name "composite key in one-to-many relationship reverse"
                             :eql {:query-single {[:sub-account/sub-acc 2]
                                                  [:sub-account/sub-descr
                                                   {:sub-account/account
                                                    [:account/acc-descr]}]}
-                                  :ignore       #{"MySQL"}
                                   :expected #:sub-account{:sub-descr "SA #2 Sub Acc", :account #:account{:acc-descr "SA #2"}}}}]}}

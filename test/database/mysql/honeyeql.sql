@@ -294,3 +294,33 @@ UNLOCK TABLES;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2023-08-14 12:02:44
+
+CREATE TABLE account (
+   acc_num INT,
+   acc_type INT,
+   acc_descr CHAR(20),
+   PRIMARY KEY (acc_num, acc_type));
+
+CREATE TABLE sub_account (
+   sub_acc INT PRIMARY KEY,
+   ref_num INT NOT NULL,
+   ref_type INT NOT NULL,
+   sub_descr CHAR(20),
+   FOREIGN KEY (ref_num, ref_type) REFERENCES account (acc_num, acc_type));
+   
+CREATE TABLE account_referrer (
+   acc_num INTEGER,
+   acc_type INTEGER,
+   referred_by VARCHAR(20),
+   PRIMARY KEY (acc_num, acc_type),
+   FOREIGN KEY (acc_num, acc_type) REFERENCES account (acc_num, acc_type)
+);
+
+INSERT into account(acc_num, acc_type, acc_descr) 
+ VALUES (1, 1, "SA #1"), (2, 1, "SA #2");
+ 
+INSERT INTO account_referrer(acc_num, acc_type, referred_by)
+ VALUES (1,1,'foo');
+ 
+INSERT INTO sub_account(sub_acc, ref_num, ref_type, sub_descr)
+VALUES (1,1,1,'SA #1 Sub Acc'), (3,1,1,'SA #1 Sub Acc#2'), (2,2,1,'SA #2 Sub Acc');
