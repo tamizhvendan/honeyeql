@@ -1,6 +1,6 @@
 # Cast Operation
 
-HoneyEQL supports type cast operation using the `:cast` parameter. This parameter takes the value similar to HoneySQL's a `cast` parameter expect that instead of column name, we'll be using the attribute ident.
+HoneyEQL supports type cast operation using the `:cast` parameter. This parameter takes the value similar to HoneySQL's a `cast` parameter except that instead of column name, we'll be using the attribute ident.
 
 ```clojure
 ; :eql.mode/lenient syntax

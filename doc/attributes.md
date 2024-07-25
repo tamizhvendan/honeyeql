@@ -16,7 +16,7 @@ An attribute is represented using Clojure's namespaced keyword.
 :{table-name-in-kebab-case}/{column-or-relationship-name-in-kebab-case}
 ```
 
-An attributes namespace namespace is the singularized, kebab-case version of the corresponding table or view name.
+An attributes namespace is the singularized, kebab-case version of the corresponding table or view name.
 
 | Table/View Name | Attribute Namespace |
 | --------------- | ------------------- |
