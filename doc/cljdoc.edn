@@ -8,6 +8,7 @@
                    ["Filters" {:file "doc/filters.md"}]
                    ["Aggregate Queries" {:file "doc/aggregate-queries.md"}]
                    ["Cast Operation" {:file "doc/cast-operation.md"}]
+                   ["Transactions" {:file "doc/transactions.md"}]
                    ["Configuration" {:file "doc/configuration.md"}]
                    ["Coercion" {:file "doc/coercion.md"}]
                    ["JSON object" {:file "doc/json-object.md"}]
