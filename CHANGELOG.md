@@ -1,3 +1,5 @@
+* 1.0.3 - 2024-07-26
+  - Updated docs
 * 1.0.2 - 2024-01-02
   - Added support for composite keys #8
   - Removed `opt-attrs` from metadata
