@@ -33,7 +33,7 @@ The query result would look like
  ...]
 ```
 
-Then we need to do the **group by** operation on the `first_name` & `last_name` attributes at the application layer to get the exact result result that we want!
+Then we need to do the **group by** operation on the `first_name` & `last_name` attributes at the application layer to get the exact result that we want!
 
 How about making these steps truly declarative? 
 

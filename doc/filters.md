@@ -1,6 +1,6 @@
 # Filtering
 
-HoneyEQL supports filtering using the `:where` parameter. This parameter takes the value similar to HoneySQL's a `where` clause expect that instead of column name, we'll be using the attribute ident.
+HoneyEQL supports filtering using the `:where` parameter. This parameter takes the value similar to HoneySQL's a `where` clause except that instead of column name, we'll be using the attribute ident.
 
 ```clojure
 ; :eql.mode/lenient syntax
