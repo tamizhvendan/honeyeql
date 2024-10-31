@@ -8,8 +8,11 @@
 (defn- entity-name [entity]
   (-> entity keys first namespace))
 
-(defn- table-name [entity]
-  (-> (entity-name entity) (str/replace #"-" "_") keyword))
+(defn- table-name [{:keys [heql-meta-data]} entity]
+  (->> entity
+       keys
+       first
+       (heql-md/entity-relation-ident heql-meta-data)))
 
 (defn- sqlize-entity [db-adapter entity]
   (into {}
@@ -25,7 +28,7 @@
   (namespacify-attributes
    (entity-name entity)
    (sql/insert! (:db-spec db-adapter)
-                (table-name entity)
+                (table-name db-adapter entity)
                 (sqlize-entity db-adapter entity)
                 {:column-fn (db/table-fn db-adapter)
                  :table-fn (db/table-fn db-adapter)
@@ -40,7 +43,7 @@
       (map
        #(namespacify-attributes first-entity-name %)
        (sql/insert-multi! (:db-spec db-adapter)
-                          (table-name first-entity)
+                          (table-name db-adapter first-entity)
                           (keys (first sqlized-entities))
                           (map vals sqlized-entities)
                           {:column-fn (db/table-fn db-adapter)
@@ -48,13 +51,13 @@
                            :builder-fn rs/as-kebab-maps})))))
 
 (defn update! [db-adapter update-params where-params]
-  (sql/update! (:db-spec db-adapter) (table-name update-params)
+  (sql/update! (:db-spec db-adapter) (table-name db-adapter update-params)
                (sqlize-entity db-adapter update-params) (sqlize-entity db-adapter where-params)
                {:column-fn (db/table-fn db-adapter)
                 :table-fn (db/table-fn db-adapter)}))
 
 (defn delete! [db-adapter where-params]
-  (sql/delete! (:db-spec db-adapter) (table-name where-params)
+  (sql/delete! (:db-spec db-adapter) (table-name db-adapter where-params)
                (sqlize-entity db-adapter where-params)
                {:column-fn (db/table-fn db-adapter)
                 :table-fn (db/table-fn db-adapter)}))
