@@ -81,7 +81,7 @@ we can perform the following database operations using the HoneyEQL's mutation s
 
 ## Transaction Support
 
-To perform Database transactipn we can make use of the `next.jdbc`'s `with-transaction` [macro](https://cljdoc.org/d/com.github.seancorfield/next.jdbc/1.3.883/doc/getting-started/transactions) along with two functions, `db-spec` and `use-tx` from the `honeyeql.core` namespace.
+To perform Database transactions we can make use of the `next.jdbc`'s `with-transaction` [macro](https://cljdoc.org/d/com.github.seancorfield/next.jdbc/1.3.883/doc/getting-started/transactions) along with two functions, `db-spec` and `use-tx` from the `honeyeql.core` namespace.
 
 ```clojure
 (jdbc/with-transaction [tx (heql/db-spec db-adapter)]
