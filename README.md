@@ -1,6 +1,6 @@
 ## HoneyEQL
 
-HoneyEQL is a Clojure library enables you to query the database declaratively using the [EDN Query Language](https://edn-query-language.org)(EQL). It aims to simplify the effort required to work with the relational databases in Clojure. It also provides database modification operations support using Clojure maps with namespace qualified keys.   
+HoneyEQL is a Clojure library that enables you to query the database declaratively using the [EDN Query Language](https://edn-query-language.org)(EQL). It aims to simplify the effort required to work with relational databases in Clojure. It also provides database modification operations support using Clojure maps with namespace qualified keys.   
 
 [![Clojars Project](https://img.shields.io/clojars/v/com.github.tamizhvendan/honeyeql.svg)](https://clojars.org/com.github.tamizhvendan/honeyeql)
 
@@ -8,7 +8,7 @@ HoneyEQL is a Clojure library enables you to query the database declaratively us
 
 ## Rationale
 
-When a query involves more than one table, the declarative nature of SQL depreciates. Depends on the type of relationship, we have to put appropriate join conditions. 
+When a query involves more than one table, the declarative nature of SQL depreciates. Depending on the type of relationship, we have to put appropriate join conditions. 
 
 Let's assume that we have the following schema.
 
@@ -61,7 +61,7 @@ The above query **yields the results in the exact-shape that we wanted** and **w
 
 As the query syntax is made up of Clojure's data structures, we can construct it **dynamically** at runtime. 
 
-HoneyEQL transforms the EQL into single efficient SQL and query the database using [next.jdbc](https://github.com/seancorfield/next-jdbc).
+HoneyEQL transforms the EQL into single efficient SQL and queries the database using [next.jdbc](https://github.com/seancorfield/next-jdbc).
 
 ## Documentation
 
@@ -86,7 +86,7 @@ HoneyEQL is not possible without the following excellent Clojure libraries.
 - [inflections](https://github.com/r0man/inflections-clj)
 - [data-json](https://github.com/clojure/data.json)
 
-The samples in the documentation of HoneyEQL uses the [Sakila](https://www.jooq.org/sakila) database from [JOOQ](https://www.jooq.org) extensively.
+The samples in the documentation of HoneyEQL use the [Sakila](https://www.jooq.org/sakila) database from [JOOQ](https://www.jooq.org) extensively.
 
 ## License
 
