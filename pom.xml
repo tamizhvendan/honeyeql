@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.github.tamizhvendan</groupId>
   <artifactId>honeyeql</artifactId>
-  <version>1.0.4</version>
+  <version>1.0.5</version>
 
   <name>Honey EQL</name>
   <description>HoneyEQL enables you to query database using the EQL.</description>
@@ -21,19 +21,19 @@
     <url>https://github.com/tamizhvendan/honeyeql</url>
     <connection>scm:git:git://github.com/tamizhvendan/honeyeql.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/tamizhvendan/honeyeql.git</developerConnection>
-    <tag>1.0.4</tag>
+    <tag>1.0.5</tag>
   </scm>
 
   <dependencies>
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
-      <version>1.11.1</version>
+      <version>1.12.1</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>data.json</artifactId>
-      <version>2.4.0</version>
+      <version>2.5.1</version>
     </dependency>
     <dependency>
       <groupId>edn-query-language</groupId>
@@ -43,17 +43,17 @@
     <dependency>
       <groupId>com.github.seancorfield</groupId>
       <artifactId>honeysql</artifactId>
-      <version>2.4.1045</version>
+      <version>2.7.1310</version>
     </dependency>
     <dependency>
       <groupId>inflections</groupId>
       <artifactId>inflections</artifactId>
-      <version>0.14.1</version>
+      <version>0.14.2</version>
     </dependency>
     <dependency>
       <groupId>com.github.seancorfield</groupId>
       <artifactId>next.jdbc</artifactId>
-      <version>1.3.883</version>
+      <version>1.3.1048</version>
     </dependency>
   </dependencies>
 

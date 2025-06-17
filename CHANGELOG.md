@@ -1,3 +1,6 @@
+* 1.0.5 - 2025-06-17
+  - Fixes #22
+  - Upgrade dependencies to their latest versions  
 * 1.0.4 - 2024-10-31
   - Fixes #15
 * 1.0.3 - 2024-07-26
