@@ -194,7 +194,7 @@
     (case op
       :and (concat [:and] (map #(where-predicate db-adapter % eql-node) (rest clause)))
       :or (concat [:or] (map #(where-predicate db-adapter % eql-node) (rest clause)))
-      :not (conj [:not] (where-predicate db-adapter (second clause) eql-node))
+      :not (conj [:not] [(where-predicate db-adapter (second clause) eql-node)])
       :exists (nested-entity-predicate db-adapter eql-node clause)
       (if (keyword? col)
         (hsql-predicate db-adapter eql-node clause)

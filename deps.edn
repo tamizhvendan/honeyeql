@@ -1,18 +1,18 @@
 {:paths ["src"]
- :deps  {org.clojure/clojure    {:mvn/version "1.11.1"}
-         com.github.seancorfield/next.jdbc {:mvn/version "1.3.909"}
-         inflections/inflections            {:mvn/version "0.14.1"}
+ :deps  {org.clojure/clojure    {:mvn/version "1.12.1"}
+         com.github.seancorfield/next.jdbc {:mvn/version "1.3.1048"}
+         inflections/inflections            {:mvn/version "0.14.2"}
          edn-query-language/eql {:mvn/version "2021.07.18"}
-         com.github.seancorfield/honeysql {:mvn/version "2.5.1103"}
-         org.clojure/data.json  {:mvn/version "2.5.0"}}
+         com.github.seancorfield/honeysql {:mvn/version "2.1.818"}
+         org.clojure/data.json  {:mvn/version "2.5.1"}}
  :aliases {:dev {:extra-paths ["dev"]
-                 :extra-deps {com.mysql/mysql-connector-j {:mvn/version "8.1.0"}
+                 :extra-deps {com.mysql/mysql-connector-j {:mvn/version "9.3.0"}
                               org.postgresql/postgresql   {:mvn/version "42.7.7"}
-                              djblue/portal {:mvn/version "0.45.1"}}}
+                              djblue/portal {:mvn/version "0.59.1"}}}
            :test {:extra-paths ["test"]
                   :main-opts ["-m" "cognitect.test-runner"]
                   :exec-fn cognitect.test-runner.api/test
                   :extra-deps {hikari-cp/hikari-cp {:mvn/version "3.0.1"}
-                               com.mysql/mysql-connector-j {:mvn/version "8.1.0"}
+                               com.mysql/mysql-connector-j {:mvn/version "9.3.0"}
                                org.postgresql/postgresql   {:mvn/version "42.7.7"}
                                io.github.cognitect-labs/test-runner {:git/tag "v0.5.1" :git/sha "dfb30dd"}}}}}
