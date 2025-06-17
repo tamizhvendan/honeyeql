@@ -77,15 +77,18 @@
 (defn- attributes-meta-data [db-spec ^DatabaseMetaData jdbc-meta-data]
   (->> (.getColumns jdbc-meta-data nil "%" "%" nil)
        (heql-md/datafied-result-set db-spec)
+       (remove (fn [{:keys [table_schem]}]
+                 (or (= table_schem "information_schema")
+                     (= table_schem "pg_catalog"))))
        vec))
 
 (defn- primary-keys-meta-data [db-spec ^DatabaseMetaData jdbc-meta-data]
-  (->> (.getPrimaryKeys jdbc-meta-data nil "" nil)
+  (->> (.getPrimaryKeys jdbc-meta-data nil nil nil)
        (heql-md/datafied-result-set db-spec)
        vec))
 
 (defn- foreign-keys-meta-data [db-spec ^DatabaseMetaData jdbc-meta-data]
-  (->> (.getImportedKeys jdbc-meta-data nil "" nil)
+  (->> (.getImportedKeys jdbc-meta-data nil nil nil)
        (heql-md/datafied-result-set db-spec)
        vec))
 
