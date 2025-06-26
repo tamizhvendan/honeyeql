@@ -695,6 +695,15 @@
                            {:name "custom single arity function"
                             :eql {:query-single [{[:site/id 1] [[[:upper :site/name] :as :site/name]]}]
                                   :expected #:site{:name "TEST"}}}
+                           {:name "custom multi arity function"
+                            :eql {:query-single [{[:author/id 1] [[[:concat :author/first-name " " :author/last-name] :as :author/full-name]]}]
+                                  :ignore   #{"MySQL"}
+                                  :expected #:author{:full-name "John Doe"}}}
+                           {:name "custom multi arity function with nested function"
+                            :eql {:query-single [{[:employee/id 7]
+                                                  [[[:concat [:cast :employee/id :text] ". " :employee/first-name] :as :employee/identifer]]}]
+                                  :ignore   #{"MySQL"}
+                                  :expected #:employee{:identifer "7. Robert"}}}
                            {:name "composite key in one-to-one relationship"
                             :eql {:query-single {[:account/acc-num 1]
                                                  [:account/acc-num
