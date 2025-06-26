@@ -7,6 +7,7 @@
                    ["Pagination" {:file "doc/pagination.md"}]
                    ["Filters" {:file "doc/filters.md"}]
                    ["Aggregate Queries" {:file "doc/aggregate-queries.md"}]
+                   ["Functions" {:file "doc/functions.md"}]
                    ["Cast Operation" {:file "doc/cast-operation.md"}]
                    ["Transactions" {:file "doc/transactions.md"}]
                    ["Configuration" {:file "doc/configuration.md"}]
