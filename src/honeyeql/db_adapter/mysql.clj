@@ -20,7 +20,7 @@
 ;; https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-reference-type-conversions.html
 (defn- mysql-type->col-type [{:keys [type_name column_size]}]
   (if (and (#{"BIT" "TINYINT"} type_name) (= 1 column_size))
-    :attr.type/boolean
+    :attr.type/boolean 
     (case type_name
       ("CHAR" "VARCHAR" "TINYTEXT" "TEXT" "MEDIUMTEXT" "LONGTEXT" "ENUM" "SET" "BINARY" "VARBINARY" "TINYBLOB" "BLOB" "LONGBLOB") :attr.type/string
       ("TINYINT" "SMALLINT" "MEDIUMINT" "INT" "TINYINT UNSIGNED" "SMALLINT UNSIGNED" "MEDIUMINT UNSIGNED") :attr.type/integer

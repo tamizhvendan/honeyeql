@@ -38,6 +38,13 @@
        (keyword? (first x))
        (not (qualified-keyword? (first x)))))
 
+(defn- function-args-attribute-ident [{:keys [key]}]
+  (cond 
+    (function-attribute-ident? key) (rest key)
+    (and (dsl/alias-attribute-ident? key)
+         (function-attribute-ident? (first key))) (rest (first key))
+    :else nil))
+
 (defn- eql-node->attr-ident [{:keys [key type dispatch-key]}]
   (cond
     (and (= :prop type) (keyword? key)) key
@@ -339,7 +346,12 @@
   ([db-adapter eql-node]
    (enrich-eql-node db-adapter eql-node nil))
   ([db-adapter eql-node parent-alias]
-   (let [attr-ident                           (eql-node->attr-ident eql-node)]
+   (let [attr-ident               (eql-node->attr-ident eql-node)
+         function-attribute-ident (and
+                                   (= :prop (:type eql-node))
+                                   (if (dsl/alias-attribute-ident? (:key eql-node))
+                                     (function-attribute-ident? (first (:key eql-node)))
+                                     (function-attribute-ident? (:key eql-node))))]
      (case (:type eql-node)
        :root (update (assoc eql-node :attr-ident attr-ident) :children
                      (fn [eql-nodes]
@@ -351,11 +363,13 @@
                               :attr-ident attr-ident)
                        :children
                        (partial resolve-wid-card-attributes db-adapter self-alias)))
-       :prop (-> (assoc eql-node :attr-ident attr-ident)
-                 (assoc-in [:alias :parent] parent-alias)
-                 (assoc :function-attribute-ident (if (dsl/alias-attribute-ident? (:key eql-node))
-                                                    (function-attribute-ident? (first (:key eql-node)))
-                                                    (function-attribute-ident? (:key eql-node)))))))))
+       :prop (->
+              (if function-attribute-ident 
+                (assoc eql-node :function-args-attribute-ident (function-args-attribute-ident eql-node))
+                eql-node)
+              (assoc :attr-ident attr-ident)
+              (assoc-in [:alias :parent] parent-alias)
+              (assoc :function-attribute-ident function-attribute-ident))))))
 
 (defn query [db-adapter eql-query]
   (let [{:keys [heql-meta-data heql-config]} db-adapter

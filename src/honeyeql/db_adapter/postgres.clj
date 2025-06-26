@@ -105,21 +105,31 @@
               :from   [:rs]} :rs]]
    :select [[[:raw "coalesce (json_agg(\"rs\"), '[]')::character varying as result"]]]})
 
-(defn- hsql-column-name [{:keys [alias function-attribute-ident key] :as n} attr-md]
+(defn- hsql-raw-column-name [attr-md parent]
+  (->> (heql-md/attr-column-name attr-md)
+       (str parent ".")
+       keyword))
+
+(defn- hsql-column-name [heql-meta-data {:keys [alias function-attribute-ident function-args-attribute-ident key] :as n} attr-md]
   (let [{:keys [parent]} alias
-        c (->> (heql-md/attr-column-name attr-md)
-               (str parent ".")
-               keyword)]
+        args-as-column (reduce (fn [m a]
+                                 (let [c (if (vector? a) (second a) a)]
+                                   (if (heql-md/attribute? heql-meta-data c)
+                                     (assoc m c (hsql-raw-column-name (heql-md/attr-meta-data heql-meta-data c) parent))
+                                     m))) 
+                               {} 
+                               function-args-attribute-ident)]
     (if function-attribute-ident
-      (let [[sqlfn arg1 arg2] (if (dsl/alias-attribute-ident? key)
+      (let [[sqlfn & args] (if (dsl/alias-attribute-ident? key)
                              (first key)
                              key)]
-        (if arg2
-          (hsql/call sqlfn c arg2)
-          (if (vector? arg1)
-            (hsql/call sqlfn (hsql/call (first arg1) c))
-            (hsql/call sqlfn c))))
-      c)))
+        (apply (partial hsql/call sqlfn)
+               (map #(or (args-as-column %)
+                         (when (vector? %)
+                           (hsql/call (first %) (args-as-column (second %))))
+                         %)
+                    args)))
+      (hsql-raw-column-name attr-md parent))))
 
 (defn- eql-node->select-expr [db-adapter heql-meta-data {:keys [attr-ident alias]
                                                          :as   eql-node}]
@@ -130,7 +140,7 @@
         select-attr-expr      (case (:attr.column.ref/type attr-md)
                                 :attr.column.ref.type/one-to-one (keyword (str parent "__" self))
                                 (:attr.column.ref.type/one-to-many :attr.column.ref.type/many-to-many) (dsl/eql->hsql db-adapter heql-meta-data eql-node)
-                                (hsql-column-name eql-node attr-md))]
+                                (hsql-column-name heql-meta-data eql-node attr-md))]
     [select-attr-expr (dsl/select-clause-alias eql-node)]))
 
 (defn- assoc-one-to-one-hsql-queries [db-adapter heql-meta-data hsql eql-nodes]
