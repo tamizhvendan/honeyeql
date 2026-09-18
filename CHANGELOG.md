@@ -1,3 +1,5 @@
+* 1.0.7 - 2026-09-18
+  - Upgrade dependencies to their latest versions 
 * 1.0.6 - 2025-06-26
   - Added support for multi-arity function in postgres
 * 1.0.5 - 2025-06-17

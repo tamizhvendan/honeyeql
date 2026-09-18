@@ -123,12 +123,12 @@
       (let [[sqlfn & args] (if (dsl/alias-attribute-ident? key)
                              (first key)
                              key)]
-        (apply (partial hsql/call sqlfn)
+        (apply (partial vector sqlfn)
                (map (fn [arg]
                       (or 
                        (args-as-column arg) 
                        (when (vector? arg)
-                         (apply hsql/call (map #(or (args-as-column %) %) arg))) 
+                         (apply vector (map #(or (args-as-column %) %) arg))) 
                        arg))
                     args)))
       (hsql-raw-column-name attr-md parent))))

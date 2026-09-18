@@ -137,13 +137,13 @@
         c (keyword (name parent) (name column-name))]
     (if function-attribute-ident
       (let [[sqlfn arg1 arg2] (if (dsl/alias-attribute-ident? key)
-                             (first key)
-                             key)]
+                                (first key)
+                                key)]
         (if arg2
-          (hsql/call sqlfn c arg2)
+          [sqlfn c arg2]
           (if (vector? arg1)
-            (hsql/call sqlfn (hsql/call (first arg1) c))
-            (hsql/call sqlfn c))))
+            [sqlfn [(first arg1) c]]
+            [sqlfn c])))
       c)))
 
 (defn- mysql-select-clause [db-adapter heql-meta-data eql-nodes]
