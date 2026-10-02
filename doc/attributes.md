@@ -101,6 +101,8 @@ If the column name (`language_id`) after the removal of the foreign key suffix (
 
 If the column name (`original_language_id`) after the removal of the foreign key suffix (`original_language`) did not match the source table name, then HoneyEQL removes the foreign key suffix and concatenate with the pluralized form of the target table and then convert it to its *kebab-case* version (`original-language-films`).
 
+NOTE: HoneyEQL generates a one-to-many relationship on the referenced table when the foreign-key column set is not unique.
+
 ### One to One (Reverse side of One to Many)
 
 ![](./img/address_city_country_er_diagram.png)
@@ -134,7 +136,7 @@ By default, HoneyEQL assumes `_id` as the suffix for foreign keys in both Postgr
 
 ### One to One
 
-HoneyEQL infers one to one relationship if the primary key and a foreign key of a table are same. 
+HoneyEQL infers a one-to-one relationship when the foreign-key column or column set is unique.
 
 ![](./img/one-to-one-relationship.png)
 
@@ -148,6 +150,51 @@ For this example, HoneyEQL generates two attributes
 ```clojure
 :site/site-meta-datum
 :site-meta-datum/site
+```
+
+It infers one-to-one relationship for unique foreign keys as well.
+
+For example:
+
+```sql
+CREATE TABLE player (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+CREATE TABLE player_profile (
+    id INTEGER PRIMARY KEY,
+    player_id INTEGER NOT NULL UNIQUE,
+    website TEXT NOT NULL,
+    FOREIGN KEY (player_id) REFERENCES player(id)
+);
+```
+
+The `player_id` column is both a foreign key and unique. This means that multiple `player_profile` rows cannot refer to the same player.
+
+HoneyEQL therefore infers one-to-one relationships in both directions:
+
+```
+:player-profile/player
+:player/player-profile
+```
+
+A query can navigate the relationship from player to player_profile as a single nested value:
+
+```clojure
+(heql/query-single
+ db-adapter
+ {[:player/id 1]
+  [:player/name
+   {:player/player-profile
+    [:player-profile/website]}]})
+```
+which returns:
+
+```clojure
+#:player{:name "Player #1"
+         :player-profile
+         #:player-profile{:website "Player #1 Website"}}
 ```
 
 ### Many to Many

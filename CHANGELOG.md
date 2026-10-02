@@ -1,3 +1,5 @@
+* 2.0.0 - 2026-10-02
+  - **Breaking**: Foreign keys backed by UNIQUE constraints are now correctly inferred as one-to-one relationships.
 * 1.0.8 - 2026-10-02
   - Added support for projecting attributes through one-to-one relationship paths
 * 1.0.7 - 2026-09-18
