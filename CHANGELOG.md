@@ -1,3 +1,5 @@
+* 1.0.8 - 2026-10-02
+  - Added support for projecting attributes through one-to-one relationship paths
 * 1.0.7 - 2026-09-18
   - Upgrade dependencies to their latest versions 
 * 1.0.6 - 2025-06-26

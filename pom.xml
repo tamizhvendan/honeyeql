@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.github.tamizhvendan</groupId>
   <artifactId>honeyeql</artifactId>
-  <version>1.0.7</version>
+  <version>1.0.8</version>
   <name>Honey EQL</name>
   <description>HoneyEQL enables you to query database using the EQL.</description>
   <url>https://github.com/tamizhvendan/honeyeql</url>
