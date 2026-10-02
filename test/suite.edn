@@ -380,6 +380,13 @@
                                                    {[:city/country :as :city/nation]
                                                     [[:country/country :as :nation/name]]}]}]
                                   :expected #:city{:name "Abu Dhabi", :nation #:nation{:name "United Arab Emirates"}}}}
+                           {:name "query one-to-one join expression"
+                            :eql {:query-single [{[:customer/customer-id 318]
+                                                  [[[:customer/address :address/address] :as :customer/address]
+                                                   [[:customer/address :address/city :city/country :country/country]
+                                                    :as
+                                                    :customer/country]]}]
+                                  :expected #:customer{:address "1769 Iwaki Lane", :country "Poland"}}}
                            {:name "query one-to-many join column alias"
                             :eql  {:query-single [{[:country/country-id 2] [:country/country {[:country/cities :as :country/greater-cities] [:city/city]}]}]
                                    :expected     #:country{:country "Algeria"

@@ -120,7 +120,7 @@
                                {} 
                                function-args-attribute-ident)]
     (if function-attribute-ident
-      (let [[sqlfn & args] (if (dsl/alias-attribute-ident? key)
+      (let [[sqlfn & args] (if (dsl/alias-expression? key)
                              (first key)
                              key)]
         (apply (partial vector sqlfn)
@@ -136,7 +136,7 @@
 (defn- eql-node->select-expr [db-adapter heql-meta-data {:keys [attr-ident alias]
                                                          :as   eql-node}]
   (let [{:keys [parent self]} alias
-        attr-md               (heql-md/attr-meta-data heql-meta-data (if (dsl/alias-attribute-ident? attr-ident)
+        attr-md               (heql-md/attr-meta-data heql-meta-data (if (dsl/alias-expression? attr-ident)
                                                                        (first attr-ident)
                                                                        attr-ident))
         select-attr-expr      (case (:attr.column.ref/type attr-md)

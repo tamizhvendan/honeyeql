@@ -136,7 +136,7 @@
         {:keys [_ parent]} alias
         c (keyword (name parent) (name column-name))]
     (if function-attribute-ident
-      (let [[sqlfn arg1 arg2] (if (dsl/alias-attribute-ident? key)
+      (let [[sqlfn arg1 arg2] (if (dsl/alias-expression? key)
                                 (first key)
                                 key)]
         (if arg2
@@ -151,7 +151,7 @@
    (reduce (fn [obj {:keys [attr-ident alias]
                      :as   eql-node}]
              (let [{:keys [self parent]} alias
-                   attr-md               (heql-md/attr-meta-data heql-meta-data (if (dsl/alias-attribute-ident? attr-ident)
+                   attr-md               (heql-md/attr-meta-data heql-meta-data (if (dsl/alias-expression? attr-ident)
                                                                                   (first attr-ident)
                                                                                   attr-ident))
                    attr-column-ref-type  (heql-md/attr-column-ref-type attr-md)]

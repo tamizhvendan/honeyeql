@@ -33,25 +33,27 @@
   (let [eql-queries (if (vector? eql-queries) eql-queries (vector eql-queries))]
     (vec (map transform-honeyeql-query eql-queries))))
 
-(defn- function-attribute-ident? [x]
-  (and (vector? x)
-       (keyword? (first x))
-       (not (qualified-keyword? (first x)))))
+
 
 (defn- function-args-attribute-ident [{:keys [key]}]
-  (cond 
-    (function-attribute-ident? key) (rest key)
-    (and (dsl/alias-attribute-ident? key)
-         (function-attribute-ident? (first key))) (rest (first key))
+  (cond
+    (dsl/function-expression? key) (rest key)
+    (and (dsl/alias-expression? key)
+         (dsl/function-expression? (first key))) (rest (first key))
     :else nil))
+
+(comment
+  (def eq (last @p))
+  (eql-node->attr-ident (:eql-node eq)))
 
 (defn- eql-node->attr-ident [{:keys [key type dispatch-key]}]
   (cond
     (and (= :prop type) (keyword? key)) key
-    (and (= :prop type) (function-attribute-ident? key)) (second key)
-    (and (= :prop type) (dsl/alias-attribute-ident? key)) (if (function-attribute-ident? (first key))
-                                                            (second (first key))
-                                                            (first key))
+    (and (= :prop type) (dsl/function-expression? key)) (second key)
+    (and (= :prop type) (dsl/alias-expression? key)) (if (dsl/function-expression? (first key))
+                                                       (second (first key))
+                                                       (first key))
+    (and (= :prop type) (dsl/attribute-path-expression? key)) (first key)
     (and (= :join type) dispatch-key) key))
 
 (defn- composite-ref-keys? [{:attr.column.ref/keys [left right]}]
@@ -223,6 +225,25 @@
       group-by (apply-group-by db-adapter group-by eql-node)
       :else identity)))
 
+(defn- apply-attribute-path-joins [db-adapter hsql eql-nodes]
+  (let [heql-meta-data (:heql-meta-data db-adapter)]
+    (reduce
+     (fn [hsql {:keys [attr-ident alias]}]
+       (let [attr-md (heql-md/attr-meta-data heql-meta-data attr-ident)
+             table [(heql-md/ref-entity-relation-ident heql-meta-data attr-ident)
+                    (keyword (:self alias))]
+             predicate (one-to-*-join-predicate heql-meta-data attr-md alias)]
+         (hsql-helpers/left-join hsql table predicate)))
+     hsql
+     (mapcat :attribute-path/joins eql-nodes))))
+
+(defn- resolve-child-selections [db-adapter heql-meta-data hsql children]
+  (db/resolve-children-one-to-one-relationships
+   db-adapter
+   heql-meta-data
+   (apply-attribute-path-joins db-adapter hsql children)
+   children))
+
 (defmethod ^{:private true} dsl/eql->hsql :ident-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
         hsql                         {:from   [[(heql-md/entity-relation-ident heql-meta-data (first key))
@@ -230,7 +251,7 @@
                                       :where  (eql-ident-key->hsql-predicate db-adapter key alias)
                                       :select (db/select-clause db-adapter heql-meta-data children)}
         hsql                         (apply-params db-adapter hsql eql-node)]
-    (db/resolve-children-one-to-one-relationships db-adapter heql-meta-data hsql children)))
+    (resolve-child-selections db-adapter heql-meta-data hsql children)))
 
 (defmethod ^{:private true} dsl/eql->hsql :non-ident-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [children alias]} eql-node
@@ -239,11 +260,11 @@
                                             (keyword (:self alias))]]
                                   :select (db/select-clause db-adapter heql-meta-data children)}
         hsql                     (apply-params db-adapter hsql eql-node)]
-    (db/resolve-children-one-to-one-relationships db-adapter heql-meta-data hsql children)))
+    (resolve-child-selections db-adapter heql-meta-data hsql children)))
 
 (defmethod ^{:private true} dsl/eql->hsql :one-to-one-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
-        key                          (if (dsl/alias-attribute-ident? key)
+        key                          (if (dsl/alias-expression? key)
                                        (first key)
                                        key)
         join-attr-md                 (heql-md/attr-meta-data heql-meta-data key)
@@ -256,7 +277,7 @@
 
 (defmethod ^{:private true} dsl/eql->hsql :one-to-many-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
-        key                          (if (dsl/alias-attribute-ident? key)
+        key                          (if (dsl/alias-expression? key)
                                        (first key)
                                        key)
         join-attr-md                 (heql-md/attr-meta-data heql-meta-data key)
@@ -269,7 +290,7 @@
 
 (defmethod ^{:private true} dsl/eql->hsql :many-to-many-join [db-adapter heql-meta-data eql-node]
   (let [{:keys [key children alias]} eql-node
-        key                          (if (dsl/alias-attribute-ident? key)
+        key                          (if (dsl/alias-expression? key)
                                        (first key)
                                        key)
         join-attr-md                 (heql-md/attr-meta-data heql-meta-data key)
@@ -340,6 +361,68 @@
           eql-nodes))
       eql-nodes)))
 
+(defn- enrich-attribute-path [db-adapter parent-alias path]
+  (let [heql-meta-data (:heql-meta-data db-adapter)
+        terminal-attr-ident (last path)
+        terminal-attr-md (heql-md/attr-meta-data heql-meta-data terminal-attr-ident)]
+
+    (when (= :attr.type/ref (:attr/type terminal-attr-md))
+      (throw
+       (ex-info
+        (str "Attribute path must end in a scalar attribute: " terminal-attr-ident)
+        {:attribute-path path :attribute terminal-attr-ident})))
+
+    (loop [rel-attr-idents (butlast path)
+           expected-entity-ident nil
+           parent-alias parent-alias
+           joins []]
+      (if-let [rel-attr-ident (first rel-attr-idents)]
+        (let [rel-attr-md (heql-md/attr-meta-data  heql-meta-data rel-attr-ident)
+              source-entity-ident (:attr.entity/ident rel-attr-md)
+              target-entity-ident (:attr.ref/type rel-attr-md)
+              self-alias (gensym)]
+          (when-not (= :attr.type/ref (:attr/type rel-attr-md))
+            (throw
+             (ex-info
+              (str "Attribute path can only traverse relationships: " rel-attr-ident)
+              {:attribute-path path :attribute rel-attr-ident})))
+
+          (when-not (= :attr.ref.cardinality/one (:attr.ref/cardinality rel-attr-md))
+            (throw
+             (ex-info
+              (str "Cannot project through " rel-attr-ident " because the relationship has cardinality many")
+              {:attribute-path path :attribute rel-attr-ident})))
+
+          (when
+           (and expected-entity-ident (not= expected-entity-ident source-entity-ident))
+            (throw
+             (ex-info
+              (str "Invalid attribute path at " rel-attr-ident)
+              {:attribute-path path 
+               :attribute rel-attr-ident 
+               :expected-entity expected-entity-ident 
+               :actual-entity source-entity-ident})))
+
+          (recur (next rel-attr-idents)
+                 target-entity-ident
+                 self-alias
+                 (conj joins {:attr-ident rel-attr-ident :alias {:parent parent-alias :self self-alias}})))
+
+        (do
+          (when (and expected-entity-ident (not= expected-entity-ident (:attr.entity/ident terminal-attr-md)))
+            (throw
+             (ex-info
+              (str "Invalid terminal attribute " terminal-attr-ident " in attribute path")
+              {:attribute-path path
+               :attribute terminal-attr-ident
+               :expected-entity expected-entity-ident
+               :actual-entity
+               (:attr.entity/ident terminal-attr-md)})))
+
+          {:attr-ident terminal-attr-ident
+           :alias  {:parent parent-alias}
+           :attribute-path/joins joins})))))
+
 (defn-
   enrich-eql-node
   "Adds ident & alias to the eql node and also resolve wild-card-select props"
@@ -349,9 +432,9 @@
    (let [attr-ident               (eql-node->attr-ident eql-node)
          function-attribute-ident (and
                                    (= :prop (:type eql-node))
-                                   (if (dsl/alias-attribute-ident? (:key eql-node))
-                                     (function-attribute-ident? (first (:key eql-node)))
-                                     (function-attribute-ident? (:key eql-node))))]
+                                   (if (dsl/alias-expression? (:key eql-node))
+                                     (dsl/function-expression? (first (:key eql-node)))
+                                     (dsl/function-expression? (:key eql-node))))]
      (case (:type eql-node)
        :root (update (assoc eql-node :attr-ident attr-ident) :children
                      (fn [eql-nodes]
@@ -363,13 +446,16 @@
                               :attr-ident attr-ident)
                        :children
                        (partial resolve-wid-card-attributes db-adapter self-alias)))
-       :prop (->
-              (if function-attribute-ident 
-                (assoc eql-node :function-args-attribute-ident (function-args-attribute-ident eql-node))
-                eql-node)
-              (assoc :attr-ident attr-ident)
-              (assoc-in [:alias :parent] parent-alias)
-              (assoc :function-attribute-ident function-attribute-ident))))))
+       :prop (if (dsl/attribute-path-expression? (:key eql-node))
+               (merge eql-node
+                      (enrich-attribute-path db-adapter parent-alias (first (:key eql-node))))
+               (->
+                (if function-attribute-ident
+                  (assoc eql-node :function-args-attribute-ident (function-args-attribute-ident eql-node))
+                  eql-node)
+                (assoc :attr-ident attr-ident)
+                (assoc-in [:alias :parent] parent-alias)
+                (assoc :function-attribute-ident function-attribute-ident)))))))
 
 (defn query [db-adapter eql-query]
   (let [{:keys [heql-meta-data heql-config]} db-adapter

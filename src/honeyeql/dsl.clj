@@ -2,10 +2,24 @@
   (:require [honeyeql.meta-data :as heql-md]
             [inflections.core :as inf]))
 
-(defn alias-attribute-ident? [x]
+(defn alias-expression? [x]
   (and (vector? x)
        (= (count x) 3)
        (= :as (second x))))
+
+(defn function-expression? [x]
+  (and (vector? x)
+       (keyword? (first x))
+       (not (qualified-keyword? (first x)))))
+
+(defn attribute-path-expression?
+  [x]
+  (and
+   (alias-expression? x) 
+   (vector? (first x))
+   (< 1 (count (first x)))
+   (every? qualified-keyword? (first x))
+   (qualified-keyword? (last x))))
 
 (defn find-join-type [heql-meta-data eql-node]
   (let [{node-type :type
@@ -17,7 +31,7 @@
                                                         name
                                                         (str "-join")
                                                         keyword)
-      (and (= :join node-type) (alias-attribute-ident? node-key)) (-> (heql-md/attr-column-ref-type heql-meta-data (first node-key))
+      (and (= :join node-type) (alias-expression? node-key)) (-> (heql-md/attr-column-ref-type heql-meta-data (first node-key))
                                                                       name
                                                                       (str "-join")
                                                                       keyword)
@@ -31,14 +45,14 @@
 
 (defn select-clause-alias [{:keys [attr-ident key function-attribute-ident]}]
   (let [attr-ident (cond
-                     function-attribute-ident (if (alias-attribute-ident? key)
+                     function-attribute-ident (if (alias-expression? key)
                                                 (nth key 2)
                                                 (if (vector? attr-ident)
                                                   (keyword (namespace (second attr-ident)) (str (name (first attr-ident)) "-" (name (first key)) "-of-" (name (second attr-ident))))
                                                   (keyword (namespace attr-ident) (str (name (first key)) "-of-" (name attr-ident)))))
-                     (alias-attribute-ident? key) (nth key 2)
+                     (alias-expression? key) (nth key 2)
                      :else attr-ident)]
     (column-alias :naming-convention/qualified-kebab-case attr-ident)))
 
-(defmulti eql->hsql (fn [db-adapter heql-meta-data eql-node]
+(defmulti eql->hsql (fn [_ heql-meta-data eql-node]
                       (find-join-type heql-meta-data eql-node)))
