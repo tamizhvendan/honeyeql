@@ -42,10 +42,6 @@
          (dsl/function-expression? (first key))) (rest (first key))
     :else nil))
 
-(comment
-  (def eq (last @p))
-  (eql-node->attr-ident (:eql-node eq)))
-
 (defn- eql-node->attr-ident [{:keys [key type dispatch-key]}]
   (cond
     (and (= :prop type) (keyword? key)) key
@@ -398,9 +394,9 @@
             (throw
              (ex-info
               (str "Invalid attribute path at " rel-attr-ident)
-              {:attribute-path path 
-               :attribute rel-attr-ident 
-               :expected-entity expected-entity-ident 
+              {:attribute-path path
+               :attribute rel-attr-ident
+               :expected-entity expected-entity-ident
                :actual-entity source-entity-ident})))
 
           (recur (next rel-attr-idents)

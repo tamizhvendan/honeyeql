@@ -736,4 +736,14 @@
                                                  [:sub-account/sub-descr
                                                   {:sub-account/account
                                                    [:account/acc-descr]}]}
-                                  :expected #:sub-account{:sub-descr "SA #2 Sub Acc", :account #:account{:acc-descr "SA #2"}}}}]}}
+                                  :expected #:sub-account{:sub-descr "SA #2 Sub Acc", :account #:account{:acc-descr "SA #2"}}}}
+                           {:name "one-to-one relationship through unique foreign key"
+                            :eql
+                            {:query-single
+                             [{[:player/id 1]
+                               [:player/name
+                                {:player/player-profile
+                                 [:player-profile/website]}]}]
+                             :expected
+                             #:player{:name "Player #1"
+                                      :player-profile #:player-profile{:website "Player #1 Website"}}}}]}}

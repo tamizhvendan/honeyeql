@@ -324,3 +324,20 @@ INSERT INTO account_referrer(acc_num, acc_type, referred_by)
  
 INSERT INTO sub_account(sub_acc, ref_num, ref_type, sub_descr)
 VALUES (1,1,1,'SA #1 Sub Acc'), (3,1,1,'SA #1 Sub Acc#2'), (2,2,1,'SA #2 Sub Acc');
+
+CREATE TABLE player (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+CREATE TABLE player_profile (
+    id INTEGER PRIMARY KEY,
+    player_id INTEGER NOT NULL UNIQUE,
+    website TEXT NOT NULL,
+    FOREIGN KEY (player_id) REFERENCES player (id)
+);
+
+INSERT INTO player(id, name)
+VALUES (1, 'Player #1');
+INSERT INTO player_profile (id, player_id, website)
+VALUES (1, 1, 'Player #1 Website');

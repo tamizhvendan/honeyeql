@@ -156,6 +156,7 @@
                                                        :entity.relation.primary-key/attrs (set (map #(attribute-ident db-config %) v))}})) {})
        (update heql-meta-data :entities (partial merge-with merge))))
 
+
 (defmulti get-db-config identity)
 
 (defn- foreign-key-column->attr-name [{:keys [foreign-key-suffix]} fkcolumn_name]
@@ -209,12 +210,23 @@
   (map (fn [fk]
          (apply attribute-ident (conj (map #(% fk) keys) db-config))) fk-md))
 
-(defn- one-to-one-relationship? [db-config heql-meta-data fk-md]
-  (let [attr-idents (fk-attr-idents db-config fk-md [:fktable_schem :fktable_name :fkcolumn_name])
+(defn- unique-index-attr-sets
+  [db-config db-meta-data table-schema table-name]
+  (->> (:unique-keys db-meta-data)
+       (filter #(and (= table-schema (:table_schem %)) (= table-name (:table_name %))))
+       (group-by :index_name)
+       vals 
+       (map #(set (map (partial attribute-ident db-config) %)))
+       set))
+
+(defn- one-to-one-relationship? [db-config db-meta-data heql-meta-data fk-md]
+  (let [fk-attr-idents (set (fk-attr-idents db-config fk-md [:fktable_schem :fktable_name :fkcolumn_name]))
         {:keys [fktable_schem fktable_name]} (first fk-md)
+        unique-attr-sets (unique-index-attr-sets db-config db-meta-data fktable_schem fktable_name)
         e-ident (entity-ident db-config fktable_schem fktable_name)
         e-primary-keys (get-in heql-meta-data [:entities e-ident :entity.relation/primary-key :entity.relation.primary-key/attrs])]
-    (= e-primary-keys (set attr-idents))))
+    (or (= e-primary-keys fk-attr-idents)
+        (contains? unique-attr-sets fk-attr-idents))))
 
 (defn- add-fk-one-to-many-rel-metadata [db-config heql-meta-data fk-md]
   (let [is-composite-fk  (>= (count fk-md) 2)
@@ -316,8 +328,8 @@
                          :entity.relation.foreign-key/ref-attr  left-attr-ident})
         (update-in [:entities right-entity-ident :entity/rel-attrs] conj parent-attr-ident))))
 
-(defn- add-fk-rel-meta-data [db-config heql-meta-data fk-md]
-  (if (one-to-one-relationship? db-config heql-meta-data fk-md)
+(defn- add-fk-rel-meta-data [db-config db-meta-data heql-meta-data fk-md]
+  (if (one-to-one-relationship? db-config db-meta-data heql-meta-data fk-md)
     (add-fk-one-to-one-rel-metadata db-config heql-meta-data fk-md)
     (add-fk-one-to-many-rel-metadata db-config heql-meta-data fk-md)))
 
@@ -327,7 +339,7 @@
        (group-by :fk_name)
        vals
        (reduce
-        #(merge-with merge %1 (add-fk-rel-meta-data db-config %1 %2))
+        #(merge-with merge %1 (add-fk-rel-meta-data db-config db-meta-data %1 %2))
         heql-meta-data)))
 
 (defn- associative-entity? [{:entity.relation/keys [primary-key foreign-keys]}]

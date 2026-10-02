@@ -92,12 +92,26 @@
        (heql-md/datafied-result-set db-spec)
        vec))
 
+(defn- unique-keys-meta-data [db-spec ^DatabaseMetaData jdbc-meta-data entities]
+  (mapcat (fn [{:keys [table_schem table_name]}]
+            (->> (.getIndexInfo jdbc-meta-data nil table_schem table_name true false)
+                (heql-md/datafied-result-set db-spec)
+                 (filter
+                  #(and
+                    (:index_name %)
+                    (:column_name %)
+                    (nil? (:filter_condition %))))
+                vec))
+          entities))
+
 (defmethod heql-md/get-db-meta-data "PostgreSQL" [_ db-spec ^Connection db-conn]
-  (let [jdbc-meta-data  (.getMetaData db-conn)]
-    {:entities     (entities-meta-data db-spec jdbc-meta-data)
+  (let [jdbc-meta-data  (.getMetaData db-conn)
+        entities     (entities-meta-data db-spec jdbc-meta-data)]
+    {:entities entities
      :attributes   (attributes-meta-data db-spec jdbc-meta-data)
      :primary-keys (primary-keys-meta-data db-spec jdbc-meta-data)
-     :foreign-keys (foreign-keys-meta-data db-spec jdbc-meta-data)}))
+     :foreign-keys (foreign-keys-meta-data db-spec jdbc-meta-data)
+     :unique-keys (unique-keys-meta-data db-spec jdbc-meta-data entities)}))
 
 (defn- result-set-hql [hql]
   {:with   [[:rs hql]]
@@ -116,8 +130,8 @@
                                  (let [c (if (vector? a) (second a) a)]
                                    (if (heql-md/attribute? heql-meta-data c)
                                      (assoc m c (hsql-raw-column-name (heql-md/attr-meta-data heql-meta-data c) parent))
-                                     m))) 
-                               {} 
+                                     m)))
+                               {}
                                function-args-attribute-ident)]
     (if function-attribute-ident
       (let [[sqlfn & args] (if (dsl/alias-expression? key)
@@ -125,10 +139,10 @@
                              key)]
         (apply (partial vector sqlfn)
                (map (fn [arg]
-                      (or 
-                       (args-as-column arg) 
+                      (or
+                       (args-as-column arg)
                        (when (vector? arg)
-                         (apply vector (map #(or (args-as-column %) %) arg))) 
+                         (apply vector (map #(or (args-as-column %) %) arg)))
                        arg))
                     args)))
       (hsql-raw-column-name attr-md parent))))
@@ -194,7 +208,7 @@
   (column-fn [db-adapter]
     quoted/ansi)
   (table-fn [db-adapter]
-            (fn [table-name]
-              (->> (string/split table-name #"\.")
-                   (map #(format "\"%s\"" %))
-                   (string/join ".")))))
+    (fn [table-name]
+      (->> (string/split table-name #"\.")
+           (map #(format "\"%s\"" %))
+           (string/join ".")))))

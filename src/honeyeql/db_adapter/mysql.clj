@@ -20,7 +20,7 @@
 ;; https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-reference-type-conversions.html
 (defn- mysql-type->col-type [{:keys [type_name column_size]}]
   (if (and (#{"BIT" "TINYINT"} type_name) (= 1 column_size))
-    :attr.type/boolean 
+    :attr.type/boolean
     (case type_name
       ("CHAR" "VARCHAR" "TINYTEXT" "TEXT" "MEDIUMTEXT" "LONGTEXT" "ENUM" "SET" "BINARY" "VARBINARY" "TINYBLOB" "BLOB" "LONGBLOB") :attr.type/string
       ("TINYINT" "SMALLINT" "MEDIUMINT" "INT" "TINYINT UNSIGNED" "SMALLINT UNSIGNED" "MEDIUMINT UNSIGNED") :attr.type/integer
@@ -62,24 +62,36 @@
        (heql-md/datafied-result-set db-spec)
        vec))
 
-(defn- get-pks-and-fks [db-spec ^DatabaseMetaData jdbc-meta-data catalog table-names]
+(defn- unique-keys-meta-data [db-spec ^DatabaseMetaData jdbc-meta-data catalog table-name]
+  (->> (.getIndexInfo jdbc-meta-data catalog "" table-name true false)
+       (heql-md/datafied-result-set db-spec)
+       (filter
+        #(and
+          (:index_name %)
+          (:column_name %)
+          (nil? (:filter_condition %))))
+       vec))
+
+(defn- get-*-keys [db-spec ^DatabaseMetaData jdbc-meta-data catalog table-names]
   (reduce (fn [s table-name]
-            (update (update s
-                            :primary-keys (comp vec concat) (primary-keys-meta-data db-spec jdbc-meta-data catalog table-name))
-                    :foreign-keys (comp vec concat) (foreign-keys-meta-data db-spec jdbc-meta-data catalog table-name)))
+            (-> (update s :primary-keys concat (primary-keys-meta-data db-spec jdbc-meta-data catalog table-name))
+                (update :foreign-keys concat (foreign-keys-meta-data db-spec jdbc-meta-data catalog table-name))
+                (update :unique-keys concat (unique-keys-meta-data db-spec jdbc-meta-data catalog table-name))))
           {:primary-keys []
-           :foreign-keys []} table-names))
+           :foreign-keys []
+           :unique-keys []} table-names))
 
 (defmethod heql-md/get-db-meta-data "MySQL" [_ db-spec ^Connection db-conn]
   (let [jdbc-meta-data                      (.getMetaData db-conn)
         catalog                             (.getCatalog db-conn)
         entities-meta-data                  (entities-meta-data db-spec jdbc-meta-data catalog)
         table-names                         (map :table_name entities-meta-data)
-        {:keys [primary-keys foreign-keys]} (get-pks-and-fks db-spec jdbc-meta-data catalog table-names)]
+        {:keys [primary-keys foreign-keys unique-keys]} (get-*-keys db-spec jdbc-meta-data catalog table-names)]
     {:entities     entities-meta-data
      :attributes   (attributes-meta-data db-spec jdbc-meta-data catalog)
      :primary-keys primary-keys
-     :foreign-keys foreign-keys}))
+     :foreign-keys foreign-keys
+     :unique-keys unique-keys}))
 
 (defn- result-set-hql
   ([hsql]

@@ -913,3 +913,19 @@ VALUES
 (1,1,1,E'SA #1 Sub Acc'),
 (3,1,1,E'SA #1 Sub Acc#2'),
 (2,2,1,E'SA #2 Sub Acc');
+
+CREATE TABLE public.player (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+CREATE TABLE public.player_profile (
+    id INTEGER PRIMARY KEY,
+    player_id INTEGER NOT NULL UNIQUE REFERENCES public.player(id),
+    website TEXT NOT NULL
+);
+
+INSERT INTO "public"."player"("id", "name")
+VALUES (1, 'Player #1');
+INSERT INTO "public"."player_profile" ("id", "player_id", "website")
+VALUES (1, 1, 'Player #1 Website');
