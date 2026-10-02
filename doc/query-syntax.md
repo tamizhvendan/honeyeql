@@ -76,7 +76,7 @@ We can have more than one join attributes as well.
    :payment/amount]}]
 ```
 
-Aliases are also supported using the following syntax.
+Attributes and expressions can be projected under a different attribute name using the alias syntax.
 
 ```clojure
 [:customer/first-name :as :customer/fname]
@@ -155,6 +155,74 @@ This idents and the attributes selection vector together forms a query in EQL. T
    :customer/first-name 
    :customer/last-name]}]
 ```
+
+### Expressions
+
+HoneyEQL allows an expression to be selected and projected into an attribute using the alias syntax:
+
+```clojure
+[expression :as :entity/attribute]
+```
+
+For example, a database function is an expression:
+
+```clojure
+[[:upper :customer/first-name]
+ :as
+ :customer/first-name]
+```
+
+HoneyEQL also supports navigating through one-to-one relationships using an attribute path expression.
+
+```clojure
+[[:customer/address :address/address]
+ :as
+ :customer/address]
+```
+
+The expression follows the `:customer/address` relationship and projects `:address/address` directly into `:customer/address`.
+
+For example,
+
+```clojure
+(heql/query-single
+ db-adapter
+ {[:customer/customer-id 318]
+  [[[:customer/address :address/address]
+    :as
+    :customer/address]]})
+```
+
+```clojure
+#:customer{:address "1769 Iwaki Lane"}
+```
+
+An attribute path can navigate through multiple one-to-one relationships. 
+
+```clojure
+(heql/query-single
+ db-adapter
+ {[:customer/customer-id 318]
+  [[[:customer/address :address/city :city/country :country/country]
+    :as
+    :customer/country]]})
+```
+
+returns
+
+```clojure
+#:customer{:country "Poland"}
+```
+
+Every attribute in the path except the last one must be a one-to-one relationship attribute. The final attribute must be a scalar attribute. Attribute path expressions cannot navigate through one-to-many or many-to-many
+relationships. For example, the following is not valid because `:country/cities` has cardinality many:
+
+```clojure
+[[:country/cities :city/city]
+ :as
+ :country/city]
+```
+
 
 ### HoneyEQL Override
 

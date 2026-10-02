@@ -1,6 +1,8 @@
 # Functions
 
-Function calls (and expressions with operators) can be specified as vectors where the first element is the keyword representing the function name.
+Database functions are one type of HoneyEQL expression.
+
+A function expression is specified as a vector where the first element is the keyword representing the function name.
 
 ```clojure
 ; :eql.mode/lenient syntax
@@ -16,6 +18,10 @@ It returns
 ```clojure
 #:employee{:first-name "ANDREW"}
 ```
+
+Like other HoneyEQL expressions, a function expression can be projected into an attribute using `:as`.
+
+See [Query Syntax](./query-syntax.md#expressions) for other expression types, including attribute paths through one-to-one relationships.
 
 ## Multi Arity Function
 
