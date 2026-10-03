@@ -1,3 +1,6 @@
+* 2.0.1 - 2026-10-03
+  - Reuse shared relationship-path prefixes when projecting multiple attributes through the same one-to-one relationships.
+  - Avoid generating duplicate joins for sibling attribute-path expressions that traverse the same relationships.
 * 2.0.0 - 2026-10-02
   - **Breaking**: Foreign keys backed by UNIQUE constraints are now correctly inferred as one-to-one relationships.
 * 1.0.8 - 2026-10-02

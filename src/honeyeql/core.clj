@@ -345,9 +345,113 @@
 
 (declare ^:private enrich-eql-node)
 
+(defn- enrich-attribute-path
+  ([db-adapter parent-alias path]
+   (first (enrich-attribute-path db-adapter parent-alias path {})))
+  ([db-adapter parent-alias path path-aliases]
+   (let [heql-meta-data (:heql-meta-data db-adapter)
+         terminal-attr-ident (last path)
+         terminal-attr-md (heql-md/attr-meta-data heql-meta-data terminal-attr-ident)]
+
+     (when (= :attr.type/ref (:attr/type terminal-attr-md))
+       (throw
+        (ex-info
+         (str "Attribute path must end in a scalar attribute: " terminal-attr-ident)
+         {:attribute-path path :attribute terminal-attr-ident})))
+
+     (loop [rel-attr-idents (butlast path)
+            expected-entity-ident nil
+            parent-alias parent-alias
+            path-aliases path-aliases
+            joins []
+            path-prefix []]
+       (if-let [rel-attr-ident (first rel-attr-idents)]
+         (let [rel-attr-md (heql-md/attr-meta-data  heql-meta-data rel-attr-ident)
+               source-entity-ident (:attr.entity/ident rel-attr-md)
+               target-entity-ident (:attr.ref/type rel-attr-md)
+               path-prefix (conj path-prefix rel-attr-ident)
+               existing-alias (get path-aliases path-prefix)
+               self-alias (or existing-alias (gensym))
+               new-join? (nil? existing-alias)
+               path-aliases (if new-join?
+                              (assoc path-aliases path-prefix self-alias)
+                              path-aliases)
+               joins  (if new-join?
+                        (conj joins {:attr-ident rel-attr-ident :alias {:parent parent-alias :self self-alias}})
+                        joins)]
+           (when-not (= :attr.type/ref (:attr/type rel-attr-md))
+             (throw
+              (ex-info
+               (str "Attribute path can only traverse relationships: " rel-attr-ident)
+               {:attribute-path path :attribute rel-attr-ident})))
+
+           (when-not (= :attr.ref.cardinality/one (:attr.ref/cardinality rel-attr-md))
+             (throw
+              (ex-info
+               (str "Cannot project through " rel-attr-ident " because the relationship has cardinality many")
+               {:attribute-path path :attribute rel-attr-ident})))
+
+           (when
+            (and expected-entity-ident (not= expected-entity-ident source-entity-ident))
+             (throw
+              (ex-info
+               (str "Invalid attribute path at " rel-attr-ident)
+               {:attribute-path path
+                :attribute rel-attr-ident
+                :expected-entity expected-entity-ident
+                :actual-entity source-entity-ident})))
+
+           (recur (next rel-attr-idents)
+                  target-entity-ident
+                  self-alias
+                  path-aliases
+                  joins
+                  path-prefix))
+
+         (do
+           (when (and expected-entity-ident (not= expected-entity-ident (:attr.entity/ident terminal-attr-md)))
+             (throw
+              (ex-info
+               (str "Invalid terminal attribute " terminal-attr-ident " in attribute path")
+               {:attribute-path path
+                :attribute terminal-attr-ident
+                :expected-entity expected-entity-ident
+                :actual-entity
+                (:attr.entity/ident terminal-attr-md)})))
+
+           [{:attr-ident terminal-attr-ident
+             :alias  {:parent parent-alias}
+             :attribute-path/joins joins}
+            path-aliases]))))))
+
+(defn- enrich-sibling-eql-nodes
+  [db-adapter parent-alias eql-nodes]
+  (first
+   (reduce
+    (fn [[nodes path-aliases] eql-node]
+      (if
+       (and
+        (= :prop (:type eql-node))
+        (dsl/attribute-path-expression? (:key eql-node)))
+
+        (let [[attribute-path-data updated-path-aliases]
+              (enrich-attribute-path
+               db-adapter
+               parent-alias
+               (first (:key eql-node))
+               path-aliases)]
+
+          [(conj nodes (merge eql-node attribute-path-data))
+           updated-path-aliases])
+
+        [(conj nodes (enrich-eql-node db-adapter eql-node parent-alias))
+         path-aliases]))
+    [[] {}]
+    eql-nodes)))
+
 (defn- resolve-wid-card-attributes [{:keys [heql-config heql-meta-data]
                                      :as   db-adapter} self-alias eql-nodes]
-  (let [eql-nodes             (map #(enrich-eql-node db-adapter % self-alias) eql-nodes)]
+  (let [eql-nodes (enrich-sibling-eql-nodes db-adapter self-alias eql-nodes)]
     (if (= :eql.mode/lenient (:eql/mode heql-config))
       (let [[props joins]         ((juxt filter remove) #(= :prop (:type %)) eql-nodes)
             wild-card-select-node (some #(when (and (keyword? (:key %))
@@ -356,68 +460,6 @@
           (concat (resolve-eql-nodes heql-meta-data wild-card-select-node) joins)
           eql-nodes))
       eql-nodes)))
-
-(defn- enrich-attribute-path [db-adapter parent-alias path]
-  (let [heql-meta-data (:heql-meta-data db-adapter)
-        terminal-attr-ident (last path)
-        terminal-attr-md (heql-md/attr-meta-data heql-meta-data terminal-attr-ident)]
-
-    (when (= :attr.type/ref (:attr/type terminal-attr-md))
-      (throw
-       (ex-info
-        (str "Attribute path must end in a scalar attribute: " terminal-attr-ident)
-        {:attribute-path path :attribute terminal-attr-ident})))
-
-    (loop [rel-attr-idents (butlast path)
-           expected-entity-ident nil
-           parent-alias parent-alias
-           joins []]
-      (if-let [rel-attr-ident (first rel-attr-idents)]
-        (let [rel-attr-md (heql-md/attr-meta-data  heql-meta-data rel-attr-ident)
-              source-entity-ident (:attr.entity/ident rel-attr-md)
-              target-entity-ident (:attr.ref/type rel-attr-md)
-              self-alias (gensym)]
-          (when-not (= :attr.type/ref (:attr/type rel-attr-md))
-            (throw
-             (ex-info
-              (str "Attribute path can only traverse relationships: " rel-attr-ident)
-              {:attribute-path path :attribute rel-attr-ident})))
-
-          (when-not (= :attr.ref.cardinality/one (:attr.ref/cardinality rel-attr-md))
-            (throw
-             (ex-info
-              (str "Cannot project through " rel-attr-ident " because the relationship has cardinality many")
-              {:attribute-path path :attribute rel-attr-ident})))
-
-          (when
-           (and expected-entity-ident (not= expected-entity-ident source-entity-ident))
-            (throw
-             (ex-info
-              (str "Invalid attribute path at " rel-attr-ident)
-              {:attribute-path path
-               :attribute rel-attr-ident
-               :expected-entity expected-entity-ident
-               :actual-entity source-entity-ident})))
-
-          (recur (next rel-attr-idents)
-                 target-entity-ident
-                 self-alias
-                 (conj joins {:attr-ident rel-attr-ident :alias {:parent parent-alias :self self-alias}})))
-
-        (do
-          (when (and expected-entity-ident (not= expected-entity-ident (:attr.entity/ident terminal-attr-md)))
-            (throw
-             (ex-info
-              (str "Invalid terminal attribute " terminal-attr-ident " in attribute path")
-              {:attribute-path path
-               :attribute terminal-attr-ident
-               :expected-entity expected-entity-ident
-               :actual-entity
-               (:attr.entity/ident terminal-attr-md)})))
-
-          {:attr-ident terminal-attr-ident
-           :alias  {:parent parent-alias}
-           :attribute-path/joins joins})))))
 
 (defn-
   enrich-eql-node
