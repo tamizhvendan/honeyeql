@@ -746,4 +746,17 @@
                                  [:player-profile/website]}]}]
                              :expected
                              #:player{:name "Player #1"
-                                      :player-profile #:player-profile{:website "Player #1 Website"}}}}]}}
+                                      :player-profile #:player-profile{:website "Player #1 Website"}}}}
+                           {:name "scalar alias preserves underlying type"
+                            :eql
+                            {:query-single
+                             [{[:customer/id "847f09a7-39d1-4021-b43d-18ceb7ada8f6"]
+                               [:customer/id
+                                [:customer/id
+                                 :as
+                                 :customer/aliased-id]]}]
+                             :ignore #{"MySQL"}
+                             :expected
+                             #:customer
+                              {:id #uuid "847f09a7-39d1-4021-b43d-18ceb7ada8f6"
+                               :aliased-id #uuid "847f09a7-39d1-4021-b43d-18ceb7ada8f6"}}}]}}

@@ -1,3 +1,7 @@
+* 2.0.3 - 2026-10-05
+  - Preserve the underlying attribute type when returning aliased scalar attributes.
+  - Aliases now affect only the returned key; result coercion continues to use the source attribute metadata.
+  - Attribute-path projections also preserve the terminal attribute's type when aliased.
 * 2.0.1 - 2026-10-03
   - Reuse shared relationship-path prefixes when projecting multiple attributes through the same one-to-one relationships.
   - Avoid generating duplicate joins for sibling attribute-path expressions that traverse the same relationships.

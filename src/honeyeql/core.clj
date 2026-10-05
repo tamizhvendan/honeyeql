@@ -314,10 +314,17 @@
         default-key)
       [default-key (dsl/column-alias attribute-return-as default-key)])))
 
-(defn- json-value-fn [db-adapter attribute-return-as json-key json-value]
-  (if (= :naming-convention/qualified-kebab-case attribute-return-as)
-    (heql-md/coerce-attr-value db-adapter :from-db json-key json-value)
-    (heql-md/coerce-attr-value db-adapter :from-db (first json-key) json-value)))
+
+
+(defn- json-value-fn [db-adapter attribute-return-as result-attr->coerce-as-attr-ident json-key json-value]
+  (let [return-attr-ident (if (= :naming-convention/qualified-kebab-case attribute-return-as)
+                            json-key
+                            (first json-key))
+        coerce-as-attr-ident (get
+                              result-attr->coerce-as-attr-ident
+                              return-attr-ident
+                              return-attr-ident)]
+    (heql-md/coerce-attr-value db-adapter :from-db coerce-as-attr-ident json-value)))
 
 (defn- transform-keys [attribute-return-as return-value]
   (if (= :naming-convention/qualified-kebab-case attribute-return-as)
@@ -340,7 +347,18 @@
        (map #(merge wild-card-select-node
                     {:key          %
                      :dispatch-key %
+                     :coerce-as-attr-ident %
                      :attr-ident   %}))))
+
+(defn- result-attr->coerce-as-attr-ident [eql-node]
+  (->>
+   (tree-seq #(seq (:children %)) :children eql-node)
+   (keep
+    (fn [{:keys [coerce-as-attr-ident] :as node}]
+      (when coerce-as-attr-ident
+        [(keyword (dsl/select-clause-alias node))
+         coerce-as-attr-ident])))
+   (into {})))
 
 
 (declare ^:private enrich-eql-node)
@@ -420,6 +438,7 @@
                 (:attr.entity/ident terminal-attr-md)})))
 
            [{:attr-ident terminal-attr-ident
+             :coerce-as-attr-ident terminal-attr-ident
              :alias  {:parent parent-alias}
              :attribute-path/joins joins}
             path-aliases]))))))
@@ -490,7 +509,7 @@
                (->
                 (if function-attribute-ident
                   (assoc eql-node :function-args-attribute-ident (function-args-attribute-ident eql-node))
-                  eql-node)
+                  (assoc eql-node :coerce-as-attr-ident attr-ident))
                 (assoc :attr-ident attr-ident)
                 (assoc-in [:alias :parent] parent-alias)
                 (assoc :function-attribute-ident function-attribute-ident)))))))
@@ -498,14 +517,14 @@
 (defn query [db-adapter eql-query]
   (let [{:keys [heql-meta-data heql-config]} db-adapter
         {:attr/keys [return-as aggregate-attr-convention]} heql-config
-        eql-query                            (case (:eql/mode heql-config)
-                                               :eql.mode/lenient (trace>> :transformed-eql (transform-honeyeql-queries eql-query))
-                                               :eql.mode/strict  eql-query)]
+        eql-query (case (:eql/mode heql-config)
+                    :eql.mode/lenient (trace>> :transformed-eql (transform-honeyeql-queries eql-query))
+                    :eql.mode/strict  eql-query)
+        eql-node (trace>> :raw-eql-ast (eql/query->ast eql-query))
+        enriched-eql-node (trace>> :eql-ast (enrich-eql-node db-adapter eql-node))
+        result-attr->coerce-as-attr-ident (result-attr->coerce-as-attr-ident enriched-eql-node)]
     (map  #(transform-keys return-as %)
-          (json/read-str (->> (eql/query->ast eql-query)
-                              (trace>> :raw-eql-ast)
-                              (enrich-eql-node db-adapter)
-                              (trace>> :eql-ast)
+          (json/read-str (->> enriched-eql-node
                               (dsl/eql->hsql db-adapter heql-meta-data)
                               (trace>> :hsql)
                               (db/to-sql db-adapter)
@@ -513,7 +532,7 @@
                               (db/query db-adapter))
                          :bigdec true
                          :key-fn #(json-key-fn return-as aggregate-attr-convention %)
-                         :value-fn #(json-value-fn db-adapter return-as %1 %2)))))
+                         :value-fn #(json-value-fn db-adapter return-as result-attr->coerce-as-attr-ident %1 %2)))))
 
 (defn query-single [db-adapter eql-query]
   (first (query db-adapter eql-query)))
