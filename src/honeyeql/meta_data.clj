@@ -498,7 +498,7 @@
     (when x
       (parse-fn x))))
 
-(defn coerce-attr-value [db-adapter mode attr-ident value]
+(defn- default-coerce-attr-value [db-adapter mode attr-ident value]
   (let [heql-meta-data (:heql-meta-data db-adapter)
         attr-md        (try
                          (attr-meta-data heql-meta-data attr-ident)
@@ -529,5 +529,26 @@
       :attr.type/unknown (coerce (constantly true) identity (case mode
                                                               :from-db value
                                                               :to-db (jdbc-types/as-other value)))
-
+      
       value)))
+
+(defn coerce-attr-value
+  [db-adapter mode attr-ident value]
+  (let [custom-coerce
+        (get-in db-adapter
+                [:heql-config :attr/coercions attr-ident mode])]
+    (case mode
+      :to-db
+      (let [value (if custom-coerce
+                    (custom-coerce value)
+                    value)]
+        (default-coerce-attr-value
+         db-adapter :to-db attr-ident value))
+
+      :from-db
+      (let [value
+            (default-coerce-attr-value
+             db-adapter :from-db attr-ident value)]
+        (if custom-coerce
+          (custom-coerce value)
+          value)))))

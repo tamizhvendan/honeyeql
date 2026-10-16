@@ -447,316 +447,338 @@
                             :driver-class-name "com.mysql.cj.jdbc.MysqlDataSource"
                             :username          "root"
                             :password          "mysql123"}]
-              :assertions [{:name "query nested self-join (one-to-one) relationship"
-                            :eql  {:query-single [{[:employee/id 7] [:employee/first-name
-                                                                     {:employee/employee-reports-to [:employee/first-name
-                                                                                                     {:employee/employee-reports-to [:employee/first-name]}]}]}]
-                                   :expected     #:employee{:first-name          "Robert"
-                                                            :employee-reports-to #:employee{:first-name          "Michael"
-                                                                                            :employee-reports-to #:employee{:first-name "Andrew"}}}}}
-                           {:name "uuid scalar type"
-                            :eql  {:query-single [{[:customer/id "847f09a7-39d1-4021-b43d-18ceb7ada8f6"] [:customer/first-name :customer/id]}]
-                                   :ignore       #{"MySQL"}
-                                   :expected     #:customer{:first-name "John"
-                                                            :id         #uuid "847f09a7-39d1-4021-b43d-18ceb7ada8f6"}}}
-                           {:name "postgres datetime scalar value"
-                            :eql  {:query-single [{[:scalar/id 1] [:scalar/timestamp-c :scalar/timestamp-with-fraction :scalar/timestamp-without-timezone-c]}]
-                                   :ignore       #{"MySQL"}
-                                   :expected     #:scalar{:timestamp-c                  #local-date-time "2004-10-19T10:23:54"
-                                                          :timestamp-with-fraction      #local-date-time "2004-10-19T10:23:54.222"
-                                                          :timestamp-without-timezone-c #local-date-time "2004-10-19T10:23:54"}}}
-                           {:name "postgres datetime with timezone scalar value"
-                            :eql  {:query-single [{[:scalar/id 1] [:scalar/timestamptz-c :scalar/timestamptz-with-fraction :scalar/timestamp-with-timezone-c]}]
-                                   :ignore       #{"MySQL"}
-                                   :expected     #:scalar{:timestamptz-c             #offset-date-time "2017-08-19T17:52:11+05:30"
-                                                          :timestamptz-with-fraction #offset-date-time "2017-08-19T17:52:11.222+05:30"
-                                                          :timestamp-with-timezone-c #offset-date-time "2017-08-19T17:52:11+05:30"}}}
-                           {:name "mysql datetime scalar value"
-                            :eql  {:query-single [{[:scalar/id 1] [:scalar/datetime-c :scalar/datetime-with-fraction]}]
-                                   :ignore       #{"PostgreSQL"}
-                                   :expected     #:scalar{:datetime-c             #local-date-time "2004-10-19T10:23:54"
-                                                          :datetime-with-fraction #local-date-time "2004-10-19T10:23:54.456"}}}
-                           {:name "mysql datetime scalar value (timestamp)"
-                            :eql  {:query-single [{[:scalar/id 1] [:scalar/timestamp-c :scalar/timestamp-with-fraction]}]
-                                   :ignore       #{"PostgreSQL"}
-                                   :expected     #:scalar{:timestamp-c             #local-date-time "2020-01-01T05:40:10"
-                                                          :timestamp-with-fraction #local-date-time "2020-01-01T05:40:10.456"}}}
-                           {:name "postgres,mysql decimal scalar value"
-                            :eql  {:query-single [{[:scalar/id 1] [:scalar/decimal-c :scalar/numeric-c]}]
-                                   :expected     #:scalar{:decimal-c 5234.5678M
-                                                          :numeric-c 5234.678908M}}}
-                           {:name "postgres long column types"
-                            :eql  {:query-single [{[:scalar/id 1] [:scalar/bigint-c :scalar/bigserial-c :scalar/int8-c :scalar/serial8-c]}]
-                                   :ignore       #{"MySQL"}
-                                   :expected     #:scalar{:bigint-c    9223372036854775807
-                                                          :bigserial-c 7223372036854775807
-                                                          :int8-c      8223372036854775807
-                                                          :serial8-c   6223372036854775807}}}
-                           {:name "mysql long column types"
-                            :eql  {:query-single [{[:scalar/id 1] [:scalar/int-unsigned :scalar/bigint-c]}]
-                                   :ignore       #{"PostgreSQL"}
-                                   :expected     #:scalar{:int-unsigned 854775807
-                                                          :bigint-c     9223372036854775807}}}
-                           {:name "mysql bigint column types"
-                            :eql  {:query-single [{[:scalar/id 1] [:scalar/bigint-unsigned]}]
-                                   :ignore       #{"PostgreSQL"}
-                                   :expected     #:scalar{:bigint-unsigned 9223372036854775807}}}
-                           {:name "postgres,mysql date scalar value"
-                            :eql  {:query-single [{[:scalar/id 1] [:scalar/date-c]}]
-                                   :expected     #:scalar{:date-c #local-date "1988-11-05"}}}
-                           {:name "postgres,mysql time scalar value"
-                            :eql  {:query-single [{[:scalar/id 1] [:scalar/time-c]}]
-                                   :expected     #:scalar{:time-c #local-time "13:05:54"}}}
-                           {:name "postgres time with timezone scalar value"
-                            :eql  {:query-single [{[:scalar/id 1] [:scalar/time-with-time-zone]}]
-                                   :ignore       #{"MySQL"}
-                                   :expected     #:scalar{:time-with-time-zone #offset-time "13:05:54+05:30"}}}
-                           {:name "mysql boolean column types"
-                            :eql  {:query-single [{[:scalar/id 1] [:scalar/truthy :scalar/falsey
-                                                                   :scalar/bit-truthy :scalar/bit-falsey
-                                                                   :scalar/non-zero-truthy]}]
-                                   :ignore       #{"PostgreSQL"}
-                                   :expected     #:scalar{:falsey          false
-                                                          :truthy          true
-                                                          :bit-falsey      false
-                                                          :bit-truthy      true
-                                                          :non-zero-truthy true}}}
-                           {:name "where filter with `<` on timestamp"
-                            :eql  {:query    [{([] {:where [:< :scalar/time-c "13:05:54"]}) [:scalar/time-c]}]
-                                   :expected ()}}
-                           {:name "where filter with `<=` on timestamp"
-                            :eql  {:query    [{([] {:where [:<= :scalar/time-c "13:05:54"]}) [:scalar/time-c]}]
-                                   :expected (#:scalar{:time-c #local-time "13:05:54"})}}
-                           {:name "where filter with `is null`"
-                            :eql  {:query    [{([] {:where [:= :employee/employee-reports-to-id nil]}) [:employee/first-name :employee/last-name]}]
-                                   :expected (#:employee{:first-name "Andrew"
-                                                         :last-name  "Adams"})}}
-                           {:name "where filter with `is not null`"
-                            :eql  {:query    [{([] {:where [:<> :employee/employee-reports-to-id nil]
-                                                    :limit 1}) [:employee/first-name :employee/last-name]}]
-                                   :expected (#:employee{:last-name  "Edwards"
-                                                         :first-name "Nancy"})}}
-                           {:name "where filter with `in` on uuid column"
-                            :eql  {:query    [{([] {:where [:in :customer/id ["847f09a7-39d1-4021-b43d-18ceb7ada8f6" "e5156dce-58ff-44f5-8533-932a7250bd29"]]}) [:customer/first-name]}]
-                                   :ignore   #{"MySQL"}
-                                   :expected (#:customer{:first-name "John"} #:customer{:first-name "Rahul"})}}
-                           {:name "where filter with `not-in` on uuid column"
-                            :eql  {:query    [{([] {:where [:not-in :customer/id ["847f09a7-39d1-4021-b43d-18ceb7ada8f6" "e5156dce-58ff-44f5-8533-932a7250bd29"]]}) [:customer/first-name]}]
-                                   :ignore   #{"MySQL"}
-                                   :expected ()}}
-                           {:name "ignore null in where"
-                            :eql  {:query    [{([] {:limit 1
-                                                    :where nil}) [:employee/first-name]}]
-                                   :expected (#:employee {:first-name "Andrew"})}}
-                           {:name "nested object predicate many-to-many relationship"
-                            :eql  {:query    [{([] {:where [:= [:author/courses :course/rating] 5]}) [:author/first-name
-                                                                                                      :author/last-name]}]
-                                   :expected (#:author{:first-name "John"
-                                                       :last-name  "Doe"}
-                                              #:author{:first-name "Rahul"
-                                                       :last-name  "Sharma"})}}
-                           {:name "nested object predicate many-to-many satisfy all"
-                            :eql  {:query    [{([] {:where [:and [:not [:<> [:author/courses :course/rating] 5]]
-                                                            [:exists :author/courses]]}) [:author/first-name :author/last-name]}]
-                                   :expected (#:author{:first-name "Rahul"
-                                                       :last-name  "Sharma"})}}
-                           {:name "filter by nested object(s) existence"
-                            :eql  {:query    [{([] {:where [:not [:exists :author/courses]]}) [:author/first-name
-                                                                                               :author/last-name]}]
-                                   :expected (#:author{:first-name "Prakash"
-                                                       :last-name  "Rao"})}}
-                           {:name "using * to select all attributes"
-                            :eql  {:query    [{([]) [:author/*
-                                                     {:author/courses [:course/*]}]}]
-                                   :expected (#:author{:first-name "John"
-                                                       :id         1
-                                                       :last-name  "Doe"
-                                                       :courses    [#:course{:title  "Flutter Fundamentals"
-                                                                             :rating 4
-                                                                             :id     1}
-                                                                    #:course{:title  "Beginning React Native"
-                                                                             :rating 5
-                                                                             :id     2}]}
-                                              #:author{:first-name "Rahul"
-                                                       :id         2
-                                                       :last-name  "Sharma"
-                                                       :courses    [#:course{:title  "Android Basics"
-                                                                             :rating 5
-                                                                             :id     3}
-                                                                    #:course{:title  "Getting Started With Kotlin"
-                                                                             :rating 5
-                                                                             :id     4}]}
-                                              #:author{:first-name "Prakash"
-                                                       :id         3
-                                                       :last-name  "Rao"
-                                                       :courses    []})}}
-                           {:name "simpler eql syntax"
-                            :eql  {:query    {[] [:author/first-name]}
-                                   :expected (#:author{:first-name "John"}
-                                              #:author{:first-name "Rahul"}
-                                              #:author{:first-name "Prakash"})}}
-                           {:name "one-to-one relationship without the id suffix"
-                            :eql  {:query    [{[] [:country/name {:country/continent-by-continent-identifier [:continent/name]}]}]
-                                   :expected (#:country{:name                              "India"
-                                                        :continent-by-continent-identifier #:continent{:name "Asia"}})}}
-                           {:name "one-to-many relationship without the id suffix"
-                            :eql  {:query    [{[] [:continent/name {:continent/continent-identifier-countries [:country/name]}]}]
-                                   :expected (#:continent{:name                           "Asia"
-                                                          :continent-identifier-countries [#:country{:name "India"}]})}}
-                           {:name "query using eql.mode/lenient mode"
-                            :eql  {:query    [{[[] {:where [:= [:author/courses :course/rating] 5]}] [{[:author/courses {:where [:= :course/rating 5]}] [:course/title :course/rating]}
-                                                                                                      :author/first-name]}]
-                                   :expected (#:author{:courses    [#:course{:title  "Beginning React Native"
-                                                                             :rating 5}]
-                                                       :first-name "John"}
-                                              #:author{:courses    [#:course{:title  "Android Basics"
-                                                                             :rating 5}
-                                                                    #:course{:title  "Getting Started With Kotlin"
-                                                                             :rating 5}]
-                                                       :first-name "Rahul"})}}
-                           {:name "aggregate functions"
-                            :eql  {:query    [{[] [[:count :course/rating]
-                                                   [:avg :course/rating]
-                                                   [:max :course/rating]
-                                                   [:min :course/rating]
-                                                   [:sum :course/rating]]}]
-                                   :expected (#:course{:count-of-rating 4
-                                                       :avg-of-rating   4.7500000000000000M
-                                                       :max-of-rating   5
-                                                       :min-of-rating   4
-                                                       :sum-of-rating   19})}}
-                           {:name "distinct count"
-                            :eql {:query-single [{[] [[:count [:distinct :course/rating]]]}]
-                                  :expected #:course{:distinct-count-of-rating 2}}}
-                           {:name "aggregate functions in relationship"
-                            :eql  {:query    [{[:author/id 1] [:author/id
-                                                               :author/first-name
-                                                               {:author/courses [[:count :course/rating]
-                                                                                 [:avg :course/rating]
-                                                                                 [:max :course/rating]
-                                                                                 [:min :course/rating]
-                                                                                 [:sum :course/rating]]}]}]
-                                   :expected (#:author{:id         1
-                                                       :first-name "John"
-                                                       :courses    [#:course{:count-of-rating 2
-                                                                             :avg-of-rating   4.5000000000000000M
-                                                                             :max-of-rating   5
-                                                                             :min-of-rating   4
-                                                                             :sum-of-rating   9}]})}}
-                           {:name "aggregate functions with group by"
-                            :eql  {:query    [{([] {:group-by [:course/rating]}) [:course/rating
-                                                                                  [:count :course/rating]]}]
-                                   :expected ["MySQL" (#:course{:rating         4
-                                                                :count-of-rating 1}
-                                                       #:course{:rating          5
-                                                                :count-of-rating 3})
-                                              "PostgreSQL" (#:course{:rating          5
-                                                                     :count-of-rating 3}
-                                                            #:course{:rating          4
-                                                                     :count-of-rating 1})]}}
-                           {:name "aggregate function with group by on join attributes"
-                            :eql  {:query    [{[] [:author/first-name
-                                                   :author/last-name
-                                                   {(:author/courses {:group-by [:course/rating]}) [:course/rating
-                                                                                                    [:count :course/rating]]}]}]
-                                   :expected (#:author{:courses    [#:course{:rating          4
-                                                                             :count-of-rating 1}
-                                                                    #:course{:rating          5
-                                                                             :count-of-rating 1}]
-                                                       :last-name  "Doe"
-                                                       :first-name "John"}
-                                              #:author{:courses    [#:course{:rating          5
-                                                                             :count-of-rating 2}]
-                                                       :last-name  "Sharma"
-                                                       :first-name "Rahul"}
-                                              #:author{:courses    []
-                                                       :last-name  "Rao"
-                                                       :first-name "Prakash"})}}
-                           {:name "group-by with one-to-one relationship"
-                            :eql {:query [{([] {:group-by #{:employee/employee-reports-to}}) [[:count :employee/first-name]
-                                                                                              {:employee/employee-reports-to [:employee/id]}]}]
-                                  :expected ["PostgreSQL" (#:employee{:count-of-first-name 2
-                                                                      :employee-reports-to #:employee{:id 1}}
-                                                           #:employee{:count-of-first-name 3
-                                                                      :employee-reports-to #:employee{:id 2}}
-                                                           #:employee{:count-of-first-name 2
-                                                                      :employee-reports-to #:employee{:id 6}}
-                                                           #:employee{:count-of-first-name 1
-                                                                      :employee-reports-to nil})
-                                             "MySQL" (#:employee{:count-of-first-name 2
-                                                                 :employee-reports-to #:employee{:id 1}}
-                                                      #:employee{:count-of-first-name 3
-                                                                 :employee-reports-to #:employee{:id 2}}
-                                                      #:employee{:count-of-first-name 2
-                                                                 :employee-reports-to #:employee{:id 6}})]}}
-                           {:name "one-to-one mapping child-to-parent-query"
-                            :eql  {:query    [{[:site-meta-datum/id 1]
-                                               [:site-meta-datum/*
-                                                {:site-meta-datum/site [:site/*]}]}]
-                                   :expected (#:site-meta-datum{:id 1, :description "test dec", :site #:site{:name "test", :id 1}})}}
-                           {:name "one-to-one mapping parent-to-child-query"
-                            :eql  {:query    [{[:site/id 1]
-                                               [:site/*
-                                                {:site/site-meta-datum [:site-meta-datum/*]}]}]
-                                   :expected (#:site{:name "test", :id 1, :site-meta-datum #:site-meta-datum{:id 1, :description "test dec"}})}}
-                           {:name "custom single arity function"
-                            :eql {:query-single [{[:site/id 1] [[[:upper :site/name] :as :site/name]]}]
-                                  :expected #:site{:name "TEST"}}}
-                           {:name "custom multi arity function"
-                            :eql {:query-single [{[:author/id 1] [[[:concat :author/first-name " " :author/last-name] :as :author/full-name]]}]
-                                  :ignore   #{"MySQL"}
-                                  :expected #:author{:full-name "John Doe"}}}
-                           {:name "custom multi arity function with nested function"
-                            :eql {:query-single [{[:employee/id 7]
-                                                  [[[:concat [:cast :employee/id :text] ". " :employee/first-name] :as :employee/identifer]]}]
-                                  :ignore   #{"MySQL"}
-                                  :expected #:employee{:identifer "7. Robert"}}}
-                           {:name "composite key in one-to-one relationship"
-                            :eql {:query-single {[:account/acc-num 1]
-                                                 [:account/acc-num
-                                                  :account/acc-descr
-                                                  {:account/account-referrer
-                                                   [:account-referrer/referred-by]}]}
-                                  :expected #:account{:acc-num 1 :acc-descr "SA #1" :account-referrer #:account-referrer{:referred-by "foo"}}}}
-                           {:name "composite key in one-to-one relationship reverse"
-                            :eql {:query-single {[:account-referrer/acc-num 1
-                                                  :account-referrer/acc-type 1]
-                                                 [:account-referrer/referred-by
-                                                  {:account-referrer/account
-                                                   [:account/acc-descr]}]}
-                                  :expected #:account-referrer{:referred-by "foo", :account #:account{:acc-descr "SA #1"}}}}
-                           {:name "composite key in one-to-many relationship"
-                            :eql {:query-single {[:account/acc-num 1]
-                                                 [:account/acc-descr
-                                                  {:account/sub-accounts
-                                                   [:sub-account/sub-descr]}]}
-                                  :expected #:account{:acc-descr "SA #1" :sub-accounts [#:sub-account{:sub-descr "SA #1 Sub Acc"} #:sub-account{:sub-descr "SA #1 Sub Acc#2"}]}}}
-                           {:name "composite key in one-to-many relationship reverse"
-                            :eql {:query-single {[:sub-account/sub-acc 2]
-                                                 [:sub-account/sub-descr
-                                                  {:sub-account/account
-                                                   [:account/acc-descr]}]}
-                                  :expected #:sub-account{:sub-descr "SA #2 Sub Acc", :account #:account{:acc-descr "SA #2"}}}}
-                           {:name "one-to-one relationship through unique foreign key"
-                            :eql
-                            {:query-single
-                             [{[:player/id 1]
-                               [:player/name
-                                {:player/player-profile
-                                 [:player-profile/website]}]}]
-                             :expected
-                             #:player{:name "Player #1"
-                                      :player-profile #:player-profile{:website "Player #1 Website"}}}}
-                           {:name "scalar alias preserves underlying type"
-                            :eql
-                            {:query-single
-                             [{[:customer/id "847f09a7-39d1-4021-b43d-18ceb7ada8f6"]
-                               [:customer/id
-                                [:customer/id
-                                 :as
-                                 :customer/aliased-id]]}]
-                             :ignore #{"MySQL"}
-                             :expected
-                             #:customer
-                              {:id #uuid "847f09a7-39d1-4021-b43d-18ceb7ada8f6"
-                               :aliased-id #uuid "847f09a7-39d1-4021-b43d-18ceb7ada8f6"}}}]}}
+            :heql-config {:attr/coercions
+                          {:certificate/item-type
+                           {:to-db clojure.core/name
+                            :from-db clojure.core/keyword}}}
+            :assertions [{:name "query nested self-join (one-to-one) relationship"
+                          :eql  {:query-single [{[:employee/id 7] [:employee/first-name
+                                                                   {:employee/employee-reports-to [:employee/first-name
+                                                                                                   {:employee/employee-reports-to [:employee/first-name]}]}]}]
+                                 :expected     #:employee{:first-name          "Robert"
+                                                          :employee-reports-to #:employee{:first-name          "Michael"
+                                                                                          :employee-reports-to #:employee{:first-name "Andrew"}}}}}
+                         {:name "uuid scalar type"
+                          :eql  {:query-single [{[:customer/id "847f09a7-39d1-4021-b43d-18ceb7ada8f6"] [:customer/first-name :customer/id]}]
+                                 :ignore       #{"MySQL"}
+                                 :expected     #:customer{:first-name "John"
+                                                          :id         #uuid "847f09a7-39d1-4021-b43d-18ceb7ada8f6"}}}
+                         {:name "postgres datetime scalar value"
+                          :eql  {:query-single [{[:scalar/id 1] [:scalar/timestamp-c :scalar/timestamp-with-fraction :scalar/timestamp-without-timezone-c]}]
+                                 :ignore       #{"MySQL"}
+                                 :expected     #:scalar{:timestamp-c                  #local-date-time "2004-10-19T10:23:54"
+                                                        :timestamp-with-fraction      #local-date-time "2004-10-19T10:23:54.222"
+                                                        :timestamp-without-timezone-c #local-date-time "2004-10-19T10:23:54"}}}
+                         {:name "postgres datetime with timezone scalar value"
+                          :eql  {:query-single [{[:scalar/id 1] [:scalar/timestamptz-c :scalar/timestamptz-with-fraction :scalar/timestamp-with-timezone-c]}]
+                                 :ignore       #{"MySQL"}
+                                 :expected     #:scalar{:timestamptz-c             #offset-date-time "2017-08-19T17:52:11+05:30"
+                                                        :timestamptz-with-fraction #offset-date-time "2017-08-19T17:52:11.222+05:30"
+                                                        :timestamp-with-timezone-c #offset-date-time "2017-08-19T17:52:11+05:30"}}}
+                         {:name "mysql datetime scalar value"
+                          :eql  {:query-single [{[:scalar/id 1] [:scalar/datetime-c :scalar/datetime-with-fraction]}]
+                                 :ignore       #{"PostgreSQL"}
+                                 :expected     #:scalar{:datetime-c             #local-date-time "2004-10-19T10:23:54"
+                                                        :datetime-with-fraction #local-date-time "2004-10-19T10:23:54.456"}}}
+                         {:name "mysql datetime scalar value (timestamp)"
+                          :eql  {:query-single [{[:scalar/id 1] [:scalar/timestamp-c :scalar/timestamp-with-fraction]}]
+                                 :ignore       #{"PostgreSQL"}
+                                 :expected     #:scalar{:timestamp-c             #local-date-time "2020-01-01T05:40:10"
+                                                        :timestamp-with-fraction #local-date-time "2020-01-01T05:40:10.456"}}}
+                         {:name "postgres,mysql decimal scalar value"
+                          :eql  {:query-single [{[:scalar/id 1] [:scalar/decimal-c :scalar/numeric-c]}]
+                                 :expected     #:scalar{:decimal-c 5234.5678M
+                                                        :numeric-c 5234.678908M}}}
+                         {:name "postgres long column types"
+                          :eql  {:query-single [{[:scalar/id 1] [:scalar/bigint-c :scalar/bigserial-c :scalar/int8-c :scalar/serial8-c]}]
+                                 :ignore       #{"MySQL"}
+                                 :expected     #:scalar{:bigint-c    9223372036854775807
+                                                        :bigserial-c 7223372036854775807
+                                                        :int8-c      8223372036854775807
+                                                        :serial8-c   6223372036854775807}}}
+                         {:name "mysql long column types"
+                          :eql  {:query-single [{[:scalar/id 1] [:scalar/int-unsigned :scalar/bigint-c]}]
+                                 :ignore       #{"PostgreSQL"}
+                                 :expected     #:scalar{:int-unsigned 854775807
+                                                        :bigint-c     9223372036854775807}}}
+                         {:name "mysql bigint column types"
+                          :eql  {:query-single [{[:scalar/id 1] [:scalar/bigint-unsigned]}]
+                                 :ignore       #{"PostgreSQL"}
+                                 :expected     #:scalar{:bigint-unsigned 9223372036854775807}}}
+                         {:name "postgres,mysql date scalar value"
+                          :eql  {:query-single [{[:scalar/id 1] [:scalar/date-c]}]
+                                 :expected     #:scalar{:date-c #local-date "1988-11-05"}}}
+                         {:name "postgres,mysql time scalar value"
+                          :eql  {:query-single [{[:scalar/id 1] [:scalar/time-c]}]
+                                 :expected     #:scalar{:time-c #local-time "13:05:54"}}}
+                         {:name "postgres time with timezone scalar value"
+                          :eql  {:query-single [{[:scalar/id 1] [:scalar/time-with-time-zone]}]
+                                 :ignore       #{"MySQL"}
+                                 :expected     #:scalar{:time-with-time-zone #offset-time "13:05:54+05:30"}}}
+                         {:name "mysql boolean column types"
+                          :eql  {:query-single [{[:scalar/id 1] [:scalar/truthy :scalar/falsey
+                                                                 :scalar/bit-truthy :scalar/bit-falsey
+                                                                 :scalar/non-zero-truthy]}]
+                                 :ignore       #{"PostgreSQL"}
+                                 :expected     #:scalar{:falsey          false
+                                                        :truthy          true
+                                                        :bit-falsey      false
+                                                        :bit-truthy      true
+                                                        :non-zero-truthy true}}}
+                         {:name "where filter with `<` on timestamp"
+                          :eql  {:query    [{([] {:where [:< :scalar/time-c "13:05:54"]}) [:scalar/time-c]}]
+                                 :expected ()}}
+                         {:name "where filter with `<=` on timestamp"
+                          :eql  {:query    [{([] {:where [:<= :scalar/time-c "13:05:54"]}) [:scalar/time-c]}]
+                                 :expected (#:scalar{:time-c #local-time "13:05:54"})}}
+                         {:name "where filter with `is null`"
+                          :eql  {:query    [{([] {:where [:= :employee/employee-reports-to-id nil]}) [:employee/first-name :employee/last-name]}]
+                                 :expected (#:employee{:first-name "Andrew"
+                                                       :last-name  "Adams"})}}
+                         {:name "where filter with `is not null`"
+                          :eql  {:query    [{([] {:where [:<> :employee/employee-reports-to-id nil]
+                                                  :limit 1}) [:employee/first-name :employee/last-name]}]
+                                 :expected (#:employee{:last-name  "Edwards"
+                                                       :first-name "Nancy"})}}
+                         {:name "where filter with `in` on uuid column"
+                          :eql  {:query    [{([] {:where [:in :customer/id ["847f09a7-39d1-4021-b43d-18ceb7ada8f6" "e5156dce-58ff-44f5-8533-932a7250bd29"]]}) [:customer/first-name]}]
+                                 :ignore   #{"MySQL"}
+                                 :expected (#:customer{:first-name "John"} #:customer{:first-name "Rahul"})}}
+                         {:name "where filter with `not-in` on uuid column"
+                          :eql  {:query    [{([] {:where [:not-in :customer/id ["847f09a7-39d1-4021-b43d-18ceb7ada8f6" "e5156dce-58ff-44f5-8533-932a7250bd29"]]}) [:customer/first-name]}]
+                                 :ignore   #{"MySQL"}
+                                 :expected ()}}
+                         {:name "ignore null in where"
+                          :eql  {:query    [{([] {:limit 1
+                                                  :where nil}) [:employee/first-name]}]
+                                 :expected (#:employee {:first-name "Andrew"})}}
+                         {:name "nested object predicate many-to-many relationship"
+                          :eql  {:query    [{([] {:where [:= [:author/courses :course/rating] 5]}) [:author/first-name
+                                                                                                    :author/last-name]}]
+                                 :expected (#:author{:first-name "John"
+                                                     :last-name  "Doe"}
+                                            #:author{:first-name "Rahul"
+                                                     :last-name  "Sharma"})}}
+                         {:name "nested object predicate many-to-many satisfy all"
+                          :eql  {:query    [{([] {:where [:and [:not [:<> [:author/courses :course/rating] 5]]
+                                                          [:exists :author/courses]]}) [:author/first-name :author/last-name]}]
+                                 :expected (#:author{:first-name "Rahul"
+                                                     :last-name  "Sharma"})}}
+                         {:name "filter by nested object(s) existence"
+                          :eql  {:query    [{([] {:where [:not [:exists :author/courses]]}) [:author/first-name
+                                                                                             :author/last-name]}]
+                                 :expected (#:author{:first-name "Prakash"
+                                                     :last-name  "Rao"})}}
+                         {:name "using * to select all attributes"
+                          :eql  {:query    [{([]) [:author/*
+                                                   {:author/courses [:course/*]}]}]
+                                 :expected (#:author{:first-name "John"
+                                                     :id         1
+                                                     :last-name  "Doe"
+                                                     :courses    [#:course{:title  "Flutter Fundamentals"
+                                                                           :rating 4
+                                                                           :id     1}
+                                                                  #:course{:title  "Beginning React Native"
+                                                                           :rating 5
+                                                                           :id     2}]}
+                                            #:author{:first-name "Rahul"
+                                                     :id         2
+                                                     :last-name  "Sharma"
+                                                     :courses    [#:course{:title  "Android Basics"
+                                                                           :rating 5
+                                                                           :id     3}
+                                                                  #:course{:title  "Getting Started With Kotlin"
+                                                                           :rating 5
+                                                                           :id     4}]}
+                                            #:author{:first-name "Prakash"
+                                                     :id         3
+                                                     :last-name  "Rao"
+                                                     :courses    []})}}
+                         {:name "simpler eql syntax"
+                          :eql  {:query    {[] [:author/first-name]}
+                                 :expected (#:author{:first-name "John"}
+                                            #:author{:first-name "Rahul"}
+                                            #:author{:first-name "Prakash"})}}
+                         {:name "one-to-one relationship without the id suffix"
+                          :eql  {:query    [{[] [:country/name {:country/continent-by-continent-identifier [:continent/name]}]}]
+                                 :expected (#:country{:name                              "India"
+                                                      :continent-by-continent-identifier #:continent{:name "Asia"}})}}
+                         {:name "one-to-many relationship without the id suffix"
+                          :eql  {:query    [{[] [:continent/name {:continent/continent-identifier-countries [:country/name]}]}]
+                                 :expected (#:continent{:name                           "Asia"
+                                                        :continent-identifier-countries [#:country{:name "India"}]})}}
+                         {:name "query using eql.mode/lenient mode"
+                          :eql  {:query    [{[[] {:where [:= [:author/courses :course/rating] 5]}] [{[:author/courses {:where [:= :course/rating 5]}] [:course/title :course/rating]}
+                                                                                                    :author/first-name]}]
+                                 :expected (#:author{:courses    [#:course{:title  "Beginning React Native"
+                                                                           :rating 5}]
+                                                     :first-name "John"}
+                                            #:author{:courses    [#:course{:title  "Android Basics"
+                                                                           :rating 5}
+                                                                  #:course{:title  "Getting Started With Kotlin"
+                                                                           :rating 5}]
+                                                     :first-name "Rahul"})}}
+                         {:name "aggregate functions"
+                          :eql  {:query    [{[] [[:count :course/rating]
+                                                 [:avg :course/rating]
+                                                 [:max :course/rating]
+                                                 [:min :course/rating]
+                                                 [:sum :course/rating]]}]
+                                 :expected (#:course{:count-of-rating 4
+                                                     :avg-of-rating   4.7500000000000000M
+                                                     :max-of-rating   5
+                                                     :min-of-rating   4
+                                                     :sum-of-rating   19})}}
+                         {:name "distinct count"
+                          :eql {:query-single [{[] [[:count [:distinct :course/rating]]]}]
+                                :expected #:course{:distinct-count-of-rating 2}}}
+                         {:name "aggregate functions in relationship"
+                          :eql  {:query    [{[:author/id 1] [:author/id
+                                                             :author/first-name
+                                                             {:author/courses [[:count :course/rating]
+                                                                               [:avg :course/rating]
+                                                                               [:max :course/rating]
+                                                                               [:min :course/rating]
+                                                                               [:sum :course/rating]]}]}]
+                                 :expected (#:author{:id         1
+                                                     :first-name "John"
+                                                     :courses    [#:course{:count-of-rating 2
+                                                                           :avg-of-rating   4.5000000000000000M
+                                                                           :max-of-rating   5
+                                                                           :min-of-rating   4
+                                                                           :sum-of-rating   9}]})}}
+                         {:name "aggregate functions with group by"
+                          :eql  {:query    [{([] {:group-by [:course/rating]}) [:course/rating
+                                                                                [:count :course/rating]]}]
+                                 :expected ["MySQL" (#:course{:rating         4
+                                                              :count-of-rating 1}
+                                                     #:course{:rating          5
+                                                              :count-of-rating 3})
+                                            "PostgreSQL" (#:course{:rating          5
+                                                                   :count-of-rating 3}
+                                                          #:course{:rating          4
+                                                                   :count-of-rating 1})]}}
+                         {:name "aggregate function with group by on join attributes"
+                          :eql  {:query    [{[] [:author/first-name
+                                                 :author/last-name
+                                                 {(:author/courses {:group-by [:course/rating]}) [:course/rating
+                                                                                                  [:count :course/rating]]}]}]
+                                 :expected (#:author{:courses    [#:course{:rating          4
+                                                                           :count-of-rating 1}
+                                                                  #:course{:rating          5
+                                                                           :count-of-rating 1}]
+                                                     :last-name  "Doe"
+                                                     :first-name "John"}
+                                            #:author{:courses    [#:course{:rating          5
+                                                                           :count-of-rating 2}]
+                                                     :last-name  "Sharma"
+                                                     :first-name "Rahul"}
+                                            #:author{:courses    []
+                                                     :last-name  "Rao"
+                                                     :first-name "Prakash"})}}
+                         {:name "group-by with one-to-one relationship"
+                          :eql {:query [{([] {:group-by #{:employee/employee-reports-to}}) [[:count :employee/first-name]
+                                                                                            {:employee/employee-reports-to [:employee/id]}]}]
+                                :expected ["PostgreSQL" (#:employee{:count-of-first-name 2
+                                                                    :employee-reports-to #:employee{:id 1}}
+                                                         #:employee{:count-of-first-name 3
+                                                                    :employee-reports-to #:employee{:id 2}}
+                                                         #:employee{:count-of-first-name 2
+                                                                    :employee-reports-to #:employee{:id 6}}
+                                                         #:employee{:count-of-first-name 1
+                                                                    :employee-reports-to nil})
+                                           "MySQL" (#:employee{:count-of-first-name 2
+                                                               :employee-reports-to #:employee{:id 1}}
+                                                    #:employee{:count-of-first-name 3
+                                                               :employee-reports-to #:employee{:id 2}}
+                                                    #:employee{:count-of-first-name 2
+                                                               :employee-reports-to #:employee{:id 6}})]}}
+                         {:name "one-to-one mapping child-to-parent-query"
+                          :eql  {:query    [{[:site-meta-datum/id 1]
+                                             [:site-meta-datum/*
+                                              {:site-meta-datum/site [:site/*]}]}]
+                                 :expected (#:site-meta-datum{:id 1, :description "test dec", :site #:site{:name "test", :id 1}})}}
+                         {:name "one-to-one mapping parent-to-child-query"
+                          :eql  {:query    [{[:site/id 1]
+                                             [:site/*
+                                              {:site/site-meta-datum [:site-meta-datum/*]}]}]
+                                 :expected (#:site{:name "test", :id 1, :site-meta-datum #:site-meta-datum{:id 1, :description "test dec"}})}}
+                         {:name "custom single arity function"
+                          :eql {:query-single [{[:site/id 1] [[[:upper :site/name] :as :site/name]]}]
+                                :expected #:site{:name "TEST"}}}
+                         {:name "custom multi arity function"
+                          :eql {:query-single [{[:author/id 1] [[[:concat :author/first-name " " :author/last-name] :as :author/full-name]]}]
+                                :ignore   #{"MySQL"}
+                                :expected #:author{:full-name "John Doe"}}}
+                         {:name "custom multi arity function with nested function"
+                          :eql {:query-single [{[:employee/id 7]
+                                                [[[:concat [:cast :employee/id :text] ". " :employee/first-name] :as :employee/identifer]]}]
+                                :ignore   #{"MySQL"}
+                                :expected #:employee{:identifer "7. Robert"}}}
+                         {:name "composite key in one-to-one relationship"
+                          :eql {:query-single {[:account/acc-num 1]
+                                               [:account/acc-num
+                                                :account/acc-descr
+                                                {:account/account-referrer
+                                                 [:account-referrer/referred-by]}]}
+                                :expected #:account{:acc-num 1 :acc-descr "SA #1" :account-referrer #:account-referrer{:referred-by "foo"}}}}
+                         {:name "composite key in one-to-one relationship reverse"
+                          :eql {:query-single {[:account-referrer/acc-num 1
+                                                :account-referrer/acc-type 1]
+                                               [:account-referrer/referred-by
+                                                {:account-referrer/account
+                                                 [:account/acc-descr]}]}
+                                :expected #:account-referrer{:referred-by "foo", :account #:account{:acc-descr "SA #1"}}}}
+                         {:name "composite key in one-to-many relationship"
+                          :eql {:query-single {[:account/acc-num 1]
+                                               [:account/acc-descr
+                                                {:account/sub-accounts
+                                                 [:sub-account/sub-descr]}]}
+                                :expected #:account{:acc-descr "SA #1" :sub-accounts [#:sub-account{:sub-descr "SA #1 Sub Acc"} #:sub-account{:sub-descr "SA #1 Sub Acc#2"}]}}}
+                         {:name "composite key in one-to-many relationship reverse"
+                          :eql {:query-single {[:sub-account/sub-acc 2]
+                                               [:sub-account/sub-descr
+                                                {:sub-account/account
+                                                 [:account/acc-descr]}]}
+                                :expected #:sub-account{:sub-descr "SA #2 Sub Acc", :account #:account{:acc-descr "SA #2"}}}}
+                         {:name "one-to-one relationship through unique foreign key"
+                          :eql
+                          {:query-single
+                           [{[:player/id 1]
+                             [:player/name
+                              {:player/player-profile
+                               [:player-profile/website]}]}]
+                           :expected
+                           #:player{:name "Player #1"
+                                    :player-profile #:player-profile{:website "Player #1 Website"}}}}
+                         {:name "scalar alias preserves underlying type"
+                          :eql
+                          {:query-single
+                           [{[:customer/id "847f09a7-39d1-4021-b43d-18ceb7ada8f6"]
+                             [:customer/id
+                              [:customer/id
+                               :as
+                               :customer/aliased-id]]}]
+                           :ignore #{"MySQL"}
+                           :expected
+                           #:customer
+                            {:id #uuid "847f09a7-39d1-4021-b43d-18ceb7ada8f6"
+                             :aliased-id #uuid "847f09a7-39d1-4021-b43d-18ceb7ada8f6"}}}
+                         {:name "custom coercion on return value"
+                          :eql
+                          {:query-single
+                           [{[:certificate/id 1]
+                             [:certificate/item-type]}]
+                           :ignore #{"MySQL"}
+                           :expected
+                           #:certificate
+                            {:item-type :course}}}
+                         {:name "custom coercion on predicate"
+                          :eql
+                          {:query
+                           [{[:certificate/item-type :course]
+                             [:certificate/id]}]
+                           :ignore #{"MySQL"}
+                           :expected
+                           (#:certificate
+                             {:id 1})}}]}}

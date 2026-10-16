@@ -6,13 +6,35 @@
             [suite-reader :refer [read-string-opts]]
             [hikari-cp.core :as hikari]))
 
+(defn- resolve-fn [value]
+  (if (symbol? value)
+    (-> value
+        requiring-resolve
+        deref)
+    value))
+
+(defn- resolve-attr-coercions [heql-config]
+  (update
+   heql-config
+   :attr/coercions
+   (fn [coercions]
+     (update-vals
+      coercions
+      (fn [coercion]
+        (cond-> coercion
+          (:to-db coercion)
+          (update :to-db resolve-fn)
+
+          (:from-db coercion)
+          (update :from-db resolve-fn)))))))
+
 (deftest honeyeql-query-test-suite
-  (doseq [[_ {:keys [ds-opts assertions]}]
+  (doseq [[_ {:keys [ds-opts assertions heql-config]}]
           (edn/read-string read-string-opts (slurp "./test/suite.edn"))]
     (doseq [{:keys [database-name adapter jdbc-url db-product-name]
              :as   ds-opt} ds-opts]
       (with-open [db-spec (hikari/make-datasource (dissoc ds-opt :db-product-name))]
-        (let [db-adapter (heql-db/initialize db-spec)]
+        (let [db-adapter (heql-db/initialize db-spec (or (resolve-attr-coercions heql-config) heql/default-heql-config))]
           (doseq [{:keys [name eql]} assertions]
             (testing (if (and database-name adapter)
                        (str "Testing " name " on " database-name " in " adapter)

@@ -1,3 +1,6 @@
+* 2.0.4 - 2026-10-16
+  - Added per-attribute `:to-db` and `:from-db` coercion through `:attr/coercions`.
+  - Query ident and predicate values now consistently use `:to-db` coercion.
 * 2.0.3 - 2026-10-05
   - Preserve the underlying attribute type when returning aliased scalar attributes.
   - Aliases now affect only the returned key; result coercion continues to use the source attribute metadata.

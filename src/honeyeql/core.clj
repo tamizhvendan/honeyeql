@@ -88,7 +88,7 @@
 (defn- eql-ident->hsql-predicate [db-adapter [attr-ident value] alias]
   (let [heql-meta-data (:heql-meta-data db-adapter)
         attr-col-name  (heql-md/attr-column-name heql-meta-data attr-ident)
-        attr-value     (heql-md/coerce-attr-value db-adapter :from-db attr-ident value)]
+        attr-value     (heql-md/coerce-attr-value db-adapter :to-db attr-ident value)]
     [:= (keyword (str (:self alias) "." attr-col-name)) attr-value]))
 
 (defn- eql-ident-key->hsql-predicate [db-adapter eql-ident-key alias]
@@ -140,7 +140,7 @@
     (map #(coerce-value db-adapter eql-node col %) value)
     (if (and (keyword? value) (some? (namespace value)) (heql-md/attribute? (:heql-meta-data db-adapter) value))
       (hsql-column db-adapter value eql-node)
-      (heql-md/coerce-attr-value db-adapter :from-db col value))))
+      (heql-md/coerce-attr-value db-adapter :to-db col value))))
 
 (defn- hsql-predicate [db-adapter eql-node clause]
   (let [[op col v1 v2] clause
