@@ -1,3 +1,5 @@
+* 2.0.5 - 2026-10-17
+  - Apply `:from-db` attribute coercion to entities returned by `insert!` and `insert-multi!`, so mutation results use the same application-level representation as query results.
 * 2.0.4 - 2026-10-16
   - Added per-attribute `:to-db` and `:from-db` coercion through `:attr/coercions`.
   - Query ident and predicate values now consistently use `:to-db` coercion.

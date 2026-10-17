@@ -24,15 +24,21 @@
 (defn- namespacify-attributes [entity-name entity]
   (update-keys entity #(keyword entity-name (name %))))
 
+(defn- coerce-from-db [db-adapter entity]
+  (into {}
+        (map (fn [[attr-ident value]]
+               [attr-ident (heql-md/coerce-attr-value db-adapter :from-db attr-ident value)]))
+        entity))
+
 (defn insert! [db-adapter entity]
-  (namespacify-attributes
-   (entity-name entity)
-   (sql/insert! (:db-spec db-adapter)
-                (table-name db-adapter entity)
-                (sqlize-entity db-adapter entity)
-                {:column-fn (db/table-fn db-adapter)
-                 :table-fn (db/table-fn db-adapter)
-                 :builder-fn rs/as-kebab-maps})))
+  (->> (sql/insert! (:db-spec db-adapter)
+                    (table-name db-adapter entity)
+                    (sqlize-entity db-adapter entity)
+                    {:column-fn (db/table-fn db-adapter)
+                     :table-fn (db/table-fn db-adapter)
+                     :builder-fn rs/as-kebab-maps})
+       (namespacify-attributes (entity-name entity))
+       (coerce-from-db db-adapter)))
 
 (defn insert-multi! [db-adapter entities]
   (when (seq entities)
@@ -41,7 +47,10 @@
           first-entity-name (entity-name first-entity)
           sqlized-entities (map (partial sqlize-entity db-adapter) entities)]
       (map
-       #(namespacify-attributes first-entity-name %)
+       (fn [entity]
+         (->> entity
+              (namespacify-attributes first-entity-name)
+              (coerce-from-db db-adapter)))
        (sql/insert-multi! (:db-spec db-adapter)
                           (table-name db-adapter first-entity)
                           (keys (first sqlized-entities))
