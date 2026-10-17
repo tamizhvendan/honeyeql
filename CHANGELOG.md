@@ -1,3 +1,5 @@
+* 2.0.6 - 2026-10-17
+  - Normalize JDBC-native temporal values returned by mutations so `date`, `time`, and `timestamp` attributes are converted to the same `java.time` representations used by query results.
 * 2.0.5 - 2026-10-17
   - Apply `:from-db` attribute coercion to entities returned by `insert!` and `insert-multi!`, so mutation results use the same application-level representation as query results.
 * 2.0.4 - 2026-10-16

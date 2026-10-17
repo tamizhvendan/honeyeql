@@ -8,7 +8,10 @@
             [clojure.data.json :as json]
             [honeyeql.db-adapter.core :as db]
             [honeyeql.debug :refer [trace>>]])
-  (:import [java.time OffsetDateTime LocalDateTime LocalDate LocalTime OffsetTime]))
+  (:import
+   [java.util UUID]
+   [java.sql Date Time Timestamp]
+   [java.time OffsetDateTime LocalDateTime LocalDate LocalTime OffsetTime]))
 
 (defn datafied-result-set [db-spec result-set]
   (rs/datafiable-result-set result-set db-spec {:builder-fn rs/as-unqualified-lower-maps}))
@@ -489,6 +492,9 @@
 (defn- local-time? [x]
   (same-type? LocalTime x))
 
+(defn- offset-time? [x]
+  (same-type? OffsetTime x))
+
 (defn- offset-date-time? [x]
   (same-type? OffsetDateTime x))
 
@@ -497,6 +503,25 @@
     x
     (when x
       (parse-fn x))))
+
+(defn- coerce-value [type type-fn parse-fn value]
+  (if (instance? type value)
+    (if type-fn
+      (type-fn value)
+      value)
+    (parse-fn value)))
+
+(defn- sql-date->local-date [^Date value]
+  (.toLocalDate value))
+
+(defn- sql-time->local-time [^Time value]
+  (.toLocalTime value))
+
+(defn- sql-timestamp->local-date-time [^Timestamp value]
+  (.toLocalDateTime value))
+
+(defn- sql-*->attr-type [db-adapter attr-type value]
+  (db/coerce db-adapter value attr-type))
 
 (defn- default-coerce-attr-value [db-adapter mode attr-ident value]
   (let [heql-meta-data (:heql-meta-data db-adapter)
@@ -507,13 +532,13 @@
                              {:attr/type :attr.type/unknown}
                              (throw ex))))]
     (case (:attr/type attr-md)
-      :attr.type/uuid (coerce uuid? #(java.util.UUID/fromString %) value)
-      :attr.type/date (coerce local-date? #(LocalDate/parse %) value)
-      :attr.type/time (coerce local-time? #(LocalTime/parse %) value)
-      :attr.type/time-with-time-zone (coerce local-time? #(OffsetTime/parse %) value)
-      :attr.type/date-time (coerce local-date-time? #(db/coerce db-adapter % :attr.type/date-time) value)
-      :attr.type/boolean (coerce boolean? #(db/coerce db-adapter % :attr.type/boolean) value)
+      :attr.type/uuid (coerce uuid? #(UUID/fromString %) value)
+      :attr.type/date (coerce local-date? #(coerce-value Date sql-date->local-date LocalDate/parse %) value)
+      :attr.type/time (coerce local-time? #(coerce-value Time sql-time->local-time LocalTime/parse %) value)
+      :attr.type/date-time (coerce local-date-time? #(coerce-value Timestamp sql-timestamp->local-date-time (partial sql-*->attr-type db-adapter :attr.type/date-time) %) value)
+      :attr.type/time-with-time-zone (coerce offset-time? #(OffsetTime/parse %) value)
       :attr.type/date-time-with-time-zone (coerce offset-date-time? #(OffsetDateTime/parse %) value)
+      :attr.type/boolean (coerce boolean? #(sql-*->attr-type db-adapter :attr.type/boolean %) value)
       :attr.type/ref (if (and (= :attr.ref.cardinality/many (:attr.ref/cardinality attr-md)) (nil? value))
                        []
                        value)

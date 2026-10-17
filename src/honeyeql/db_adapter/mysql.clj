@@ -235,7 +235,7 @@
   (select-clause [db-adapter heql-meta-data eql-nodes]
     (let [[sql & args] (mysql-select-clause db-adapter heql-meta-data eql-nodes)]
       (into [[sql :result]] args)))
-  (resolve-one-to-one-relationship-alias [db-adapter {:keys [parent self]}]
+  (resolve-one-to-one-relationship-alias [_ {:keys [parent self]}]
     (keyword (format "%s__%s" parent self) "result"))
   (resolve-children-one-to-one-relationships [db-adapter heql-meta-data hsql eql-nodes]
     (assoc-one-to-one-hsql-queries db-adapter heql-meta-data hsql eql-nodes))
