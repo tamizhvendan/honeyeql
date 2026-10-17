@@ -1,17 +1,23 @@
 (ns ^:no-doc honeyeql.meta-data
-  (:require [next.jdbc :as jdbc]
-            [next.jdbc.types :as jdbc-types]
-            [next.jdbc.result-set :as rs]
-            [inflections.core :as inf]
+  (:require [clojure.data.json :as json]
             [clojure.set :as set]
             [clojure.string :as string]
-            [clojure.data.json :as json]
             [honeyeql.db-adapter.core :as db]
-            [honeyeql.debug :refer [trace>>]])
+            [honeyeql.debug :refer [trace>>]]
+            [inflections.core :as inf]
+            [next.jdbc :as jdbc]
+            [next.jdbc.result-set :as rs]
+            [next.jdbc.types :as jdbc-types])
   (:import
-   [java.util UUID]
    [java.sql Date Time Timestamp]
-   [java.time OffsetDateTime LocalDateTime LocalDate LocalTime OffsetTime]))
+   [java.time
+    LocalDate
+    LocalDateTime
+    LocalTime
+    OffsetDateTime
+    OffsetTime
+    ZoneOffset]
+   [java.util UUID]))
 
 (defn datafied-result-set [db-spec result-set]
   (rs/datafiable-result-set result-set db-spec {:builder-fn rs/as-unqualified-lower-maps}))
@@ -520,6 +526,9 @@
 (defn- sql-timestamp->local-date-time [^Timestamp value]
   (.toLocalDateTime value))
 
+(defn- sql-timestamp->offset-date-time [^Timestamp value]
+  (.atOffset (.toInstant value) ZoneOffset/UTC))
+
 (defn- sql-*->attr-type [db-adapter attr-type value]
   (db/coerce db-adapter value attr-type))
 
@@ -536,8 +545,9 @@
       :attr.type/date (coerce local-date? #(coerce-value Date sql-date->local-date LocalDate/parse %) value)
       :attr.type/time (coerce local-time? #(coerce-value Time sql-time->local-time LocalTime/parse %) value)
       :attr.type/date-time (coerce local-date-time? #(coerce-value Timestamp sql-timestamp->local-date-time (partial sql-*->attr-type db-adapter :attr.type/date-time) %) value)
+      :attr.type/date-time-with-time-zone (coerce offset-date-time? #(coerce-value Timestamp sql-timestamp->offset-date-time OffsetDateTime/parse %) value)
       :attr.type/time-with-time-zone (coerce offset-time? #(OffsetTime/parse %) value)
-      :attr.type/date-time-with-time-zone (coerce offset-date-time? #(OffsetDateTime/parse %) value)
+      
       :attr.type/boolean (coerce boolean? #(sql-*->attr-type db-adapter :attr.type/boolean %) value)
       :attr.type/ref (if (and (= :attr.ref.cardinality/many (:attr.ref/cardinality attr-md)) (nil? value))
                        []

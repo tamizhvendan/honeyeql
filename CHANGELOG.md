@@ -1,3 +1,5 @@
+* 2.0.7 - 2026-10-17
+  - Normalize JDBC-native `TIMESTAMPTZ` mutation results to `OffsetDateTime` and improve mutation coercion error diagnostics.
 * 2.0.6 - 2026-10-17
   - Normalize JDBC-native temporal values returned by mutations so `date`, `time`, and `timestamp` attributes are converted to the same `java.time` representations used by query results.
 * 2.0.5 - 2026-10-17

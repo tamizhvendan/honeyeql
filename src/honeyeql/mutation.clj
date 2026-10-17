@@ -27,7 +27,16 @@
 (defn- coerce-from-db [db-adapter entity]
   (into {}
         (map (fn [[attr-ident value]]
-               [attr-ident (heql-md/coerce-attr-value db-adapter :from-db attr-ident value)]))
+               (try 
+                 [attr-ident (heql-md/coerce-attr-value db-adapter :from-db attr-ident value)]
+                 (catch Throwable ex
+                   (throw
+                    (ex-info
+                     "Failed to coerce mutation result attribute"
+                     {:attr-ident attr-ident
+                      :value-type (some-> value class .getName)
+                      :mode :from-db}
+                     ex))))))
         entity))
 
 (defn insert! [db-adapter entity]
