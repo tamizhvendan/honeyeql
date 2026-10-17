@@ -21,9 +21,10 @@ application
 HoneyEQL provides default coercion based on the database column type.
 
 While retrieving data from the database, HoneyEQL coerces returned values to the corresponding JVM types described below.
-‎
+
+
 | Type                     | Postgres                                                                                                                          | MySQL                                                                                                                                        |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
 | java.lang.Long           | `integer`, `int`, `int2` `int4`, `smallint`, `smallserial`, `serial`, `serial2`, `serial4`, `bigint`,`int8`,`bigserial`,`serial8` | `SMALLINT`, `MEDIUMINT`, `INT`, `TINYINT UNSIGNED`, `SMALLINT UNSIGNED`, `MEDIUMINT UNSIGNED`, `YEAR`, `INT UNSIGNED`, `BIGINT`              |
 | java.math.BigDecimal     | `real`, `float4`, `float8`, `double precision`,`numeric`,`decimal`                                                                | `REAL`, `FLOAT`, `DOUBLE`, `DECIMAL`, `NUMERIC`                                                                                              |
 | java.lang.String         | `bit`, `bit varying`, `char`, `character varying`, `varchar`, `citext`, `bpchar`, `macaddr8`, `text`, `money`                     | `CHAR`, `VARCHAR`, `TINYTEXT`, `TEXT`, `MEDIUMTEXT`, `LONGTEXT`, `ENUM`, `SET`, `BINARY`, `VARBINARY`, `TINYBLOB,` `BLOB`, `LONGBLOB`, `BIT` |
@@ -34,6 +35,7 @@ While retrieving data from the database, HoneyEQL coerces returned values to the
 | java.time.OffsetTime     | `timetz`, `time with time zone`                                                                                                   | --                                                                                                                                           |
 | java.time.LocalDateTime  | `timestamp`, `timestamp without time zone`                                                                                        | `DATETIME`, `TIMESTAMP`                                                                                                                      |
 | java.time.OffsetDateTime | `timestamptz`, `timestamp with time zone`                                                                                         | --                                                                                                                                           |
+
 
 ## Custom Attribute Coercion
 
