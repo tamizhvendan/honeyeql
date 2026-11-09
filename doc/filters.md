@@ -233,7 +233,7 @@ We can also filter the results using logical operators `and`, `or` & `not`.
 
 ## Filter Based On Relationship Attributes
 
-With HoneyEQL, we can filter the results based on the attributes of a relationship. The only difference in the syntax is, in the place of the attribute ident, we will be using a vector of two attribute idents. The first ident is the relationship attribute and then second one is the attribute of the related entity. 
+With HoneyEQL, we can filter the results based on the attributes of a relationship. The only difference in the syntax is, in the place of the attribute ident, we will be using a vector representing the filter path that can contain one or more relationship attributes followed by a scalar attribute.
 
 For example, to get all the cities of a county using the country' name,
 
@@ -248,9 +248,15 @@ we can use the following query.
 {[[] {:where [:= [:city/country :country/country] "Algeria"]}]
  [:city/city-id :city/city]}
 
+{[[] {:where [:= [:address/city :city/country :country/country] "Algeria"]}]
+ [:address/address]}
+
 ; :eql.mode/strict syntax
 [{([] {:where [:= [:city/country :country/country] "Algeria"]}) 
   [:city/city-id :city/city]}]
+
+[{([] {:where [:= [:address/city :city/country :country/country] "Algeria"]}) 
+  [:address/address]}]
 ```
 
 If the relationship attribute is refers a one-to-many or many-to-many relationship, the filter condition yield the results if **any** of the related entities satisfy the condition.

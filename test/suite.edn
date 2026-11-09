@@ -364,6 +364,47 @@
                                                         :country    "Saudi Arabia"}
                                               #:country{:country-id 101
                                                         :country    "United Arab Emirates"})}}
+
+                           {:name "filter across two relationship hops"
+                            :eql
+                            {:query-single
+                             [{([:address/address-id 1]
+                                {:where
+                                 [:= [:address/city
+                                      :city/country
+                                      :country/country]
+                                  "Canada"]})
+                               [:address/address]}]
+
+                             :expected #:address{:address "47 MySakila Drive"}}}
+
+                           {:name "multi-hop filter excludes nonmatching rows"
+                            :eql
+                            {:query-single
+                             [{([:address/address-id 1]
+                                {:where
+                                 [:= [:address/city
+                                      :city/country
+                                      :country/country]
+                                  "Algeria"]})
+                               [:address/address]}]
+
+                             :expected nil}}
+
+                           {:name "filter across three relationship hops"
+                            :eql
+                            {:query-single
+                             [{([:customer/customer-id 318]
+                                {:where
+                                 [:= [:customer/address
+                                      :address/city
+                                      :city/country
+                                      :country/country]
+                                  "Poland"]})
+                               [:customer/first-name]}]
+
+                             :expected #:customer{:first-name "BRIAN"}}}
+
                            {:name "ilike"
                             :eql  {:query-single    [{[[] {:where [:ilike :actor/first-name "nick"]}]
                                                       [:actor/first-name

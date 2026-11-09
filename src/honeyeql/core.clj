@@ -178,21 +178,30 @@
      hsql
      (hsql-predicate db-adapter eql-node [op attr-ident v1 v2]))))
 
-(defn- nested-entity-predicate [db-adapter eql-node clause]
-  (let [[op col]         clause
-        join-attr-ident  (if (= :exists op) col (first col))
-        attr-ident       (when-not (= :exists op) (second col))
-        heql-meta-data   (:heql-meta-data db-adapter)
-        self-alias       (str (gensym))
-        self-eql-node    {:alias {:self self-alias}}
-        join-attr-md     (heql-md/attr-meta-data heql-meta-data join-attr-ident)
-        [from join-pred] (hsql-join-predicate db-adapter eql-node join-attr-md self-alias)
-        hsql             {:select [1]
-                          :from   from
-                          :where  join-pred}]
-    [:exists (if attr-ident
-               (nested-entity-attr-predicate db-adapter self-eql-node clause hsql join-attr-md attr-ident)
-               hsql)]))
+
+(defn- nested-entity-predicate
+  ([db-adapter eql-node clause]
+   (let [[op col] clause
+         path (if (= :exists op) [col] col)]
+     (nested-entity-predicate db-adapter eql-node clause path)))
+
+  ([db-adapter eql-node clause [join-attr-ident & remaining-path]]
+   (let [heql-meta-data (:heql-meta-data db-adapter)
+         self-alias (str (gensym))
+         self-eql-node {:alias {:self self-alias}}
+         join-attr-md (heql-md/attr-meta-data heql-meta-data join-attr-ident)
+         [from join-pred] (hsql-join-predicate db-adapter eql-node join-attr-md self-alias)
+         hsql {:select [1] :from from :where join-pred}
+
+         hsql
+         (if-let [attr-ident (first remaining-path)]
+           (if (next remaining-path)
+             (hsql-helpers/where
+              hsql
+              (nested-entity-predicate db-adapter self-eql-node clause remaining-path))
+             (nested-entity-attr-predicate db-adapter self-eql-node clause hsql join-attr-md attr-ident))
+           hsql)]
+     [:exists hsql])))
 
 (defn- where-predicate [db-adapter clause eql-node]
   (let [[op col] clause]
